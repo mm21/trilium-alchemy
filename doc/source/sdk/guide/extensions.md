@@ -1,0 +1,1 @@
+# Trilium extensions (coming soon)

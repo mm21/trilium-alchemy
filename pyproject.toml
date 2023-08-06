@@ -1,0 +1,36 @@
+[project.urls]
+"Homepage" = "https://github.com/mm21/trilium-alchemy"
+
+[tool.poetry]
+name = "trilium-alchemy"
+version = "0.1.0"
+description = "Python SDK and CLI toolkit for Trilium Notes"
+authors = ["mm21 <mm21.apps@gmail.com>"]
+readme = "README.md"
+packages = [{include = "trilium_alchemy"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.31.0"
+trilium-client = "^0.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+pytest-dependency = "^0.5.1"
+pytest-cov = "^4.1.0"
+black = "^23.3.0"
+scons = "^4.5.2"
+sphinx = "^7.0.1"
+furo = "^2023.5.20"
+sphinx-autodoc2 = {path = "/mnt/hgfs/shared/dev/sphinx-autodoc2", develop = true}
+myst-parser = "^2.0.0"
+python-dotenv = "^1.0.0"
+sphinx-copybutton = "^0.5.2"
+
+[tool.black]
+line-length = 80
+include = '\.pyi?$|SConstruct$'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

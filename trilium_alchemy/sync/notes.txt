@@ -1,0 +1,43 @@
+'''
+sync algo:
+- given a root note (not necessarily "root") and fs root
+    * take id or attribute uniquely identifying root note (fail if multiple)
+        #triliumSyncRoot
+- create sync session
+    - enables Note.flush() to add implicitly deleted child notes w/no other parent branches
+        to new note per run for manual review before deletion
+        * check if any other parent branches when deleting child note
+- invoke and pass root dir, root note:
+    - given [note], [folder]
+    - for each child of [folder]
+        * determine children by:
+            - look for *.yml files + accompanying file
+            - order if specified by parent (folder) note (.parent.yml)
+        - parse into Note obj
+            - create Note(note_id)
+                * fetches existing note
+            - extract fields from yml and set in note (if not already present)
+                - merge attributes
+                    - traverse attrs from yml to build list (similar to note children)
+                    - have list of attributes in order (not yet added to [note])
+                    - handle attrs in note not in list of attrs from fs
+                        - .yml option ALLOW_USER_ATTRIBUTES == true: (true default)
+                            - preserve relative order and append to end of fs attributes
+                        - == false: drop extra attributes
+    - have list of notes+branches from fs (not yet added to [note])
+    - handle children of [note] not in list of notes from fs
+        - has #triliumSync and not deleting any non-#triliumSync notes: delete
+            - generate warning if not deleting (this note was previously tracked by trilium-sync)
+        - if not deleting, re-order in same relative order at end of notes from fs
+
+    * defer branch operations until end
+        - determine dependencies to use correct order?
+            * probably not needed: branch creation only requires existence of parent/child notes
+        - invoke creations, then deletions
+
+- invoke flush on root note w/recursive=True
+    - detects changes and commits to trilium
+        - recurse for each child note
+
+
+'''

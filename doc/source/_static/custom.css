@@ -1,0 +1,39 @@
+/*
+TODO: try using multi_line_parameter_list = True
+*/
+em.sig-param::before {
+  content: "\A";
+  white-space: pre;
+}
+
+/* symbol categories (canonical/imported) */
+div.symbol-category p.rubric {
+    text-transform: uppercase;
+    font-size: var(--font-size--small);
+    font-weight: 500;
+}
+
+/* need to provide more specific css class to override class rubric styles 
+to be consistent with "Parameters:" */
+div.main p.rubric {
+    font-size: var(--font-size--small);
+    font-weight: 500;
+}
+
+/* param names */
+dl.field-list strong {
+    font-weight: 700;
+    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+}
+
+/* arguments */
+dl.field-list em {
+    font-weight: 700;
+    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+}
+
+/* return values */
+dl.field-list a {
+    font-weight: 700;
+    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+}
