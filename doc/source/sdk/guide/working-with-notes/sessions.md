@@ -7,9 +7,10 @@ As you make changes to Trilium objects, their state is maintained in a {obj}`Ses
 
 ```{note}
 In Trilium, there are 3 kinds of objects:
-- {obj}`Note`s
-- {obj}`Branch`es
-- {obj}`Attribute`s, divided into {obj}`Label`s and {obj}`Relation`s
+
+- {obj}`Note`
+- {obj}`Attribute`, divided into {obj}`Label` and {obj}`Relation`
+- {obj}`Branch`
 
 These are collectively referred to as "entities", both in 
 Trilium's implementation and this project (see {obj}`Entity`).
