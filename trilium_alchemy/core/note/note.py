@@ -409,8 +409,13 @@ class Mixin(ABC, metaclass=Meta):
             basename = content_file[-1]
             module_rel = content_file[:-1]
 
-            if inspect.ismodule(module):
-                # is a module, we want the package
+            try:
+                module.__module__
+            except AttributeError: 
+                # have a package
+                pass
+            else:
+                # have a module, we want a package
                 del module_path[-1]
 
             module_content = ".".join(module_path + module_rel)
