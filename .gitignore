@@ -5,3 +5,4 @@
 .venv
 .sconsign.dblite
 build
+dist
