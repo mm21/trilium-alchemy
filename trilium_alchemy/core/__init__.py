@@ -1,8 +1,6 @@
 """
 This module implements ORM access to Trilium and fundamental note capabilities.
 
-For a discussion of ORM concepts as applied here, see TODO_DOC.
-
 Examples in this module assume you have created a {obj}`Session`
 and that you will either invoke {obj}`Session.flush` or use a context manager
 to commit the changes.

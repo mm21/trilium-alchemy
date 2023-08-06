@@ -412,7 +412,7 @@ class Session:
 
     def get_app_info(self) -> AppInfo:
         """
-        Returns app info. See TODO_DOC for its definition.
+        Returns app info. See <https://github.com/mm21/trilium-client/blob/main/docs/AppInfo.md> for its definition.
         """
 
         app_info: AppInfo = self.api.get_app_info()
@@ -557,7 +557,7 @@ class Session:
     def api(self) -> DefaultApi:
         """
         ETAPI client object. Used internally and exposed for manual
-        low-level operations. For its documentation, see: TODO_DOC
+        low-level operations. For its documentation, see: <https://github.com/mm21/trilium-client>
         """
         assert self._api is not None
         return self._api
