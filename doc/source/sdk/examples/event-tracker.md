@@ -18,7 +18,7 @@ Then run its `__main__`.py to install it:
 python -m event_tracker 
 ````
 
-A note must be designated with label `#lifeTrackerRoot` to be the hierarchy root. Alternatively, you can pass `--root` to install it to your root note.
+A note must be designated with label `#eventTrackerRoot` to be the hierarchy root. Alternatively, you can pass `--root` to install it to your root note.
 
 ```{warning}
 Any existing children the destination note will be deleted. Therefore you may want to install it in an empty subtree so as to not tamper with your existing notes.
