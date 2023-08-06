@@ -12,7 +12,7 @@ git clone https://github.com/mm21/trilium-alchemy.git
 cd trilium-alchemy/example/event-tracker
 ```
 
-Then run its `__main__`.py to install it:
+Then run its `__main__.py` to install it:
 
 ```shell
 python -m event_tracker 
