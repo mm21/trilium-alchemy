@@ -3,7 +3,7 @@
 
 See `trilium-alchemy/example/event-tracker` for a fully featured showcase of both declarative and imperative approaches. An installation script is provided.
 
-This provides a complete example of using declarative notes to design a note tree for event tracking with Trilium. It can be synchronized to a destination note identified by label `#lifeTrackerRoot`. Eventually sync functionality will be provided by a CLI.
+This provides a complete example of using declarative notes to design a note tree for event tracking with Trilium.
 
 First, clone the repo and navigate to it:
 
@@ -19,6 +19,10 @@ python -m event_tracker
 ````
 
 A note must be designated with label `#eventTrackerRoot` to be the hierarchy root. Alternatively, you can pass `--root` to install it to your root note.
+
+```{note}
+Eventually sync functionality will be provided by a CLI to provide equivalent functionality as the install script.
+```
 
 ```{warning}
 Any existing children the destination note will be deleted. Therefore you may want to install it in an empty subtree so as to not tamper with your existing notes.
