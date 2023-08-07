@@ -1,9 +1,9 @@
 [run]
 source = trilium_alchemy
-data_file = build/cov/.coverage
+data_file = build/test/.coverage
 
 [html]
-directory = build/cov/htmlcov
+directory = build/test/htmlcov
 
 [xml]
-output = build/cov/coverage.xml
+output = build/test/coverage.xml
