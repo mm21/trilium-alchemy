@@ -52,7 +52,7 @@ class Relation(Attribute):
         :param inheritable: Whether attribute is inherited to children
         :param session: Session, or `None`{l=python} to use default
         """
-        
+
         model_backing = kwargs["model_backing"]
 
         super().__init__(

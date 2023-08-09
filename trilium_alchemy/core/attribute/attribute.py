@@ -151,7 +151,6 @@ class Attribute(Entity[AttributeModel], ABC):
     @require_model
     @require_attribute_id
     def __init__(self, name: str, inheritable: bool = False, **kwargs):
-
         attribute_id = kwargs.pop("attribute_id")
         session = kwargs.pop("session")
         model_backing = kwargs.pop("model_backing")
