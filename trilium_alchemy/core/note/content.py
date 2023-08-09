@@ -68,7 +68,7 @@ class BlobState:
 
 class Content(NoteStatefulExtension):
     """
-    Interface to a note's content.
+    Interface to note's content.
 
     Access as {obj}`Note.content`, a descriptor mapping to
     an instance of this class.

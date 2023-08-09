@@ -727,9 +727,9 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
     Interface to child notes.
     """
 
-    content: Content = ContentDescriptor("_content")
+    content: str | bytes = ContentDescriptor("_content")
     """
-    Interface to note content.
+    Interface to note content. See {obj}`trilium_alchemy.core.note.content.Content`.
     """
 
     _model_cls = NoteModel
