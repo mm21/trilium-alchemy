@@ -503,12 +503,9 @@ def note_cleanup(note: Note):
     """
     Flush and then delete note so we don't get warnings when flushing it
     after deleting due to abandoned dependencies.
-
-    We want to cleanup created notes without using the note fixture so we
-    can just paste the examples and verify they're working.
     """
 
-    note.flush(recursive=True)
+    note.session.flush()
     note.delete()
     note.flush()
 

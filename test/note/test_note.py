@@ -136,7 +136,6 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     parent_branch = list(note1.branches.parents)[0]
     parent_branch.prefix = "prefix2"
 
-    # make child note dirty (shouldn't be flushed unless recursive is True)
     note2.attributes["label1"] = ""
 
     assert session.dirty_count == 5
@@ -146,9 +145,7 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     assert session.dirty_count == 1
     assert note2.attributes["label1"][0]._is_dirty
 
-    # test recursion
-
-    note1.flush(recursive=True)
+    note2.flush()
     assert note2.attributes["label1"][0]._is_clean
 
 

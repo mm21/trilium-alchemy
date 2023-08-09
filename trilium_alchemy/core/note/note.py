@@ -980,11 +980,23 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
         """
         self._session.import_zip(self, src_path)
 
-    def flush(self, recursive: bool = False):
+    def flush(self, **kwargs):
         """
-        Flush note along with its attributes and branches. If
-        `recursive = True`{l=python}, recursively flush subtree.
+        Flush note along with its attributes.
+
+        ```{todo}
+        Remove `recursive` kwarg. It will cache the entire subtree which is
+        likely unexpected; use {obj}`Session.flush` instead.
+        ```
         """
+
+        if recursive := kwargs.pop("recursive", None) is not None:
+            logging.warning(
+                "Note.flush() arg recursive is deprecated and will be removed in a future release. It will cache the entire subtree which is likely unexpected; use Session.flush() instead."
+            )
+
+        if kwargs:
+            logging.warning(f"Unexpected kwargs: {kwargs}")
 
         # collect set of entities to flush
         flush_set = set()
