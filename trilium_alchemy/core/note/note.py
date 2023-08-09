@@ -411,7 +411,7 @@ class Mixin(ABC, metaclass=Meta):
 
             try:
                 module.__module__
-            except AttributeError: 
+            except AttributeError:
                 # have a package
                 pass
             else:
@@ -874,13 +874,16 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
 
     def __iadd__(
         self,
-        entity: Note | Branch | Attribute | list[Note | Branch | Attribute],
-    ):
+        entity: Note | Branch | Attribute | Iterable[Note | Branch | Attribute],
+    ) -> Note:
         """
-        Implement helper:
+        Implement entity bind operator:
 
-        note += child note / parent or child branch / attribute
-          or iterable of any combination
+        note += parent/child note
+        note += parent/child branch
+        note += attribute
+
+        or iterable of any combination.
         """
 
         entities = entity if isinstance(entity, Iterable) else [entity]
@@ -904,11 +907,11 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
 
         return self
 
-    def __ixor__(self, parent: Note):
+    def __ixor__(self, parent: Note) -> Note:
         """
-        Implement helper:
+        Implement clone operator:
+
         child ^= parent
-        or
         child ^= [parent1, parent2]
         """
 
@@ -928,8 +931,9 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
 
     def __getitem__(self, key: str | int) -> str | Note:
         """
-        Return value of first attribute with provided name, or None if
-        no such attribute exists.
+        Return value of first attribute with provided name.
+
+        :raises KeyError: No such attribute
         """
 
         # get list of attributes with name
@@ -943,14 +947,14 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
             else:
                 return attr.value
 
-    def __contains__(self, key: str) -> bool:
-        return key in self.attributes._name_map
-
     def __setitem__(self, key: str | int, value_spec: ValueSpec):
         """
         Create or update attribute with provided name.
         """
         self.attributes[key] = value_spec
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.attributes._name_map
 
     def export_zip(
         self,
