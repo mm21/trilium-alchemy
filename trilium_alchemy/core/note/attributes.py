@@ -213,7 +213,7 @@ class OwnedAttributes(NameMap, List[attribute.Attribute]):
 class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     """
     Interface to a note's inherited attributes. Implements same
-    interface as {obj}`Attributes`, but accessed as
+    interface as {obj}`Attributes` but accessed as
     `Note.attributes.inherited`.
 
     Raises {obj}`ReadOnlyError` upon attempt to modify.
@@ -375,13 +375,13 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
 
     owned: OwnedAttributes = ExtensionDescriptor("_owned")
     """
-    Same interface as {obj}`Note.attributes`, but filtered by 
+    Same interface as {obj}`Note.attributes` but filtered by 
     owned attributes.
     """
 
     inherited: InheritedAttributes = ExtensionDescriptor("_inherited")
     """
-    Same interface as {obj}`Note.attributes`, but filtered by 
+    Same interface as {obj}`Note.attributes` but filtered by 
     inherited attributes.
     """
 
@@ -436,7 +436,7 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
 # TODO:
 # FilteredAttributes
 # - used for Note.labels, Note.relations
-# - provides same interface as Attributes, but filtered by type
+# - provides same interface as Attributes but filtered by type
 # Labels(FilteredAttributes)
 # Relations(FilteredAttributes)
 

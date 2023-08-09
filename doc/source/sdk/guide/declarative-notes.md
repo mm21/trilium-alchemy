@@ -144,9 +144,15 @@ class MyNote(Note):
     note_id = "my_note_id"
 ```
 
+### Passing `note_id`
+
+When `note_id` is passed in the constructor of a {obj}`Note` subclass, it's similarly considered a singleton.
+
 ### Child of singleton
 
-Every child of a singleton note is required to also have a deterministic {obj}`Note.note_id`. Therefore a unique `note_id` is generated for children of singletons, even if they don't satisfy any of the above criteria.
+Every child of a singleton note is required to also have a deterministic {obj}`Note.note_id`. Therefore a `note_id` is generated for children of singletons, even if they don't satisfy any of the above criteria. 
+
+This is recursive, so an entire note tree specified by {obj}`Note` subclasses will be instantiated with a deterministic `note_id` if the root satisfies any of the above criteria.
 
 ## Adding relations
 
@@ -178,7 +184,7 @@ class Parent(Note): pass
 (leaf-notes)=
 ## Leaf notes
 
-If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. In this case they can't have any declarative children added by {obj}`children` or {obj}`child`.
+If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`Note.leaf` or {obj}`Mixin.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
 
 For example, this would be necessary for a list of contacts:
 

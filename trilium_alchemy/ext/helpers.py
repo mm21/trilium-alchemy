@@ -7,13 +7,14 @@ scripts, etc. This module provides automation of such a system, with a
 
 The root system {obj}`BaseRootSystem` additionally holds themes and a
 built-in stylesheet which hides the "Create child note" button in the UI
-for subclass-managed notes ({obj}`Mixin.leaf` is `False`{l=python}`).
+for subclass-managed notes ({obj}`Mixin.leaf` is `False`{l=python}).
 
 If a note hierarchy is defined under a {obj}`BaseRoot` subclass,
 a {obj}`BaseRootSystem` is automatically added.
 
 For a complete example of a note hierarchy using these classes, see 
-`trilium-alchemy/example/event-tracker`.
+`trilium-alchemy/example/event-tracker` and its documentation at
+{ref}`event-tracker`.
 
 A brief example is shown here:
 
