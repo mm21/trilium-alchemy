@@ -44,16 +44,18 @@ class Label(Attribute):
         :param inheritable: Whether attribute is inherited to children
         :param session: Session, or `None`{l=python} to use default
         """
+
+        model_backing = kwargs["model_backing"]
+
         super().__init__(
-            name=name,
-            value=value,
+            name,
             inheritable=inheritable,
             session=session,
             **kwargs,
         )
 
         # set value if not getting from database
-        if kwargs["model_backing"] is None:
+        if model_backing is None:
             self.value = value
 
     @property

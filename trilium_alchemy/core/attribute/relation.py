@@ -52,16 +52,18 @@ class Relation(Attribute):
         :param inheritable: Whether attribute is inherited to children
         :param session: Session, or `None`{l=python} to use default
         """
+        
+        model_backing = kwargs["model_backing"]
+
         super().__init__(
-            name=name,
-            value=target.note_id,
+            name,
             inheritable=inheritable,
             session=session,
             **kwargs,
         )
 
-        # defer setting target if model is provided; will set in model setup
-        if kwargs["model_backing"] is None:
+        # set target if not getting from database
+        if model_backing is None:
             self.target = target
 
     @property

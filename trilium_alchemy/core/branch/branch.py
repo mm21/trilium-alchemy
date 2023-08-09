@@ -176,10 +176,16 @@ class Branch(Entity[BranchModel]):
         :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
         """
 
+        branch_id = kwargs.pop("branch_id")
+        create = kwargs.pop("create")
+
+        if kwargs:
+            logging.warning(f"Unexpected kwargs: {kwargs}")
+
         super().__init__(
-            entity_id=kwargs["branch_id"],
+            entity_id=branch_id,
             session=session,
-            create=kwargs["create"],
+            create=create,
         )
 
         self._set_attrs(
@@ -194,7 +200,7 @@ class Branch(Entity[BranchModel]):
             None: when loaded by declarative note definition
                 (don't care if it exists or not)
         """
-        if kwargs["create"] is not False:
+        if create is not False:
             # set model fields for newly created or declarative definition
             self._set_attrs(prefix=prefix, expanded=expanded)
 

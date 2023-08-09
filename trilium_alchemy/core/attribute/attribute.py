@@ -4,8 +4,7 @@ from typing import overload, TypeVar, Generic, Type, Hashable
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-
-from pprint import pformat
+import logging
 
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.exceptions import NotFoundException
@@ -152,10 +151,19 @@ class Attribute(Entity[AttributeModel], ABC):
     @require_model
     @require_attribute_id
     def __init__(self, name: str, inheritable: bool = False, **kwargs):
+
+        attribute_id = kwargs.pop("attribute_id")
+        session = kwargs.pop("session")
+        model_backing = kwargs.pop("model_backing")
+        owning_note = kwargs.pop("owning_note", None)
+
+        if kwargs:
+            logging.warning(f"Unexpected kwargs: {kwargs}")
+
         super().__init__(
-            entity_id=kwargs["attribute_id"],
-            session=kwargs["session"],
-            model_backing=kwargs["model_backing"],
+            entity_id=attribute_id,
+            session=session,
+            model_backing=model_backing,
         )
 
         assert type(name) is str
@@ -163,16 +171,11 @@ class Attribute(Entity[AttributeModel], ABC):
 
         # set owning note if we know it already (generally just for declarative
         # usage to generate deterministic id)
-
-        if "owning_note" in kwargs:
-            if (owning_note := kwargs["owning_note"]) is not None:
-                self._note = owning_note
-
-        # if 'owning_note' in kwargs and kwargs['owning_note'] is not None:
-        #    self._note = kwargs['owning_note']
+        if owning_note:
+            self._note = owning_note
 
         # set fields if not getting from database
-        if kwargs["model_backing"] is None:
+        if model_backing is None:
             self.inheritable = inheritable
 
     @classmethod

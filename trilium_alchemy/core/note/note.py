@@ -334,7 +334,7 @@ class Mixin(ABC, metaclass=Meta):
         child = child_cls(
             note_id=child_note_id,
             session=self._session,
-            _force_leaf=self._force_leaf,
+            force_leaf=self._force_leaf,
             **kwargs,
         )
 
@@ -548,9 +548,6 @@ def require_note_id(func):
         if kwargs["note_id"] is None:
             kwargs["note_id"] = get_cls(ent)._get_decl_id()
             note_id = kwargs["note_id"]
-
-        if "child_id_seed" not in kwargs:
-            kwargs["child_id_seed"] = None
 
         return func(ent, *args, **kwargs)
 
@@ -789,6 +786,13 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
         :param session: Session, or `None`{l=python} to use default
         """
 
+        model_backing = kwargs.pop("model_backing")
+        child_id_seed = kwargs.pop("child_id_seed", None)
+        force_leaf = kwargs.pop("force_leaf", None)
+
+        if kwargs:
+            logging.warning(f"Unexpected kwargs: {kwargs}")
+
         # normalize args
         if parents and not isinstance(parents, Iterable):
             parents = {parents}
@@ -799,7 +803,7 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
         super().__init__(
             entity_id=note_id,
             session=session,
-            model_backing=kwargs["model_backing"],
+            model_backing=model_backing,
         )
 
         if init_done:
@@ -807,10 +811,10 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
             return
 
         self._sequence_map = dict()
-        self._child_id_seed = kwargs["child_id_seed"]
+        self._child_id_seed = child_id_seed
 
         # get from parent, if True
-        if force_leaf := kwargs.get("_force_leaf", None):
+        if force_leaf:
             self._force_leaf = force_leaf
 
         # map of fields to potentially update
