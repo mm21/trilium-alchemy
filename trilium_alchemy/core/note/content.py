@@ -128,7 +128,7 @@ class Content(NoteStatefulExtension):
         if self._backing.digest is None:
             # using version of Trilium which doesn't have content blobId,
             # so we need to compare the content manually (less efficient)
-            return self._get() != self._working.blob
+            return self._backing.blob != self._working.blob
         else:
             # Trilium provided blobId, so efficiently check digest
             return self._backing.digest != self._working.digest
@@ -153,6 +153,11 @@ class Content(NoteStatefulExtension):
         else:
             # get digest from model, only fetch content if accessed by user
             self._backing.digest = model.blob_id
+
+            if self._backing.digest is None:
+                logging.debug(
+                    "You are using an older version of Trilium which doesn't provide blobId. Performance of setting note content may be worsened in some cases."
+                )
 
     def _teardown(self):
         """
