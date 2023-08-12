@@ -83,39 +83,62 @@ def test_parent_extend(session: Session, note: Note, note1: Note, note2: Note):
     session.flush()
 
 
-def test_child_add(session: Session, note1: Note, note2: Note):
-    note1 += (note2, "My prefix")
-    assert note1.branches.children[0].prefix == "My prefix"
+def test_child_add(session: Session, note: Note, note1: Note, note2: Note):
+    note += note1
+    note.children += note2
 
-    assert note2 in note1.children
-    assert note1 in note2.parents
+    assert len(note.children) == 2
+    assert len(note.branches.children) == 2
 
-    assert len(note1.branches.children) == 1
+    assert note.branches.children[0].prefix == ""
+    assert note.branches.children[1].prefix == ""
+
+    assert note in note1.parents
+    assert note in note2.parents
+
+    assert note1 in note.children
+    assert note2 in note.children
+
+    assert len(note1.branches.parents) == 2
     assert len(note2.branches.parents) == 2
-    branch = note1.branches.children[0]
 
-    assert branch._is_create
+    assert note.branches.children[0]._is_create
+    assert note.branches.children[1]._is_create
 
     session.flush()
 
-    assert branch._is_clean
+    assert note.branches.children[0]._is_clean
+    assert note.branches.children[1]._is_clean
 
 
-def test_child_add_alt(session: Session, note1: Note, note2: Note):
-    note1 += note2
+def test_child_add_prefix(
+    session: Session, note: Note, note1: Note, note2: Note
+):
+    note += (note1, "My prefix 1")
+    note.children += (note2, "My prefix 2")
 
-    assert note2 in note1.children
-    assert note1 in note2.parents
+    assert len(note.children) == 2
+    assert len(note.branches.children) == 2
 
-    assert len(note1.branches.children) == 1
+    assert note.branches.children[0].prefix == "My prefix 1"
+    assert note.branches.children[1].prefix == "My prefix 2"
+
+    assert note in note1.parents
+    assert note in note2.parents
+
+    assert note1 in note.children
+    assert note2 in note.children
+
+    assert len(note1.branches.parents) == 2
     assert len(note2.branches.parents) == 2
-    branch = note1.branches.children[0]
 
-    assert branch._is_create
+    assert note.branches.children[0]._is_create
+    assert note.branches.children[1]._is_create
 
     session.flush()
 
-    assert branch._is_clean
+    assert note.branches.children[0]._is_clean
+    assert note.branches.children[1]._is_clean
 
 
 # Add child as branch

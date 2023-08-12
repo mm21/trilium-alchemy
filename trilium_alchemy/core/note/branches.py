@@ -27,8 +27,8 @@ __all__ = [
 
 
 def normalize_tuple(
-    note_spec: Note | tuple[Note, str]
-) -> tuple[Note, str | None]:
+    note_spec: trilium_alchemy.Note | tuple[trilium_alchemy.Note, str]
+) -> tuple[trilium_alchemy.Note, str | None]:
     """
     Returns a tuple of (Note, prefix) where prefix may be None.
     """
@@ -303,7 +303,9 @@ class Parents(NoteExtension, MutableSet):
 
     def __iadd__(
         self,
-        parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
+        parent: trilium_alchemy.Note
+        | tuple[trilium_alchemy.Note, str]
+        | Iterable[trilium_alchemy.Note | tuple[trilium_alchemy.Note, str]],
     ) -> Parents:
         """
         Implement helper:
@@ -365,22 +367,22 @@ class Children(NoteExtension, MutableSequence):
 
     def __iadd__(
         self,
-        entity: note.Note
-        | tuple[note.Note, str]
-        | Iterable[note.Note | tuple[Note, str]],
+        child: trilium_alchemy.Note
+        | tuple[trilium_alchemy.Note, str]
+        | Iterable[trilium_alchemy.Note | tuple[trilium_alchemy.Note, str]],
     ) -> Children:
         """
         Implement helper:
         note.children += branch_spec
         """
 
-        entities = (
-            [e for e in entity]
-            if isinstance(entity, Iterable) and not isinstance(entity, tuple)
-            else [entity]
+        children = (
+            [e for e in child]
+            if isinstance(child, Iterable) and not isinstance(child, tuple)
+            else [child]
         )
 
-        self._note.branches.children += entities
+        self._note.branches.children += children
 
         return self
 
