@@ -128,6 +128,7 @@ class Content(NoteStatefulExtension):
         if self._backing.digest is None:
             # using version of Trilium which doesn't have content blobId,
             # so we need to compare the content manually (less efficient)
+            self._fetch_check()
             return self._backing.blob != self._working.blob
         else:
             # Trilium provided blobId, so efficiently check digest
@@ -143,7 +144,7 @@ class Content(NoteStatefulExtension):
         """
 
         if model is None:
-            # initialize to empty content if newly created
+            # newly created, initialize to empty content
             if self._is_string:
                 self._backing.blob = ""
             else:
@@ -178,10 +179,7 @@ class Content(NoteStatefulExtension):
             blob = self._working.blob
         else:
             # get from server
-            if self._backing.blob is None:
-                self._fetch()
-                assert self._backing.blob is not None
-
+            self._fetch_check()
             blob = self._backing.blob
 
         assert blob is not None
@@ -198,6 +196,13 @@ class Content(NoteStatefulExtension):
 
         # could potentially change clean/dirty state, so reevaluate
         self._note._check_state()
+
+    def _fetch_check(self):
+        """
+        Ensure note content has been fetched from server.
+        """
+        if self._backing.blob is None:
+            self._fetch()
 
     def _fetch(self):
         """
