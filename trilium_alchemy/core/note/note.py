@@ -10,6 +10,7 @@ import hashlib
 import base64
 import inspect
 import os
+import logging
 
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
