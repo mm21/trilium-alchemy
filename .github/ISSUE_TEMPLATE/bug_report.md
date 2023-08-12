@@ -23,6 +23,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment**
  - OS: [e.g. Ubuntu]
  - Python version
+ - Trilium version
  - TriliumAlchemy version
 
 **Additional context**
