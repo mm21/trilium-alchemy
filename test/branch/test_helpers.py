@@ -84,7 +84,7 @@ def test_parent_extend(session: Session, note: Note, note1: Note, note2: Note):
 
 
 def test_child_add(session: Session, note1: Note, note2: Note):
-    note1.children += (note2, "My prefix")
+    note1 += (note2, "My prefix")
     assert note1.branches.children[0].prefix == "My prefix"
 
     assert note2 in note1.children

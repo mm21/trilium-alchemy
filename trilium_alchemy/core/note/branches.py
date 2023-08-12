@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable, Any
+from typing import Any, Iterable
 
 from pprint import pformat
 
@@ -301,16 +301,24 @@ class Parents(NoteExtension, MutableSet):
     def _setattr(self, val: Any) -> None:
         self._note.branches.parents = val
 
-    def __iadd__(self, val: Any):
+    def __iadd__(
+        self,
+        parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
+    ) -> Parents:
         """
         Implement helper:
-        note.parents += branchspec
+        note.parents += branch_spec
         """
-        if not isinstance(val, list) and not isinstance(val, set):
-            val = [val]
-        for v in val:
-            self._note.branches.parents.add(v)
-        return self._note.branches.parents
+
+        parents = (
+            {p for p in parent}
+            if isinstance(parent, Iterable) and not type(parent) is tuple
+            else {parent}
+        )
+
+        self._note.branches.parents |= parents
+
+        return self
 
     def __contains__(self, val: branch.Branch | note.Note):
         """
@@ -355,15 +363,26 @@ class Children(NoteExtension, MutableSequence):
     def _setattr(self, val: Any) -> None:
         self._note.branches.children = val
 
-    def __iadd__(self, val: Any):
+    def __iadd__(
+        self,
+        entity: note.Note
+        | tuple[note.Note, str]
+        | Iterable[note.Note | tuple[Note, str]],
+    ) -> Children:
         """
         Implement helper:
-        note.children += branchspec
+        note.children += branch_spec
         """
-        if not isinstance(val, list):
-            val = [val]
-        self._note.branches.children += val
-        return self._note.branches.children
+
+        entities = (
+            [e for e in entity]
+            if isinstance(entity, Iterable) and not isinstance(entity, tuple)
+            else [entity]
+        )
+
+        self._note.branches.children += entities
+
+        return self
 
     def __contains__(self, val: branch.Branch | note.Note):
         """

@@ -874,56 +874,70 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
 
     def __iadd__(
         self,
-        entity: Note | Branch | Attribute | Iterable[Note | Branch | Attribute],
+        entity: Note
+        | tuple[Note, str]
+        | Branch
+        | Attribute
+        | Iterable[Note | tuple[Note, str] | Branch | Attribute],
     ) -> Note:
         """
         Implement entity bind operator:
 
-        note += parent/child note
-        note += parent/child branch
-        note += attribute
+        note += child_note
+        note += (child_note, "prefix")
+        note += Branch(parent=parent_note)
+        note += Branch(child=child_note)
+        note += Label(...)/Relation(...)
 
         or iterable of any combination.
         """
 
-        entities = entity if isinstance(entity, Iterable) else [entity]
+        entities = (
+            entity
+            if isinstance(entity, Iterable) and not isinstance(entity, tuple)
+            else [entity]
+        )
 
         for entity in entities:
             if isinstance(entity, Attribute):
                 self.attributes.owned.append(entity)
-            elif isinstance(entity, Note):
+            elif isinstance(entity, Note) or type(entity) is tuple:
                 # add child note
                 self.branches.children.append(entity)
             else:
-                assert isinstance(entity, Branch)
+                assert isinstance(
+                    entity, Branch
+                ), f"Unknown type for +=: {type(entity)}"
                 branch = entity
 
-                if branch.parent is None:
-                    # note += Branch(child=child) or Branch()
+                if branch.parent in {None, self}:
+                    # note += Branch()
+                    # note += Branch(child=child)
+                    # note += Branch(parent=note, child=child)
+
                     self.branches.children.append(branch)
                 else:
                     # note += Branch(parent=parent)
-                    self.branches.parents.add(entity)
+                    self.branches.parents.add(branch)
 
         return self
 
-    def __ixor__(self, parent: Note) -> Note:
+    def __ixor__(
+        self,
+        parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
+    ) -> Note:
         """
         Implement clone operator:
 
-        child ^= parent
+        child ^= parent_note
+        child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-
-        if type(parent) is tuple:
-            parents = {parent}
-
-        else:
-            parents = (
-                {p for p in parent}
-                if isinstance(parent, Iterable)
-                else {parent}
-            )
+        parents = (
+            {p for p in parent}
+            if isinstance(parent, Iterable) and not type(parent) is tuple
+            else {parent}
+        )
 
         self.branches.parents |= parents
 
