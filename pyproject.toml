@@ -1,13 +1,22 @@
-[project.urls]
-"Homepage" = "https://github.com/mm21/trilium-alchemy"
-
 [tool.poetry]
 name = "trilium-alchemy"
-version = "0.1.4"
+version = "0.1.5"
 description = "Python SDK and CLI toolkit for Trilium Notes"
 authors = ["mm21 <mm21.apps@gmail.com>"]
 readme = "README.pypi.md"
 packages = [{include = "trilium_alchemy"}]
+documentation = "https://mm21.github.io/trilium-alchemy/"
+homepage = "https://github.com/mm21/trilium-alchemy"
+classifiers = [
+    # Get the list of trove classifiers here: https://pypi.org/classifiers/
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Development Status :: 3 - Alpha",
+    "Natural Language :: English",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
