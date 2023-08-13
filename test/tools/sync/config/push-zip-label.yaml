@@ -1,0 +1,8 @@
+# Pushes a list of zip files (e.g. extensions) to a note identified by label.
+
+mappings:
+  - dest:
+      label: "testRoot"
+    src:
+      - zip: "assets/testExtension1.zip"
+      - zip: "assets/testExtension2.zip"

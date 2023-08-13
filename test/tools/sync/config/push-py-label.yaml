@@ -1,0 +1,9 @@
+# Pushes a singleton Note subclass as documented in <declarative-notes.md> to 
+# a note identified by label.
+
+mappings:
+  - dest:
+      label: "testRoot"
+    src:
+      - py: "pkg_test.extensions.Singleton1"
+      - py: "pkg_test.extensions.Singleton2"
