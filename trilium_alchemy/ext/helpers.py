@@ -191,7 +191,7 @@ class Widget(JsFrontendNote):
     Defines a widget.
     """
 
-    pass
+    singleton = True
 
 
 class ScriptMixin(Mixin):
