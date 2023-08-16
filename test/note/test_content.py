@@ -115,7 +115,7 @@ BIN_FILE_CONTENT = b"Test content"
 @mark.temp_file(BIN_FILE_CONTENT)
 @mark.note_type("file")
 @mark.note_mime("application/octet-stream")
-def test_text_file(session: Session, note: Note, temp_file: str):
+def test_bin_file(session: Session, note: Note, temp_file: str):
     note.content = open(temp_file, "rb")
     assert note.content == BIN_FILE_CONTENT
 
