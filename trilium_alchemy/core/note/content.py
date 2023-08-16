@@ -242,7 +242,8 @@ class Content(NoteStatefulExtension):
         if self._is_string:
             assert isinstance(blob, str)
 
-            headers["Content-Type"] = "text/plain"
+            blob: bytes = blob.encode("utf-8")
+            headers["Content-Type"] = "text/plain; charset=utf-8"
         else:
             assert isinstance(blob, bytes)
 
@@ -252,7 +253,9 @@ class Content(NoteStatefulExtension):
         # generated ETAPI client only supports text, so make request manually
         response = requests.put(self._url, headers=headers, data=blob)
 
-        assert response.status_code == 204
+        assert (
+            response.status_code == 204
+        ), f"PUT {self._url} response: {response.status_code}"
 
         self._backing = self._working
         self._working = BlobState()
@@ -286,14 +289,26 @@ class Content(NoteStatefulExtension):
         return blob
 
     def _get_digest(self, blob: str | bytes) -> str:
+        """
+        Calculate digest of content.
+
+        This should be kept in sync with src/services/utils.js:hashedBlobId()
+        """
+
         # encode if string
         blob_bytes = blob.encode() if isinstance(blob, str) else blob
 
         # compute digest
         sha = hashlib.sha512(blob_bytes).digest()
 
-        # encode in base64, decode as string, and return first 20 characters
-        return base64.b64encode(sha).decode()[:20]
+        # encode in base64 and decode as string
+        b64 = base64.b64encode(sha).decode()
+
+        # make replacements to form "kinda" base62
+        b62 = b64.replace("+", "X").replace("/", "Y")
+
+        # return first 20 characters
+        return b62[:20]
 
     @property
     def _url(self) -> str:
