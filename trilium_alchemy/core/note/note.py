@@ -866,11 +866,11 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
     @classmethod
-    def _from_id(self, note_id: str, session: Session = None):
+    def _from_id(cls, note_id: str, session: Session = None):
         return Note(note_id=note_id, session=session)
 
     @classmethod
-    def _from_model(self, model: EtapiNoteModel, session: Session = None):
+    def _from_model(cls, model: EtapiNoteModel, session: Session = None):
         return Note(note_id=model.note_id, model_backing=model, session=session)
 
     def __iadd__(
@@ -936,13 +936,23 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
         """
         parents = (
             {p for p in parent}
-            if isinstance(parent, Iterable) and not type(parent) is tuple
+            if isinstance(parent, Iterable) and type(parent) is not tuple
             else {parent}
         )
 
         self.branches.parents |= parents
 
         return self
+
+    def get(self, key: str | int, default: Any = None) -> str | Note | None:
+        """
+        Return value of first attribute with provided name, or default if not found.
+        """
+
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
     def __getitem__(self, key: str | int) -> str | Note:
         """
