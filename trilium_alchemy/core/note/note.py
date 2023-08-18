@@ -1,49 +1,37 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable, Any, IO, Literal
-from collections.abc import Iterable
-from graphlib import TopologicalSorter
-from abc import ABC, ABCMeta
-from functools import wraps, partial
-import importlib.resources
-import hashlib
 import base64
+import hashlib
+import importlib.resources
 import inspect
-import os
 import logging
+import os
+from abc import ABC, ABCMeta
+from collections.abc import Iterable, MutableMapping
+from functools import wraps
+from graphlib import TopologicalSorter
+from typing import IO, Any, Iterator, Literal, Type
 
-from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.attribute import Attribute as EtapiAttributeModel
-from trilium_client.models.create_note_def import CreateNoteDef
-from trilium_client.models.note_with_branch import NoteWithBranch
 from trilium_client.exceptions import NotFoundException
-
-from ..exceptions import *
-from ..session import Session, require_session
-from ..entity.entity import (
-    Entity,
-    EntityIdDescriptor,
-)
-from ..entity.model import (
-    Model,
-    FieldDescriptor,
-    ReadOnlyFieldDescriptor,
-    ExtensionDescriptor,
-    require_model,
-)
+from trilium_client.models.create_note_def import CreateNoteDef
+from trilium_client.models.note import Note as EtapiNoteModel
+from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..attribute import Attribute, Label, Relation
 from ..branch import Branch
-
-from .attributes import Attributes, ValueSpec
-from .branches import (
-    Parents,
-    Children,
-    Branches,
+from ..entity.entity import Entity, EntityIdDescriptor
+from ..entity.model import (
+    ExtensionDescriptor,
+    FieldDescriptor,
+    Model,
+    ReadOnlyFieldDescriptor,
+    require_model,
 )
+from ..exceptions import *
+from ..session import Session, require_session
+from .attributes import Attributes, ValueSpec
+from .branches import Branches, Children, Parents
 from .content import Content, ContentDescriptor
-
-import trilium_alchemy
 
 __all__ = [
     "Note",
@@ -161,15 +149,15 @@ class Mixin(ABC, metaclass=Meta):
     ```
     """
 
-    note_id: str = None
+    note_id: str | None = None
     """
     `note_id` to explicitly assign.
     """
 
-    note_id_seed: str = None
+    note_id_seed: str | None = None
     """
-    Seed from which to generate `note_id`. Useful to generate a 
-    collision-avoidant id from a human-friendly identifier. 
+    Seed from which to generate `note_id`. Useful to generate a
+    collision-avoidant id from a human-friendly identifier.
     Generated as base64-encoded hash of seed.
 
     If you want to fix the id of a subclassed note, it's recommended
@@ -180,7 +168,7 @@ class Mixin(ABC, metaclass=Meta):
     directly.
     """
 
-    title: str = None
+    title: str | None = None
     """
     Sets {obj}`title <Note.title>` of {obj}`Note` subclass. If `None`{l=python},
     title is set to the class's `__name__`.
@@ -204,8 +192,8 @@ class Mixin(ABC, metaclass=Meta):
 
     ```{warning}
     If you move this class to a different module, it will result in a different
-    `note_id` which will break any non-declarative relations to it. To avoid 
-    changing the `note_id` you can set `note_id_seed` to the original fully 
+    `note_id` which will break any non-declarative relations to it. To avoid
+    changing the `note_id` you can set `note_id_seed` to the original fully
     qualified class name.
     ```
     """
@@ -213,22 +201,22 @@ class Mixin(ABC, metaclass=Meta):
     leaf = False
     """
     If set to `True`{l=python} on a {obj}`Note` subclass, disables setting
-    of child notes declaratively, allowing children to be manually 
-    maintained by the user. Otherwise, notes added by the user will be 
+    of child notes declaratively, allowing children to be manually
+    maintained by the user. Otherwise, notes added by the user will be
     deleted to match the children added declaratively.
 
     Should be set on notes intended to hold user notes, e.g. todo lists.
 
-    If `False`{l=python} and `note_id` is deterministically generated (e.g. 
-    it's a singleton or child of a singleton), a label 
-    `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy. 
-    This enables hiding of the "Add child note" button in Trilium's UI 
+    If `False`{l=python} and `note_id` is deterministically generated (e.g.
+    it's a singleton or child of a singleton), a label
+    `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy.
+    This enables hiding of the "Add child note" button in Trilium's UI
     via the {obj}`AppCss` note added by {obj}`BaseRootSystem`.
     """
 
-    content_file: str = None
+    content_file: str | None = None
     """
-    Name of file to use as content, relative to module's location. Also adds 
+    Name of file to use as content, relative to module's location. Also adds
     `#originalFilename` label.
 
     ```{note}
@@ -244,7 +232,7 @@ class Mixin(ABC, metaclass=Meta):
     of that template in the UI since the cssClass would be inherited as well.
 
     This is a simple way to work around that by forcing this note to act as
-    a leaf note for the purpose of checking whether to add the cssClass, 
+    a leaf note for the purpose of checking whether to add the cssClass,
     even though we still want to maintain the template itself declaratively.
     """
 
@@ -396,11 +384,8 @@ class Mixin(ABC, metaclass=Meta):
         assert cls is not None
 
         # get path to content from class
-
         module = inspect.getmodule(cls)
-
-        content_path: str = None
-
+        content_path: str | None = None
         try:
             # assume we're in a package context
             # (e.g. trilium_alchemy installation)
@@ -578,7 +563,7 @@ class NoteModel(Model):
     }
 
 
-class Note(Entity[NoteModel], Mixin, metaclass=Meta):
+class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     """
     Encapsulates a note and provides a base class for declarative notes.
 
@@ -944,16 +929,6 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
 
         return self
 
-    def get(self, key: str | int, default: Any = None) -> str | Note | None:
-        """
-        Return value of first attribute with provided name, or default if not found.
-        """
-
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
     def __getitem__(self, key: str | int) -> str | Note:
         """
         Return value of first attribute with provided name.
@@ -975,11 +950,35 @@ class Note(Entity[NoteModel], Mixin, metaclass=Meta):
     def __setitem__(self, key: str | int, value_spec: ValueSpec):
         """
         Create or update attribute with provided name.
+
+        :param key: Attribute name
+        :param value_spec: Attribute value
         """
         self.attributes[key] = value_spec
 
-    def __contains__(self, key: str) -> bool:
-        return key in self.attributes._name_map
+    def __delitem__(self, key: str | int):
+        """
+        Delete attribute with provided name.
+
+        :param key: Attribute name
+        """
+        for attr in self.attributes.owned._name_map[key]:
+            attr.delete()
+        del self.attributes[key]
+
+    def __iter__(self) -> Iterator[list[Attribute]]:
+        """
+        Iterate over attributes.
+
+        :return: Iterator over attributes
+        """
+        yield from self.attributes._name_map
+
+    def __len__(self) -> int:
+        """
+        Number of attributes.
+        """
+        return len(self.attributes)
 
     def export_zip(
         self,

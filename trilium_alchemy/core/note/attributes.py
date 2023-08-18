@@ -192,7 +192,7 @@ class OwnedAttributes(NameMap, List[attribute.Attribute]):
                     setattr(attr, key, kwargs[key])
         else:
             # attributes.owned[index]: invoke superclass
-            super().__setitem__(key, value)
+            super().__setitem__(key, value_spec)
 
     def __delitem__(self, key: str):
         """
@@ -219,7 +219,7 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     Raises {obj}`ReadOnlyError` upon attempt to modify.
     """
 
-    _list: list[Attribute] = None
+    _list: list[Attribute] = []
 
     def _setattr(self, value: Any):
         raise ReadOnlyError(
@@ -268,7 +268,7 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
             self._list = list_sorted
 
     def _teardown(self):
-        self._list = None
+        self._list = []
 
     def __len__(self):
         return len(self._list)
@@ -375,13 +375,13 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
 
     owned: OwnedAttributes = ExtensionDescriptor("_owned")
     """
-    Same interface as {obj}`Note.attributes` but filtered by 
+    Same interface as {obj}`Note.attributes` but filtered by
     owned attributes.
     """
 
     inherited: InheritedAttributes = ExtensionDescriptor("_inherited")
     """
-    Same interface as {obj}`Note.attributes` but filtered by 
+    Same interface as {obj}`Note.attributes` but filtered by
     inherited attributes.
     """
 
