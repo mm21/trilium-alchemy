@@ -936,7 +936,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
     def __getitem__(self, key: str) -> str | Note:
         """
-        Return value of first attribute with provided name or index.
+        Return value of first attribute with provided name.
 
         :raises KeyError: No such attribute
         """
@@ -954,7 +954,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
     def __setitem__(self, key: str, value_spec: ValueSpec):
         """
-        Create or update attribute with provided name or index.
+        Create or update attribute with provided name.
 
         :param key: Attribute name
         :param value_spec: Attribute value
@@ -962,7 +962,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         self.attributes[key] = value_spec
 
     def __hash__(self):
-        return hash(self.note_id)
+        return id(self)
 
     def __eq__(self, other):
         if isinstance(other, Note):

@@ -219,7 +219,7 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     Raises {obj}`ReadOnlyError` upon attempt to modify.
     """
 
-    _list: list[Attribute] = []
+    _list: list[Attribute] = None
 
     def _setattr(self, value: Any):
         raise ReadOnlyError(
@@ -268,10 +268,12 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
             self._list = list_sorted
 
     def _teardown(self):
-        self._list = []
+        self._list = None
 
     def __len__(self):
-        return len(self._list)
+        if self._list:
+            return len(self._list)
+        return 0
 
     def __setitem__(self, key: str | int, value: Any):
         raise ReadOnlyError(
@@ -284,6 +286,8 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
         )
 
     def __iter__(self):
+        if self._list is None:
+            return
         yield from self._list
 
 
