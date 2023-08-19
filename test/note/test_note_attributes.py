@@ -33,7 +33,9 @@ def test_del(session: Session, note: Note):
     assert note.attributes["Label3"][0].value == "Value"
 
     del note["Label3"]
+    assert len(note) == 0
     assert "Label3" not in note
+
     with pytest.raises(KeyError):
         _ = note["Label3"]
 
@@ -82,21 +84,6 @@ def test_iter(session: Session, note: Note):
         ("Label8", "Value8"),
         ("Label9", "Value9"),
     ]
-
-
-def test_index(session: Session, note: Note):
-    # index Label
-    note["Label10"] = "Value10"
-    note["Label11"] = "Value11"
-    note.flush()
-
-    assert len(note) == 2
-
-    del note[0]
-    note.flush()
-
-    assert len(note) == 1
-    assert list(note.keys()) == ["Label11"]
 
 
 # TODO: test multiple value Label

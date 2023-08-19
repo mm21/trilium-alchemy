@@ -20,13 +20,18 @@ from trilium_client.models.note_with_branch import NoteWithBranch
 from ..attribute import Attribute, Label, Relation
 from ..branch import Branch
 from ..entity.entity import Entity, EntityIdDescriptor
+
+# isort: off
 from ..entity.model import (
-    ExtensionDescriptor,
-    FieldDescriptor,
     Model,
+    FieldDescriptor,
     ReadOnlyFieldDescriptor,
+    ExtensionDescriptor,
     require_model,
 )
+
+# isort: on
+
 from ..exceptions import *
 from ..session import Session, require_session
 from .attributes import Attributes, ValueSpec
@@ -929,7 +934,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         return self
 
-    def __getitem__(self, key: str | int) -> str | Note:
+    def __getitem__(self, key: str) -> str | Note:
         """
         Return value of first attribute with provided name or index.
 
@@ -947,7 +952,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             else:
                 return attr.value
 
-    def __setitem__(self, key: str | int, value_spec: ValueSpec):
+    def __setitem__(self, key: str, value_spec: ValueSpec):
         """
         Create or update attribute with provided name or index.
 
@@ -965,17 +970,18 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         else:
             return False
 
-    def __delitem__(self, key: str | int):
+    def __delitem__(self, key: str):
         """
-        Delete attribute with provided name or index.
+        Delete owned attributes with provided name.
 
         :param key: Attribute name
+        :raises KeyError: No such attribute
         """
         del self.attributes.owned[key]
 
     def __iter__(self) -> Iterator:
         """
-        Iterate over attributes.
+        Iterate over owned and inherited attribute names.
 
         :return: Iterator over attributes
         """
@@ -983,7 +989,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
     def __len__(self) -> int:
         """
-        Number of attributes.
+        Number of owned and inherited attributes.
         """
         return len(self.attributes._name_map)
 
