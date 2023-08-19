@@ -931,7 +931,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
     def __getitem__(self, key: str | int) -> str | Note:
         """
-        Return value of first attribute with provided name.
+        Return value of first attribute with provided name or index.
 
         :raises KeyError: No such attribute
         """
@@ -949,24 +949,31 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
     def __setitem__(self, key: str | int, value_spec: ValueSpec):
         """
-        Create or update attribute with provided name.
+        Create or update attribute with provided name or index.
 
         :param key: Attribute name
         :param value_spec: Attribute value
         """
         self.attributes[key] = value_spec
 
+    def __hash__(self):
+        return hash(self.note_id)
+
+    def __eq__(self, other):
+        if isinstance(other, Note):
+            return self.note_id == other.note_id
+        else:
+            return False
+
     def __delitem__(self, key: str | int):
         """
-        Delete attribute with provided name.
+        Delete attribute with provided name or index.
 
         :param key: Attribute name
         """
-        for attr in self.attributes.owned._name_map[key]:
-            attr.delete()
-        del self.attributes[key]
+        del self.attributes.owned[key]
 
-    def __iter__(self) -> Iterator[list[Attribute]]:
+    def __iter__(self) -> Iterator:
         """
         Iterate over attributes.
 
@@ -978,7 +985,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         """
         Number of attributes.
         """
-        return len(self.attributes)
+        return len(self.attributes._name_map)
 
     def export_zip(
         self,
