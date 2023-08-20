@@ -170,7 +170,7 @@ class Attribute(Entity[AttributeModel], ABC):
 
         # set owning note if we know it already (generally just for declarative
         # usage to generate deterministic id)
-        if owning_note:
+        if owning_note is not None:
             self._note = owning_note
 
         # set fields if not getting from database

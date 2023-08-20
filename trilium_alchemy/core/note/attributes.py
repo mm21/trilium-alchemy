@@ -271,9 +271,7 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
         self._list = None
 
     def __len__(self):
-        if self._list:
-            return len(self._list)
-        return 0
+        return len(self._list)
 
     def __setitem__(self, key: str | int, value: Any):
         raise ReadOnlyError(
@@ -286,8 +284,6 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
         )
 
     def __iter__(self):
-        if self._list is None:
-            return
         yield from self._list
 
 
