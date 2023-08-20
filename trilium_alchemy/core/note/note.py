@@ -965,10 +965,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return id(self)
 
     def __eq__(self, other):
-        if isinstance(other, Note):
-            return self.note_id == other.note_id
-        else:
-            return False
+        return self is other
 
     def __delitem__(self, key: str):
         """
