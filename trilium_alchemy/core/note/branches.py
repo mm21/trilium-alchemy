@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..exceptions import *
-from ..entity import Entity
+from ..entity.entity import Entity, normalize_entities
 from ..entity.model import Extension, ExtensionDescriptor
 from .. import branch
 from .. import note
@@ -312,11 +312,7 @@ class Parents(NoteExtension, MutableSet):
         note.parents += branch_spec
         """
 
-        parents = (
-            {p for p in parent}
-            if isinstance(parent, Iterable) and not type(parent) is tuple
-            else {parent}
-        )
+        parents = normalize_entities(parent, collection_cls=set)
 
         self._note.branches.parents |= parents
 
@@ -376,11 +372,7 @@ class Children(NoteExtension, MutableSequence):
         note.children += branch_spec
         """
 
-        children = (
-            [e for e in child]
-            if isinstance(child, Iterable) and not isinstance(child, tuple)
-            else [child]
-        )
+        children = normalize_entities(child)
 
         self._note.branches.children += children
 

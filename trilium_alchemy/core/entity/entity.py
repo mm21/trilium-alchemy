@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import overload, TypeVar, Generic, Type, Any, Generator
 from abc import ABC, ABCMeta, abstractmethod
 from graphlib import TopologicalSorter
+from collections.abc import Iterable
 import inspect
 import logging
 
@@ -525,3 +526,23 @@ class EntityIdDescriptor:
 
     def __set__(self, ent, val):
         raise ReadOnlyError("_entity_id", ent)
+
+
+def normalize_entities(
+    entities: Entity | Iterable[Entity], collection_cls=list
+) -> Iterable[Entity]:
+    """
+    Take an entity or iterable of entities and return an iterable.
+    Also supports tuples, e.g. (child, "prefix")
+    """
+
+    if (
+        isinstance(entities, Iterable)
+        and not isinstance(entities, tuple)
+        and not isinstance(entities, Entity)
+    ):
+        # have iterable
+        return entities
+    else:
+        # have single entity, but put in list first since Note is iterable
+        return collection_cls([entities])

@@ -19,7 +19,7 @@ from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..attribute import Attribute, Label, Relation
 from ..branch import Branch
-from ..entity.entity import Entity, EntityIdDescriptor
+from ..entity.entity import Entity, EntityIdDescriptor, normalize_entities
 
 # isort: off
 from ..entity.model import (
@@ -755,9 +755,9 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         title: str = "new note",
         note_type: str = "text",
         mime: str = "text/html",
-        parents: set[Note | Branch] | Note | Branch = None,
-        children: list[Note | Branch] = None,
-        attributes: list[Attribute] = None,
+        parents: Iterable[Note | Branch] | Note | Branch = None,
+        children: Iterable[Note | Branch] = None,
+        attributes: Iterable[Attribute] = None,
         content: str | bytes | IO = None,
         note_id: str = None,
         template: Note | Type[Note] = None,
@@ -785,8 +785,8 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             logging.warning(f"Unexpected kwargs: {kwargs}")
 
         # normalize args
-        if parents and not isinstance(parents, Iterable):
-            parents = {parents}
+        if parents is not None:
+            parents = normalize_entities(parents)
 
         init_done = self._init_done
 
@@ -883,11 +883,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         or iterable of any combination.
         """
 
-        entities = (
-            entity
-            if isinstance(entity, Iterable) and not isinstance(entity, tuple)
-            else [entity]
-        )
+        entities = normalize_entities(entity)
 
         for entity in entities:
             if isinstance(entity, Attribute):
@@ -924,11 +920,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-        parents = (
-            {p for p in parent}
-            if isinstance(parent, Iterable) and type(parent) is not tuple
-            else {parent}
-        )
+        parents = normalize_entities(parent, collection_cls=set)
 
         self.branches.parents |= parents
 
@@ -1175,7 +1167,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         elif cls.singleton:
             # get id from class name
             return id_hash(cls_name)
-        elif parent:
+        elif parent is not None:
             # not declared as singleton, but possibly created by
             # singleton parent, so try to generate deterministic id
             return parent._derive_id(Note, cls_name)
