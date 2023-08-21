@@ -4,5 +4,6 @@
 .env
 .venv
 .sconsign.dblite
+.history
 build
 dist
