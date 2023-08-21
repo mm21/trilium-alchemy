@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "trilium-alchemy"
-version = "0.1.6"
+version = "0.1.7"
 description = "Python SDK and CLI toolkit for Trilium Notes"
 authors = ["mm21 <mm21.apps@gmail.com>"]
 readme = "README.pypi.md"
