@@ -203,7 +203,7 @@ class Mixin(ABC, metaclass=Meta):
     ```
     """
 
-    leaf = False
+    leaf: bool = False
     """
     If set to `True`{l=python} on a {obj}`Note` subclass, disables setting
     of child notes declaratively, allowing children to be manually
