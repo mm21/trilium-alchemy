@@ -40,8 +40,8 @@ def test_index_get(session: Session, note: Note):
 def test_index_set(session: Session, note: Note):
     assert "label1" not in note.attributes
 
-    # create attribute implicitly
-    note["label1"] = "value1"
+    # create list of attributes
+    note.attributes = [Label("label1", "value1", session=session)]
     assert len(note.attributes["label1"]) == 1
     assert note["label1"] == "value1"
 
@@ -56,8 +56,11 @@ def test_index_set(session: Session, note: Note):
     note.attributes[0].value = "value3"
     assert label1.value == "value3"
 
-    note["label2"] = "value1"
-    assert note["label2"] == "value1"
+    session.flush()
+
+    # replace with different attribute
+    note.attributes.owned[0] = Label("label1-2", session=session)
+    assert note.attributes.owned[0].name == "label1-2"
 
     session.flush()
 

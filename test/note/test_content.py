@@ -3,22 +3,18 @@ from pytest import mark
 from trilium_alchemy import *
 
 
-"""
-Get content of empty note and verify empty string.
-"""
-
-
 def test_text_empty(session: Session, note: Note):
+    """
+    Get content of empty note and verify empty string.
+    """
     assert note._is_clean
     assert note.content == ""
 
 
-"""
-Set note text content using note.content interface.
-"""
-
-
 def test_text(session: Session, note: Note):
+    """
+    Set note text content using note.content interface.
+    """
     TEXT = "<p>Hello world</p>"
 
     note.content = TEXT
@@ -62,14 +58,12 @@ def test_text(session: Session, note: Note):
     assert note._content._backing.blob is not None
 
 
-"""
-Set note binary content using note.content interface.
-"""
-
-
 @mark.note_type("file")
 @mark.note_mime("application/octet-stream")
 def test_bin(session: Session, note: Note):
+    """
+    Set note binary content using note.content interface.
+    """
     assert note.note_type == "file"
     assert note.mime == "application/octet-stream"
 
