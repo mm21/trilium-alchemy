@@ -140,13 +140,20 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
 
     assert session.dirty_count == 5
 
+    # flush note1 and its label1
     note1.flush()
 
-    assert session.dirty_count == 1
+    assert session.dirty_count == 3
     assert note2.attributes["label1"][0]._is_dirty
 
     note2.flush()
+
+    assert session.dirty_count == 2
     assert note2.attributes["label1"][0]._is_clean
+
+    branch.flush()
+    parent_branch.flush()
+    assert session.dirty_count == 0
 
 
 # Build note tree to ensure dependencies are handled correctly when flushing
