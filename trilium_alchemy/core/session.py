@@ -8,6 +8,7 @@ Eventually will be generalized to accommodate different types of sessions:
 
 from __future__ import annotations
 
+from enum import Enum, auto
 from typing import overload, TypeVar, Generic, Type, Callable, Literal
 from collections.abc import Iterable
 from functools import wraps
@@ -55,6 +56,18 @@ def etapi_helper(func):
     return wrapper
 
 
+class SessionType(Enum):
+    """
+    Type of session.
+    """
+
+    ETAPI = auto()
+    """Interface to Trilium server"""
+
+    FILE = auto()
+    """Interface to filesystem"""
+
+
 class Session:
     """
     Interface to Trilium and context in which to store changes to entities.
@@ -66,8 +79,15 @@ class Session:
     user guide.
     """
 
+    _type = SessionType.ETAPI
+    """
+    Type of session.
+    """
+
     _host: str
-    """Host as configured by user."""
+    """
+    Host as configured by user.
+    """
 
     _token: str
     """

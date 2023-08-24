@@ -4,7 +4,6 @@ from typing import overload, TypeVar, Generic, Type, Any, Generator
 from abc import ABC, ABCMeta, abstractmethod
 from graphlib import TopologicalSorter
 from collections.abc import Iterable
-import inspect
 import logging
 
 from pydantic import BaseModel
@@ -129,9 +128,9 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         # which instantiate it (set as target of relation)
         self._init_done = True
 
-        ModelContainer.__init__(self, self._model_cls(self))
         self._session = session
         self._state = State.CLEAN
+        ModelContainer.__init__(self, self._model_cls(self))
 
         if entity_id is None:
             # set create flag if no entity_id provided
@@ -251,8 +250,7 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         """
         self._session._cache.flush({self})
 
-    # TODO: override by Note to include attributes and branches?
-    # TODO: if create, don't allow invalidate or act as alias for delete?
+    # TODO: override for Note, include attributes
     def invalidate(self) -> None:
         """
         Discard cached contents and user-provided data for this object.
@@ -304,50 +302,6 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         self.invalidate()
         self._model.setup(model_backing=model, create=False)
 
-    # TODO: owned by model, subclass for etapi/filesystem
-    def _flush_model(
-        self, sorter: TopologicalSorter
-    ) -> tuple[BaseModel | None, Generator | None]:
-        """
-        Flush model if any fields are changed.
-        """
-
-        if self._state in [State.CREATE, State.UPDATE]:
-            # if creating or updating, invoke flush prep
-            self._flush_prep()
-
-        # get flush method based on state
-        func = {
-            State.CREATE: self._flush_create,
-            State.UPDATE: self._flush_update,
-            State.DELETE: self._flush_delete,
-        }[self._state]
-
-        # invoke flush method
-        model_new: BaseModel | None
-        if inspect.isgeneratorfunction(func):
-            # generator function: yields model, then performs extra processing
-            gen = func(sorter)
-            model_new = next(gen)
-        else:
-            # not generator function: just returns model
-            gen = None
-            model_new = func(sorter)
-
-        # ensure we got the updated model
-        if self._state in [State.CREATE, State.UPDATE]:
-            assert model_new is not None
-        else:
-            assert model_new is None
-
-        if self._state is State.CREATE:
-            # set entity id if needed
-            if self._entity_id is None:
-                entity_id = getattr(model_new, self._model.field_entity_id)
-                self._set_entity_id(entity_id)
-
-        return (model_new, gen)
-
     def _flush(self, sorter: TopologicalSorter) -> None:
         """
         Commit changes to Trilium database for this object.
@@ -358,29 +312,32 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         model_new: BaseModel | None = None
         gen: Generator | None = None
 
-        if (
-            self._state in {State.CREATE, State.DELETE}
-            or self._model.fields_changed
-        ):
-            # bail out if deleting an entity which never got created
-            if self._is_abandoned:
-                pass
-            elif self._is_orphan:
-                # TODO: specify which dependency was abandoned
-                logging.warning(
-                    f"Orphaned entity not being flushed since a dependency was abandoned: {self.str_summary}"
-                )
-                pass
-            else:
-                try:
-                    model_new, gen = self._flush_model(sorter)
-                except (NotFoundException, ApiException) as e:
-                    logging.warning(
-                        f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
-                    )
+        assert self._is_dirty
 
-        if self._state is not State.DELETE and self._model.extension_changed:
-            self._model.flush_extensions()
+        if self._is_abandoned:
+            # bail out if deleting an entity which never got created
+            pass
+        elif self._is_orphan:
+            # bail out if a dependency was abandoned
+            # TODO: specify which dependency was abandoned
+            logging.warning(
+                f"Orphaned entity not being flushed since a dependency was abandoned: {self.str_summary}"
+            )
+        else:
+            try:
+                # flush model if it has pending changes
+                if (
+                    self._state in {State.CREATE, State.DELETE}
+                    or self._model.fields_changed
+                ):
+                    model_new, gen = self._model.flush(sorter)
+            except (NotFoundException, ApiException) as e:
+                logging.warning(
+                    f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
+                )
+            else:
+                if self._state is not State.DELETE:
+                    self._model.flush_extensions()
 
         # mark as clean
         self._set_clean()
@@ -481,22 +438,6 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         Upon invalid state, should raise AssertionError with useful
         description of problem.
         """
-        ...
-
-    @abstractmethod
-    def _flush_create(self, sorter: TopologicalSorter) -> None:
-        ...
-
-    @abstractmethod
-    def _flush_update(self, sorter: TopologicalSorter) -> None:
-        ...
-
-    @abstractmethod
-    def _flush_delete(self, sorter: TopologicalSorter) -> None:
-        ...
-
-    @abstractmethod
-    def _fetch(self) -> ModelT | None:
         ...
 
     def _flush_prep(self) -> None:

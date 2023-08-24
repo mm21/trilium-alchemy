@@ -3,10 +3,14 @@ from __future__ import annotations
 from typing import Type, Any, Callable
 from abc import ABC, abstractmethod
 from functools import wraps
+from graphlib import TopologicalSorter
+import inspect
+import logging
 
 from pydantic import BaseModel
 
 from ..exceptions import *
+from ..session import Session, SessionType
 
 from . import entity as entity_abc
 from .types import State
@@ -23,6 +27,49 @@ def require_model(func):
     return wrapper
 
 
+class Driver(ABC):
+    """
+    Implements interface to backing note storage, either to Trilium itself
+    (through ETAPI) or a filesystem.
+    """
+
+    entity: entity_abc.Entity = None
+
+    session: Session = None
+
+    def __init__(self, entity):
+        self.entity = entity
+        self.session = entity.session
+
+    @abstractmethod
+    def fetch(self) -> BaseModel | None:
+        """
+        Retrieve model from backing storage, or None if it doesn't exist.
+        """
+        ...
+
+    @abstractmethod
+    def flush_create(self, sorter: TopologicalSorter):
+        """
+        Create entity.
+        """
+        ...
+
+    @abstractmethod
+    def flush_update(self, sorter: TopologicalSorter):
+        """
+        Update entity.
+        """
+        ...
+
+    @abstractmethod
+    def flush_delete(self, sorter: TopologicalSorter):
+        """
+        Delete entity.
+        """
+        ...
+
+
 class Model(ABC):
     """
     Abstraction of data model which is stored as a record in Trilium's
@@ -31,7 +78,13 @@ class Model(ABC):
     """
 
     # pydantic model used in etapi
-    etapi_model: Type[BaseModel]
+    etapi_model: Type[BaseModel] = None
+
+    # class to interface with ETAPI
+    etapi_driver_cls: Type[Driver] = None
+
+    # class to interface with filesystem
+    file_driver_cls: Type[Driver] = None
 
     # mapping of alias to field name
     fields_alias: dict[str, str] = None
@@ -45,24 +98,37 @@ class Model(ABC):
     # entity owning this object
     entity: entity_abc.Entity = None
 
-    # cached data fetched from database
+    # cached data fetched from backing storage
     _backing: dict[str, str | int | bool] = None
 
-    # locally modified or created data, not committed to database
+    # locally modified or created data, not committed to backing storage
     _working: dict[str, str | int | bool] = None
 
     # whether model setup was completed (populating data from server)
     _setup_done: bool = False
 
-    # whether object exists in database (None if unknown)
+    # whether object exists in backing storage (None if unknown)
     _exists: bool | None = None
 
     # list of stateful extensions registered by subclass
     _extensions: list[StatefulExtension] = None
 
+    # driver to interface with backing storage, or None
+    # if in-memory only (for VirtualSession)
+    _driver: Driver | None = None
+
     def __init__(self, entity: entity_abc.Entity):
         self.entity = entity
         self._extensions = list()
+
+        # select driver based on session type and instantiate
+        driver_map = {
+            SessionType.ETAPI: self.etapi_driver_cls,
+            SessionType.FILE: self.file_driver_cls,
+        }
+
+        if entity.session._type in driver_map:
+            self._driver = driver_map[entity.session._type](entity)
 
     def __str__(self):
         fields = list()
@@ -118,6 +184,51 @@ class Model(ABC):
     @property
     def _nexists(self) -> bool:
         return self._exists is False and self._setup_done
+
+    def flush(
+        self, sorter: TopologicalSorter
+    ) -> tuple[BaseModel | None, Generator | None]:
+        """
+        Flush model if any fields are changed.
+        """
+
+        if self.entity._state in [State.CREATE, State.UPDATE]:
+            # if creating or updating, invoke flush prep
+            self.entity._flush_prep()
+
+        assert self._driver is not None
+
+        # get flush method based on state
+        func = {
+            State.CREATE: self._driver.flush_create,
+            State.UPDATE: self._driver.flush_update,
+            State.DELETE: self._driver.flush_delete,
+        }[self.entity._state]
+
+        # invoke flush method
+        model_new: BaseModel | None
+        if inspect.isgeneratorfunction(func):
+            # generator function: yields model, then performs extra processing
+            gen = func(sorter)
+            model_new = next(gen)
+        else:
+            # not generator function: just returns model
+            gen = None
+            model_new = func(sorter)
+
+        # ensure we got the updated model
+        if self.entity._state in [State.CREATE, State.UPDATE]:
+            assert model_new is not None
+        else:
+            assert model_new is None
+
+        if self.entity._state is State.CREATE:
+            # set entity id if needed
+            if self.entity._entity_id is None:
+                entity_id = getattr(model_new, self.field_entity_id)
+                self.entity._set_entity_id(entity_id)
+
+        return (model_new, gen)
 
     @property
     def fields_changed(self) -> bool:
@@ -215,7 +326,7 @@ class Model(ABC):
         else:
             # attempt to fetch from database if not provided
             if model_backing is None:
-                model_backing = self.entity._fetch()
+                model_backing = self._driver.fetch()
 
             if model_backing is None:
                 self._backing = None
@@ -362,9 +473,9 @@ class ModelContainer:
     """
 
     # instance of Model
-    _model = None
+    _model: Model = None
 
-    def __init__(self, model):
+    def __init__(self, model: Model):
         self._model = model
 
 

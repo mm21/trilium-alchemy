@@ -9,13 +9,9 @@ import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
-from graphlib import TopologicalSorter
 from typing import IO, Any, Iterator, Literal, Type
 
-from trilium_client.exceptions import NotFoundException
-from trilium_client.models.create_note_def import CreateNoteDef
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..attribute import Attribute, Label, Relation
 from ..branch import Branch
@@ -37,6 +33,7 @@ from ..session import Session, require_session
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
 from .content import Content, ContentDescriptor
+from .model import NoteModel
 
 __all__ = [
     "Note",
@@ -81,6 +78,103 @@ def is_string(note_type: str, mime: str) -> bool:
         note_type in STRING_NOTE_TYPES
         or mime.startswith("text/")
         or mime in STRING_MIME_TYPES
+    )
+
+
+def require_note_id(func):
+    # ent: may be cls or self
+    @wraps(func)
+    def _declarative_note_id(ent, *args, **kwargs):
+        if "note_id" not in kwargs:
+            kwargs["note_id"] = None
+
+        # get declarative note id
+        if kwargs["note_id"] is None:
+            kwargs["note_id"] = get_cls(ent)._get_decl_id()
+            note_id = kwargs["note_id"]
+
+        return func(ent, *args, **kwargs)
+
+    return _declarative_note_id
+
+
+def patch_init(init, doc: str = None):
+    """
+    Insert provided init function in class's declarative init sequence.
+    """
+
+    def _patch_init(cls):
+        init_decl_old = cls._init_decl
+
+        @wraps(init_decl_old)
+        def _init_decl(self, cls_decl, *, attributes, children):
+            if cls is cls_decl:
+                # invoke init patch
+                init(self, attributes=attributes, children=children)
+
+                # invoke old init
+                init_decl_old(
+                    self, cls_decl, attributes=attributes, children=children
+                )
+
+        cls._init_decl = _init_decl
+
+        if doc:
+            # append to docstring
+            cls._decorator_doc.append(doc)
+
+        return cls
+
+    return _patch_init
+
+
+def id_hash(seed: str) -> str:
+    """
+    Return id given seed. Needed to ensure IDs have a consistent amount of
+    entropy by all being of the same length and character distribution.
+
+    Note: there is a small loss in entropy due to mapping the characters '+'
+    and '/' to 'a' and 'b' respectively. This is required since these are not
+    allowable characters in Trilium and will result in a slight bias,
+    compromising cryptographic properties, but it's inconsequential
+    for this application.
+
+    They could be replaced with e.g. 'aa', 'ab' to restore cryptographic
+    entropy, but at the cost of making IDs inconsistent lengths.
+    """
+    hex_string = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
+    byte_string = bytes.fromhex(hex_string)
+    condensed_string = (
+        base64.b64encode(byte_string)
+        .decode("utf-8")
+        .replace("=", "")
+        .replace("+", "a")
+        .replace("/", "b")
+    )
+    return condensed_string
+
+
+def get_cls(ent: Note | Type[Note]) -> Type[Note]:
+    """
+    Check if note is a class or instance and return the class.
+    """
+    if type(ent) is Meta:
+        # have class
+        return ent
+    else:
+        # have instance
+        return type(ent)
+
+
+def is_inherited(cls: Type[Mixin], attr: str) -> bool:
+    """
+    Check if given attribute is inherited from superclass (True) or defined on this
+    class (False).
+    """
+    value = getattr(cls, attr)
+    return any(
+        value is getattr(cls_super, attr, object())
+        for cls_super in cls.__bases__
     )
 
 
@@ -424,148 +518,6 @@ class Mixin(ABC, metaclass=Meta):
 
         mode = "r" if self.is_string else "rb"
         return open(content_path, mode)
-
-
-def patch_init(init, doc: str = None):
-    """
-    Insert provided init function in class's declarative init sequence.
-    """
-
-    def _patch_init(cls):
-        init_decl_old = cls._init_decl
-
-        @wraps(init_decl_old)
-        def _init_decl(self, cls_decl, *, attributes, children):
-            if cls is cls_decl:
-                # invoke init patch
-                init(self, attributes=attributes, children=children)
-
-                # invoke old init
-                init_decl_old(
-                    self, cls_decl, attributes=attributes, children=children
-                )
-
-        cls._init_decl = _init_decl
-
-        if doc:
-            # append to docstring
-            cls._decorator_doc.append(doc)
-
-        return cls
-
-    return _patch_init
-
-
-"""
-TODO: have list of valid types, validate using custom descriptor
-for note_type
-class NoteType(StrEnum):
-    text = auto()
-    code = auto()
-    render = auto()
-    file = auto()
-    image = auto()
-    search = auto()
-    relationMap = auto()
-    book = auto()
-    noteMap = auto()
-    mermaid = auto()
-    webView = auto()
-    shortcut = auto()
-    doc = auto()
-    contentWidget = auto()
-    launcher = auto()
-"""
-
-
-def id_hash(seed: str) -> str:
-    """
-    Return id given seed. Needed to ensure IDs have a consistent amount of
-    entropy by all being of the same length and character distribution.
-
-    Note: there is a small loss in entropy due to mapping the characters '+'
-    and '/' to 'a' and 'b' respectively. This is required since these are not
-    allowable characters in Trilium and will result in a slight bias,
-    compromising cryptographic properties, but it's inconsequential
-    for this application.
-
-    They could be replaced with e.g. 'aa', 'ab' to restore cryptographic
-    entropy, but at the cost of making IDs inconsistent lengths.
-    """
-    hex_string = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
-    byte_string = bytes.fromhex(hex_string)
-    condensed_string = (
-        base64.b64encode(byte_string)
-        .decode("utf-8")
-        .replace("=", "")
-        .replace("+", "a")
-        .replace("/", "b")
-    )
-    return condensed_string
-
-
-def get_cls(ent: Note | Type[Note]) -> Type[Note]:
-    """
-    Check if note is a class or instance and return the class.
-    """
-    if type(ent) is Meta:
-        # have class
-        return ent
-    else:
-        # have instance
-        return type(ent)
-
-
-def is_inherited(cls: Type[Mixin], attr: str) -> bool:
-    """
-    Check if given attribute is inherited from superclass (True) or defined on this
-    class (False).
-    """
-    value = getattr(cls, attr)
-    return any(
-        value is getattr(cls_super, attr, object())
-        for cls_super in cls.__bases__
-    )
-
-
-def require_note_id(func):
-    # ent: may be cls or self
-    @wraps(func)
-    def _declarative_note_id(ent, *args, **kwargs):
-        if "note_id" not in kwargs:
-            kwargs["note_id"] = None
-
-        # get declarative note id
-        if kwargs["note_id"] is None:
-            kwargs["note_id"] = get_cls(ent)._get_decl_id()
-            note_id = kwargs["note_id"]
-
-        return func(ent, *args, **kwargs)
-
-    return _declarative_note_id
-
-
-class NoteModel(Model):
-    etapi_model = EtapiNoteModel
-    field_entity_id = "note_id"
-
-    fields_alias = {
-        "note_type": "type",
-    }
-
-    fields_update = [
-        "title",
-        "type",
-        "mime",
-    ]
-
-    # this is where the actual defaults come from; defaults in
-    # Note.__init__ are only for documentation
-    fields_default = {
-        "title": "new note",
-        "type": "text",
-        "mime": "text/html",
-    }
 
 
 class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
@@ -1162,96 +1114,6 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         for branch in self.branches.children:
             assert branch.parent is self
-
-    def _flush_create(self, sorter: TopologicalSorter) -> EtapiNoteModel:
-        # pick first parent branch according to serialization provided by
-        # ParentBranches
-        parent_branch = self.branches.parents[0]
-
-        # ensure parent note exists (should be taken care by sorter)
-        assert parent_branch.parent._model.exists
-
-        # get note fields
-        model_dict = self._model._working.copy()
-
-        model_dict["parent_note_id"] = parent_branch.parent.note_id
-
-        # for simplicity, always init content as empty string and let
-        # content extension set content later (handling text/bin)
-        model_dict["content"] = ""
-
-        if self.note_id is not None:
-            model_dict["note_id"] = self.note_id
-
-        # assign writeable fields from branch
-        for field in parent_branch._model.fields_update:
-            model_dict[field] = parent_branch._model.get_field(field)
-
-        model = CreateNoteDef(**model_dict)
-
-        # invoke api
-        response: NoteWithBranch = self._session.api.create_note(model)
-
-        # add parent branch to cache before note is loaded
-        # (branches will be instantiated)
-        if parent_branch.branch_id is None:
-            parent_branch._set_entity_id(response.branch.branch_id)
-        else:
-            assert parent_branch.branch_id == response.branch.branch_id
-
-        # mark parent as clean
-        parent_branch._set_clean()
-
-        # if parent was added to sorter, mark it as done
-        # (it may not have been part of sorter, even though it's dirty if e.g.
-        # the user called .flush() directly)
-        try:
-            sorter.done(parent_branch)
-        except ValueError as e:
-            pass
-
-        # return note model for processing
-        yield response.note
-
-        # load parent branch model
-        parent_branch._model.setup(response.branch)
-
-    def _flush_update(self, sorter: TopologicalSorter) -> EtapiNoteModel:
-        # assemble note model based on needed fields
-        model = EtapiNoteModel(**self._model.get_fields_changed())
-
-        # invoke api and return new model
-        model_new: EtapiNoteModel = self._session.api.patch_note_by_id(
-            self.note_id, model
-        )
-        assert model_new is not None
-
-        return model_new
-
-    def _flush_delete(self, sorter: TopologicalSorter):
-        self._session.api.delete_note_by_id(self.note_id)
-
-        # mark attributes as clean
-        for attr in self.attributes.owned:
-            if attr._is_dirty:
-                attr._set_clean()
-                sorter.done(attr)
-
-        # mark child branches as clean
-        for branch in self.branches.children:
-            if branch._is_dirty:
-                branch._set_clean()
-                sorter.done(branch)
-
-    def _fetch(self) -> EtapiNoteModel | None:
-        model: EtapiNoteModel | None
-
-        try:
-            model = self._session.api.get_note_by_id(self.note_id)
-        except NotFoundException as e:
-            model = None
-
-        return model
 
     @property
     def _dependencies(self):

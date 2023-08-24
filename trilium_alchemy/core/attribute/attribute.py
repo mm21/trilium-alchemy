@@ -20,6 +20,7 @@ from ..entity.entity import (
 )
 
 from ..entity.model import (
+    Driver,
     Model,
     FieldDescriptor,
     ReadOnlyFieldDescriptor,
@@ -35,8 +36,85 @@ __all__ = [
 ]
 
 
+class AttributeDriver(Driver):
+    @property
+    def attribute(self):
+        return self.entity
+
+
+class EtapiDriver(AttributeDriver):
+    def fetch(self) -> EtapiAttributeModel | None:
+        model: EtapiAttributeModel | None
+
+        try:
+            model = self.session.api.get_attribute_by_id(
+                self.attribute.attribute_id
+            )
+        except NotFoundException as e:
+            model = None
+
+        return model
+
+    def flush_create(self, sorter: TopologicalSorter):
+        assert self.attribute._note is not None
+        assert self.attribute._note.note_id is not None
+
+        model = EtapiAttributeModel(
+            note_id=self.attribute._note.note_id,
+            type=self.attribute.attribute_type,
+            name=self.attribute.name,
+            **self.attribute._model._working,
+        )
+
+        if self.attribute.attribute_id is not None:
+            model.attribute_id = self.attribute.attribute_id
+
+        model_new = self.session.api.post_attribute(model)
+        assert model_new is not None
+
+        return model_new
+
+    def flush_update(self, sorter: TopologicalSorter):
+        # check if relation and target changed
+        relation_update = (
+            self.attribute.attribute_type == "relation"
+            and self.attribute._model.is_field_changed("value")
+        )
+
+        # is_inheritable and target note (relation type only) are considered
+        # immutable by Trilium; delete and create a new attribute if changed
+        if relation_update or self.attribute._model.is_field_changed(
+            "is_inheritable"
+        ):
+            self.flush_delete(sorter)
+            return self.flush_create(sorter)
+        else:
+            # can just use patch
+            model = EtapiAttributeModel(
+                **self.attribute._model.get_fields_changed()
+            )
+            model_new = self.session.api.patch_attribute_by_id(
+                self.attribute.attribute_id, model
+            )
+            assert model_new is not None
+
+            return model_new
+
+    def flush_delete(self, sorter: TopologicalSorter):
+        self.session.api.delete_attribute_by_id(self.attribute.attribute_id)
+
+
+class FileDriver(AttributeDriver):
+    pass
+
+
 class AttributeModel(Model):
     etapi_model = EtapiAttributeModel
+
+    etapi_driver_cls = EtapiDriver
+
+    file_driver_cls = FileDriver
+
     field_entity_id = "attribute_id"
 
     fields_update = [
@@ -249,60 +327,6 @@ class Attribute(Entity[AttributeModel], ABC):
         if self._note is not None:
             if self in self._note.attributes.owned:
                 self._note.attributes.owned.remove(self)
-
-    def _flush_create(self, sorter: TopologicalSorter):
-        assert self._note is not None
-        assert self._note.note_id is not None
-
-        model = EtapiAttributeModel(
-            note_id=self._note.note_id,
-            type=self.attribute_type,
-            name=self.name,
-            **self._model._working,
-        )
-
-        if self.attribute_id is not None:
-            model.attribute_id = self.attribute_id
-
-        model_new = self._session.api.post_attribute(model)
-        assert model_new is not None
-
-        return model_new
-
-    def _flush_update(self, sorter: TopologicalSorter):
-        # check if relation and target changed
-        relation_update = (
-            self.attribute_type == "relation"
-            and self._model.is_field_changed("value")
-        )
-
-        # is_inheritable and target note (relation type only) are considered
-        # immutable by Trilium; delete and create a new attribute if changed
-        if relation_update or self._model.is_field_changed("is_inheritable"):
-            self._flush_delete(sorter)
-            return self._flush_create(sorter)
-        else:
-            # can just use patch
-            model = EtapiAttributeModel(**self._model.get_fields_changed())
-            model_new = self._session.api.patch_attribute_by_id(
-                self.attribute_id, model
-            )
-            assert model_new is not None
-
-            return model_new
-
-    def _flush_delete(self, sorter: TopologicalSorter):
-        self._session.api.delete_attribute_by_id(self.attribute_id)
-
-    def _fetch(self) -> EtapiAttributeModel | None:
-        model: EtapiAttributeModel | None
-
-        try:
-            model = self._session.api.get_attribute_by_id(self.attribute_id)
-        except NotFoundException as e:
-            model = None
-
-        return model
 
     def _flush_check(self):
         assert self._note is not None, "Attribute not assigned to note"
