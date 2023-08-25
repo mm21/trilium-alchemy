@@ -4,7 +4,7 @@ version = "0.1.7"
 description = "Python SDK and CLI toolkit for Trilium Notes"
 authors = ["mm21 <mm21.apps@gmail.com>"]
 readme = "README.pypi.md"
-packages = [{include = "trilium_alchemy"}]
+packages = [{ include = "trilium_alchemy" }]
 documentation = "https://mm21.github.io/trilium-alchemy/"
 homepage = "https://github.com/mm21/trilium-alchemy"
 classifiers = [
@@ -19,29 +19,30 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-requests = "^2.31.0"
+python         = "^3.10"
+requests       = "^2.31.0"
 trilium-client = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.3.1"
-pytest-dependency = "^0.5.1"
-pytest-cov = "^4.1.0"
-black = "^23.3.0"
-scons = "^4.5.2"
-sphinx = "^7.0.1"
-furo = "^2023.5.20"
-myst-parser = "^2.0.0"
-python-dotenv = "^1.0.0"
-sphinx-copybutton = "^0.5.2"
-genbadge = {extras = ["all"], version = "^1.1.0"}
-sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
+black                  = "^23.3.0"
+furo                   = "^2023.5.20"
+genbadge               = { extras = ["all"], version = "^1.1.0" }
+myst-parser            = "^2.0.0"
+pydanic                = "^1.10.12"
+pytest                 = "^7.3.1"
+pytest-cov             = "^4.1.0"
+pytest-dependency      = "^0.5.1"
+python-dotenv          = "^1.0.0"
+scons                  = "^4.5.2"
+sphinx                 = "^7.0.1"
+sphinx-autodoc2        = { git = "https://github.com/mm21/sphinx-autodoc2.git" }
+sphinx-copybutton      = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
 
 [tool.black]
 line-length = 80
-include = '\.pyi?$|SConstruct$'
+include     = '\.pyi?$|SConstruct$'
 
 [build-system]
-requires = ["poetry-core"]
+requires      = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
