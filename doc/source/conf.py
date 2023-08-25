@@ -38,6 +38,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx_copybutton",
+    "sphinxcontrib.plantuml",
 ]
 
 myst_enable_extensions = [
@@ -84,6 +85,8 @@ intersphinx_mapping = {
 
 templates_path = ["_templates"]
 exclude_patterns = []
+
+plantuml_output_format = "svg_img"
 
 
 # -- Options for HTML output ---------------------------------------------------

@@ -41,4 +41,12 @@ reference/api
 reference/fs-spec
 ```
 
+```{toctree}
+:maxdepth: 2
+:caption: Development
+:hidden:
+
+dev/guide
+dev/design
+```
 % TODO: add acknowledgements
