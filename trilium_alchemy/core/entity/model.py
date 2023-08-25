@@ -506,6 +506,8 @@ class StatefulExtension(Extension):
     setup() and cleared during teardown().
     """
 
+    # TODO: driver to handle fetch, flush
+
     def __init__(self, entity: entity_abc.Entity):
         super().__init__(entity)
         entity._model.register_extension(self)
