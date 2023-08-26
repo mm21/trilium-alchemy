@@ -1,5 +1,9 @@
 # Design
 
+## Flush procedure
+
+The following captures the mechanism to commit changes to Trilium, beginning with {obj}`Session.flush`.
+
 ```{uml}
 @startuml
 
@@ -26,9 +30,9 @@ loop while sorter.is_active()
         alt entity.state is not State.CLEAN
             cache->entity ++: entity._flush(sorter)
                 alt Model is changed
-                    entity->model ++: entity._model.flush(sorter)
+                    entity->model ++: self._model.flush(sorter)
                         alt entity.state is State.CREATE
-                            model->driver ++: entity._model._driver.flush_create(sorter)
+                            model->driver ++: self._driver.flush_create(sorter)
                                 alt
                                     driver->etapi: POST /create-note
                                 else
@@ -38,7 +42,7 @@ loop while sorter.is_active()
                                 end
                             return
                         else entity.state is State.UPDATE
-                            model->driver ++: entity._model._driver.flush_update(sorter)
+                            model->driver ++: self._driver.flush_update(sorter)
                                 alt
                                     driver->etapi: PATCH /notes/{noteId}
                                 else
@@ -48,7 +52,7 @@ loop while sorter.is_active()
                                 end
                             return
                         else entity.state is State.DELETE
-                            model->driver ++: entity._model._driver.flush_delete(sorter)
+                            model->driver ++: self._driver.flush_delete(sorter)
                                 alt
                                     driver->etapi: DELETE /notes/{noteId}
                                 else

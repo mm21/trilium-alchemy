@@ -48,5 +48,6 @@ reference/fs-spec
 
 dev/guide
 dev/design
+dev/roadmap
 ```
 % TODO: add acknowledgements
