@@ -53,7 +53,7 @@ todo_include_todos = True
 todo_link_only = True
 
 autodoc2_packages = [
-    "../../trilium_alchemy",
+    "../trilium_alchemy",
 ]
 autodoc2_index_template = None
 autodoc2_render_plugin = "renderer.MystRenderer"

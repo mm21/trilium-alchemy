@@ -30,7 +30,7 @@ test_artifacts = [
 
 DOC_BUILD_DIR = f"{BUILD_DIR}/doc"
 doc_html = env.Dir(f"{DOC_BUILD_DIR}/html")
-doc_source = env.Dir("doc/source")
+doc_source = env.Dir("doc")
 
 BADGE_BUILD_DIR = "badges"
 badge_pytest = env.File(f"{BADGE_BUILD_DIR}/tests.svg")
