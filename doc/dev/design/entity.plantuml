@@ -1,0 +1,27 @@
+@startuml
+
+package trilium_alchemy.core <<Frame>> {
+  class Entity {
+  }
+
+  class Note {
+  }
+
+  class Attribute {
+  }
+
+  class Label {
+  }
+
+  class Relation {
+  }
+
+  class Branch {
+  }
+
+  Entity <|-- Note
+  Entity <|-- Attribute
+  Entity <|-- Branch
+  Attribute <|-- Label
+  Attribute <|-- Relation
+}

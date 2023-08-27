@@ -1,0 +1,10 @@
+@startuml
+
+CREATE --> CLEAN : flush()/invalidate()
+UPDATE --> CLEAN : flush()/invalidate()
+DELETE --> CLEAN : flush()/invalidate()
+CLEAN --> UPDATE : setattr()
+CLEAN --> DELETE : delete()
+CREATE --> DELETE : delete()
+
+@enduml
