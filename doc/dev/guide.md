@@ -38,18 +38,18 @@ pytest test/note/test_attributes.py::test_create
 
 ### Fixtures
 
-To get a new `Session` and a new `Note` for testing, simply create a test (function starting with `test`) which takes arguments called `session` and `note` respectively. For example:
+To get a new {obj}`Session` and a new {obj}`Note` for testing, simply create a test (function starting with `test`) which takes arguments called `session` and `note` respectively. For example:
 
 ```python
 def test_create(session: Session, note: Note):
     ...
 ```
 
-Here a new `Session` will be created, along with a new `Note`. The note is automatically deleted after the test exits.
+Here a new {obj}`Session` will be created, along with a new {obj}`Note`. The note is automatically deleted after the test exits.
 
 ### Markers
 
-Markers are useful to configure certain things about the created `Note` under test, e.g. which attributes it has. For example, `test/attribute/test_helpers.py::test_index_del` uses such a marker to create an attribute in order to test deleting it.
+Markers are useful to configure certain things about the created {obj}`Note` under test, e.g. which attributes it has. For example, `test/attribute/test_helpers.py::test_index_del` uses such a marker to create an attribute in order to test deleting it.
 
 ```python
 @mark.attribute("label1")
