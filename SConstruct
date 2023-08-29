@@ -96,8 +96,6 @@ def run_format(target, source, env):
 
     run(
         "toml-sort",
-        "--no-sort-tables",
-        "--sort-table-keys",
         "-i",
         "pyproject.toml",
     )

@@ -44,6 +44,10 @@ toml-sort = "^0.23.1"
 include = '\.pyi?$|SConstruct$'
 line-length = 80
 
+[tool.tomlsort]
+no_sort_tables = true
+sort_table_keys = true
+
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
