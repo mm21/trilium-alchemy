@@ -88,6 +88,21 @@ def run_genbadge(target, source, env):
     )
 
 
+def run_format(target, source, env):
+    run(
+        "black",
+        ".",
+    )
+
+    run(
+        "toml-sort",
+        "--no-sort-tables",
+        "--sort-table-keys",
+        "-i",
+        "pyproject.toml",
+    )
+
+
 # tests
 test = env.Command(test_artifacts, [], run_pytest, shell=True)
 env.Clean(test, test_artifacts)
@@ -105,3 +120,8 @@ badges = env.Command(
 )
 env.Clean(badges, badge_artifacts)
 env.Alias("badges", badges)
+
+# formatting
+format_ = env.Command(["format"], [], run_format, shell=True)
+env.Alias("format", format_)
+AlwaysBuild(format_)
