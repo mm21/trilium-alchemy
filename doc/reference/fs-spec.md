@@ -9,11 +9,25 @@ In general, this specification is similar to Trilium's .zip export format. Howev
 
 Folder and file names beginning with `!` are reserved for system use.
 
-## Synchronization context and state
+## Sync context
 
-A folder root is mapped to a destination note in Trilium. This mapping, along with the associated state, is called a **sync context**. There may be many sync contexts specified in a single synchronization invocation. 
+The **sync context** is comprised of a number of **sync mappings** along with a **sync state**. It has a root folder, **sync root**, on the filesystem.
 
-The combined metadata (including content signatures) of the last synced tree is required to persist from one synchronization invocation to the next. This is known as the **sync state**. It will be stored in a text file (not unlike Trilium's zip format `!!!meta.json`, but file type TBD). It is not expected to be maintained manually, but stored as text to be readily usable in version control.
+### Sync mappings
+
+A **sync mapping** specifies the following:
+
+- A folder root (subdirectory of **sync root**)
+- A Trilium note, specified by `noteId` or a label (e.g. `#myRoot`)
+
+A mapping has an associated **sync mode**:
+
+- **Mirror**: Map source to destination, overwriting the destination state to match the source
+- **Resolve**: Resolve changes in both source and destination compared to the last sync operation
+
+### Sync state
+
+The combined metadata (including content signatures) from the last sync operation is required to persist from one synchronization invocation to the next. This is known as the **sync state**. It will be stored in text format, tentatively called `!sync.json` (not unlike Trilium's zip format `!!!meta.json`). It is not expected to be maintained manually, but stored as text to be readily usable in version control.
 
 ## Notes as folders
 
@@ -52,6 +66,8 @@ For children with the same title, the folder will be appended with `!2`, `!3`, e
 
 For file-based notes, `type` and `mime` are by default derived from the file information. They may be explicitly set the metadata YAML.
 
+`title`, `type`, and/or `mime` may be explicitly provided in `!meta.yaml`, which takes precedence.
+
 Some other fields are derived, e.g. attribute and child note positions are not explicitly set. The order is optionally provided by the user (defaulting to alphabetical), but position values are calculated rather than maintained by the user.
 
 ### Attributes
@@ -60,9 +76,13 @@ Attributes are similarly captured in `!meta.yaml`. Attribute `type` is inferred 
 
 For ease of maintenance, `attributeId` is not maintained manually. The synchronization algorithm resolves attributes agnostic of `attributeId`.
 
+#### `#originalFilename` label
+
+For file-based notes, the label `#originalFilename` is automatically maintained. When syncing a note from Trilium with this label, it's used as the filename even if the title is different.
+
 ## Note id
 
-% discussion of why noteId is required to be defined for each filesystem note
+% TODO: discussion of why noteId is required to be defined for each filesystem note
 
 ### Provided `noteId`
 
