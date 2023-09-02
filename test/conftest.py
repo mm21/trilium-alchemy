@@ -244,19 +244,15 @@ def note_setup(request, session: Session):
             # make sure note exists
 
             if note_exists(session.api, note_id):
-                # do nothing
-                pass
+                # check if user requested clean note
+                if clean:
+                    clean_note(session.api, note_id)
+                # check if user requested changed note
+                elif change:
+                    change_note(session.api, note_id)
             else:
-                # create note
-                # TODO
+                # TODO: create note
                 pass
-
-            # check if user requested clean note
-            if clean:
-                clean_note(session.api, note_id)
-            # check if user requested changed note
-            elif change:
-                change_note(session.api, note_id)
 
         else:
             # make sure note doesn't exist

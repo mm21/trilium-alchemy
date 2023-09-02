@@ -4,7 +4,7 @@ from trilium_alchemy import *
 from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash
 
-from ..conftest import create_session, clean_note
+from ..conftest import create_session, note_exists, clean_note, delete_note
 
 """
 TODO:
@@ -25,9 +25,11 @@ def singleton_setup(request):
 
     # cleanup singleton tests
     if not request.config.getoption("--skip-teardown"):
-        # clean root
+        # clean root if exists
         session = create_session()
-        clean_note(session.api, "root")
+
+        if note_exists(session.api, "testSingletonRoot"):
+            delete_note(session.api, "testSingletonRoot")
 
 
 @label("child1")
@@ -198,11 +200,11 @@ def check_subclass(branch: Branch):
 @label("mapType", "link", inheritable=True)
 @children(TemplateTest, TemplateSubclass)
 class SingletonRoot(Note):
-    note_id = "root"
+    note_id = "testSingletonRoot"
 
 
 def check_inherited_attributes(note: Note):
-    if note.note_id != "root":
+    if note.note_id != "testSingletonRoot":
         # check inherited attributes
         assert len(note.attributes.inherited) == 2
         label1, label2 = note.attributes.inherited
@@ -222,13 +224,14 @@ def check_root(root: SingletonRoot, state: State):
     # recursively check states
     check_note_state(root, state)
 
-    if state != state.CREATE:
+    if state is not state.CREATE:
         # if already created, recursively check inherited attributes
+        assert root._model.exists
         check_inherited_attributes(root)
+    else:
+        assert not root._model.exists
 
-    assert root._model.exists
-
-    assert root.note_id == "root"
+    assert root.note_id == "testSingletonRoot"
     assert root.title == "SingletonRoot"
     assert root.note_type == "text"
     assert root.mime == "text/html"
@@ -253,20 +256,14 @@ def check_root(root: SingletonRoot, state: State):
     # check positions of children
     for idx in range(len(root.branches.children)):
         branch = root.branches.children[idx]
-        assert (
-            branch.position
-            == root._session._root_position_base + (idx + 1) * 10
-        )
+        assert branch.position == (idx + 1) * 10
 
 
 def check_note_state(note: Note, state: State):
     """
     Recursively ensure note and its attributes are in provided state.
     """
-    if note.note_id == "root" and state is State.CREATE:
-        assert note._state is State.UPDATE
-    else:
-        assert note._state is state
+    assert note._state is state
 
     # check attributes
     for attr in note.attributes.owned:
@@ -278,15 +275,15 @@ def check_note_state(note: Note, state: State):
         check_note_state(branch.child, state)
 
 
-# TODO: pre-existing attributes/branches of root, ensure deleted
+# TODO: add pre-existing attributes/branches of root, ensure deleted
 # - use note fixture, set note id in marker?
 @mark.dependency()
-@mark.setup("root", clean=True)
+@mark.setup("testSingletonRoot", exist=False)
 def test_create(session: Session, note_setup):
     """
     Create singleton hierarchy.
     """
-    root = SingletonRoot(session=session)
+    root = SingletonRoot(session=session, parents=session.root)
     check_root(root, State.CREATE)
     session.flush()
 
@@ -302,7 +299,7 @@ def test_clean(session: Session):
 
 
 @mark.dependency(depends=["test_clean"])
-@mark.setup("root", change=True)
+@mark.setup("testSingletonRoot", change=True)
 def test_update(session: Session, note_setup):
     """
     Make sure singleton is updated after being changed.
@@ -317,7 +314,7 @@ def test_instance(request, session: Session):
     """
     Create a new note which has TemplateTest as a template.
     """
-    root = Note(note_id="root", session=session)
+    root = Note(note_id="testSingletonRoot", session=session)
     inst = Note(
         title="TemplateTest instance",
         parents=root,
