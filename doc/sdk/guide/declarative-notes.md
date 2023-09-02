@@ -181,6 +181,35 @@ class Child3(Note): pass
 class Parent(Note): pass
 ```
 
+## Custom initializer to add attributes, children
+
+Define {obj}`Note.init` or {obj}`Mixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
+
+- {obj}`Note.create_declarative_label`
+- {obj}`Note.create_declarative_relation`
+- {obj}`Note.create_declarative_child`
+
+These APIs are required for singleton notes to generate a deterministic id for attributes and children, generating the same subtree every time the {obj}`Note` subclass is instantiated.
+
+For example, this mechanism is used internally to add an `iconClass` label for certain {obj}`Note` subclasses like {obj}`Workspace`:
+
+```python
+class IconMixin(Mixin):
+    icon: str = None
+    """
+    If provided, defines value of `#iconClass` label.
+    """
+
+    def init(self, attributes: list[Attribute], children: list[Branch]):
+        """
+        Set `#iconClass` value by defining {obj}`IconMixin.icon`.
+        """
+        if self.icon:
+            attributes += [
+                self.create_declarative_label("iconClass", self.icon)
+            ]
+```
+
 (leaf-notes)=
 ## Leaf notes
 
