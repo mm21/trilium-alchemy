@@ -275,13 +275,16 @@ class MystRenderer(RendererBase):
         skip_constructor = note_subclass
         skip_inherited = note_subclass
 
-        # which ancestors/members to skip for Note subclasses
+        # ancestors to skip for Note subclasses
         ancestors_skip = {
             "trilium_alchemy.core.entity.Entity",
             "trilium_alchemy.core.note.Note",
             "trilium_alchemy.core.note.Mixin",
+            "collections.abc.Mapping",
+            "collections.abc.MutableMapping",
         }
 
+        # members to skip for Note subclasses
         members_skip = {
             "init",
         }
@@ -332,17 +335,19 @@ class MystRenderer(RendererBase):
                     child_short_name = child_name.split(".")[-1]
 
                     if child_short_name in members_skip:
+                        # skip member
                         continue
                     else:
-                        inherited = child.get("inherited")
+                        # check if member is provided by an ancestor
+                        ancestor = symbol.get_ancestor(child_short_name)
 
-                        if inherited and inherited in self.symbol_map.phys_map:
-                            inherited_symbol = self.symbol_map.phys_map[
-                                inherited
-                            ]
+                        if ancestor_sym := self.symbol_map.lookup(ancestor):
+                            ancestor = ancestor_sym.canonical.virt_path
 
-                            if inherited_symbol.virt_path in ancestors_skip:
-                                continue
+                        print(f"--- ancestor of {child_name}: {ancestor}")
+
+                        if ancestor in ancestors_skip:
+                            continue
 
                 for line in self.render_item(child_name, parent=symbol):
                     lines.append(line)
@@ -440,7 +445,7 @@ class MystRenderer(RendererBase):
         yield "````"
         yield ""
 
-    def render_inherited(self, item: ItemData, parent=None, **kwargs):
+    def render_inherited(self, item: ItemData, parent: Symbol = None, **kwargs):
         lines = []
 
         # astroid shows collections.abc as _collections_abc, so get
