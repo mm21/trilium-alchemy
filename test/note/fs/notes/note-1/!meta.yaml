@@ -1,0 +1,7 @@
+title: Note 1
+attributes:
+- label1
+- label2=value2
+- label3(inheritable)
+- label4(inheritable)=value4
+- ~relation1=root
