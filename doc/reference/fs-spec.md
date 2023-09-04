@@ -1,17 +1,41 @@
 (fs-spec)=
 # Filesystem note specification (in progress)
 
-This describes a specification for a Trilium note tree captured by a filesystem. See {ref}`filesystem-notes` for a tutorial-style discussion of this concept.
+This document describes a specification for representing a Trilium note tree using a filesystem. See {ref}`filesystem-notes` for API access to this interface.
 
-In general, this specification is similar to Trilium's .zip export format. However there are key differences, as this specification is designed to be manually maintainable. It's human-friendly rather than machine-friendly, and a little more work is required to parse this format as a result.
+In general, this specification is similar to Trilium's .zip export format. However there are key differences as this is designed to be manually maintainable. It's intended to be human-friendly rather than machine-friendly, and more work is required to parse it as a result.
 
-## Reserved folder and file names
+## Intro
 
-Folder and file names beginning with `!` are reserved for system use.
+### Motivation
+
+Trilium is fundamentally more powerful than a filesystem for categorizing information. Nonetheless, it can be valuable to maintain core sources of truth in a traditional filesystem format. Trilium is then viewed as an engine to "hydrate" this information, providing a UI for it and managing metadata.
+
+In particular, this system should provide first-class support for Markdown notes by utilizing YAML frontmatter to contain Trilium's metadata.
+
+### Existing solutions
+
+% TODO
+
+## Constraints
+
+Some simplifying assumptions are made for filesystem representation.
+
+If a given subtree fails to meet these requirements, attempting to synchronize it with a filesystem will fail with an error prior to changing any state.
+
+### Trilium subtree
+
+- Child note titles must be unique
+    - An enhancement may be developed in the future to accommodate duplicate titles
+- Label `#originalFilename` must be unique for child notes
+
+### Filesystem subtree
+
+- Folder and file names beginning with `!` are reserved for system use
 
 ## Sync context
 
-The **sync context** is comprised of a number of **sync mappings** along with a **sync state**. It has a root folder, **sync root**, on the filesystem.
+The **sync context** is comprised of a number of **sync mappings** from one **sync endpoint** to another. It has a root folder, **sync root**, on the filesystem.
 
 ### Sync endpoints
 
@@ -31,23 +55,41 @@ A **sync mapping** specifies a mapping between multiple **sync endpoint**s. It h
 
 For mappings with mode **resolve**, the combined metadata (including content signatures) from the last sync operation is required to persist from one invocation to the next. This is known as the **sync state**. It will be stored in text format, tentatively called `!sync.json` (not unlike Trilium's zip format `!!!meta.json`). It is not expected to be maintained manually, but stored as text to be readily usable in version control.
 
-## Notes as folders
+## Filesystem representation
 
-Every folder maps to a note in Trilium. Child files and folders are treated as child notes.
+Filesystem representation of a note is determined by whether or not it has an `#originalFilename` label.
 
-## Notes as files
+### File-based notes
 
-A file with name not beginning with `!` is considered a child of the note represented by the parent folder.
+A note is condiered file-based if and only if it has an `#originalFilename` label. A file-based note is a child of the note represented by its containing folder. 
 
-A folder with the same name as this file with a single `!` prepended is reserved to contain children of the note represented by this file. For example, children of `Hello world.md` are stored in the folder `!Hello world.md`.
+The `#originalFilename` label is managed as follows:
 
-### `#originalFilename` label
+- Created automatically upon synchronizing an existing folder tree
+- Filename is updated to reflect the label value, if changed
+- Label value is updated to reflect the filename, if changed
 
-The label `#originalFilename` is automatically maintained for file-based notes. When a note with this label is synced from Trilium to a folder, it's replicated as a file-based note using this filename.
+A folder named as the filename prepended with a single `!` is reserved to contain children of the note represented by this file. For example, children of `Hello world.md` are stored in the folder `!Hello world.md`.
 
-Therefore this label must generally be unique for each child of a given parent note. If there are multiple notes with the same value of `#originalFilename` belonging to the same parent, the sync invocation will fail.
+### Folder-based notes
 
-The filename of the file-based note and `#originalFilename` label are automatically kept in sync.
+A note is considered folder-based if and only if it does not have an `#originalFilename` label. Child files and folders are interpreted as child notes.
+
+## Note id
+
+To reliably compare note state with Trilium, `noteId` is required to be defined for each filesystem-based note. If not provided in metadata, it's initially generated based on the current timestamp.
+
+```{todo}
+Allow Trilium to generate `noteId`? Would require extra handling to update filesystem `noteId`, and ensuring Trilium subtree is flushed first.
+```
+
+### Provided `noteId`
+
+`noteId` can be explicitly provided in `!meta.yaml`. Notes originally synced from Trilium will have `noteId` fixed in this way.
+
+### Provided `noteIdSeed`
+
+If `noteIdSeed` is provided in `!meta.yaml`, this value is used to generate `noteId` as the SHA-256 hash of `noteIdSeed`, base64-encoded with replacement of `+` and `/`.
 
 ## Metadata
 
@@ -61,68 +103,61 @@ For folder-based notes, metadata is provided in `!meta.yaml`.
 
 #### File notes: `*.!meta.yaml`
 
-For file-based notes, metadata is provided alongside the file. The name of the metadata file is the name of the file suffixed with `.!meta.yaml`.
+For file-based notes, metadata is provided alongside the file. The name of the metadata file is the name of the file suffixed with `.!meta.yaml`. For example, metadata for `photo001.jpg` is stored in `photo001.jpg.!meta.yaml`.
 
 #### Markdown notes: Frontmatter
 
 For `*.md` file-based notes, frontmatter can be utilized to provide a more concise representation of the note if `*.!meta.yaml` is not provided. This may be optionally disabled, either globally or per note (mechanism TBD).
 
-### Fields (title/type/mime)
+### Title
 
-Unless explicitly provided in the metadata, title is derived based on how the note is specified:
+To avoid duplication of information, title is inferred based on how the note is specified:
 
-- Folder note: folder name
-- File note: **base name** of the file (e.g. `Hello world.md` would have the title `Hello world`).
+- Folder-based note: folder name
+- File-based note: **base name** of the file (e.g. `Hello world.md` would have the title `Hello world`)
 
-For simplicity, multiple child notes with the same title are currently not allowed. There may be a future mechanism to accommodate this, e.g. appending title with a suffix like `!2`.
+For simplicity, multiple child notes with the same title are currently not allowed. There may be a future mechanism to accommodate this, e.g. appending title with a suffix like `~2`.
 
-For file-based notes, `type` and `mime` are by default derived from the file. They may be explicitly set in the metadata YAML.
+```{todo}
+Generate filesystem path as slug of title? (could also enable duplicate titles)
+```
 
-Some other fields are derived, e.g. attribute and child note positions are not explicitly set. The order is optionally provided by the user (defaulting to alphabetical), but position values are calculated rather than maintained by the user.
+### Type, MIME
+
+For file-based notes, `type` and `mime` are derived from the file itself if not specified in the metadata YAML.
+
+### Position values
+
+Attribute and child note positions are not explicitly specified. The order is optionally provided by the user (defaulting to alphabetical for children not listed), but position values are inferred rather than explicitly maintained by the user.
 
 ### Attributes
 
-Attributes are similarly captured in `!meta.yaml`. Attribute `type` is inferred by whether the attribute is specified with `value` (for type `label`) or `target` note (for type `relation`).
+Attributes are specified as a list of strings in `!meta.yaml`. Attribute `type` is inferred by the first character: `~` implies a relation, otherwise it's interpreted as a label.
 
-For ease of maintenance, `attributeId` is not maintained manually. The synchronization algorithm resolves attributes agnostic of `attributeId`.
+For ease of maintenance, `attributeId` is not specified. The synchronization algorithm resolves attributes agnostic of `attributeId`.
 
-## Note id
+#### Maintenance of `#filesystemPath` label
 
-To reliably compare note state with Trilium, `noteId` is required to be defined for each filesystem-based note. If not explicitly provided in metadata, it's derived from the path relative to **sync root**.
+If configured, notes can be labeled with the path to their file/folder representation relative to the **sync root**.
 
-### Provided `noteId`
-
-`noteId` can be explicitly provided in `!meta.yaml`. Notes originally synced from Trilium will have `noteId` fixed in this way.
-
-### Provided `noteIdSeed`
-
-If `noteIdSeed` is provided in `!meta.yaml`, this value is used to generate `noteId` as the SHA-256 hash of `noteIdSeed`, base64-encoded (with replacement of `+` and `/`).
-
-### Filename as seed
-
-If neither `noteId` nor `noteIdSeed` is provided, `noteIdSeed` is taken to be the path of the file or folder representing this note, prefixed with its parent's `noteIdSeed` if not a top-level child of **sync root**.
-
-### Note links in Markdown
-
-This allows referencing of notes in a flexible and maintainable way. For example, a note could be referenced in a Markdown file in the following ways:
+This allows referencing of notes in a flexible and maintainable way. For example, a note could be referenced in a Markdown file as follows:
 
 ```markdown
+- [Related note relative to current file](filesystemPath:note-1.md)
 - [Related note with noteIdSeed specified](noteIdSeed:my-note-1)
-    - [Child without noteIdSeed specified](noteIdSeed:my-note-1/a.md)
-- [Related note without noteIdSeed specified](noteIdSeed:/path/to/my-note-2.md)
 ```
 
-If not leading with `/`, the path provided is relative to the current note's path. The full path relative to **sync root** (with a leading `/`) is formed prior to computing the hash.
+If not leading with `/`, the path provided is relative to the current note's path. The full path relative to **sync root** (with a leading `/`) is inferred.
 
-A Markdown renderer widget in Trilium's UI could then resolve `noteId` and generate a link to the target note. Such a widget is currently in development and will be provided along with this framework.
+A Markdown renderer widget in Trilium's UI could then resolve the target `noteId` to generate a link by either searching for the provided label or using the provided `noteIdSeed` to compute it. Such a widget is currently in development and will be provided along with this framework.
 
 ## Content
 
-Content is populated based on how the note is specified:
+Content is stored based on how the note is specified:
 
-- Folder note: content is stored in `!content.*`, where the extension is based on the note's `type` and `mime` fields
+- File-based note: in the file with name given by `#originalFilename`
+- Folder-based note: in `!content.*`, where the extension is based on the note's `type` and `mime` fields
     - For example, `text/html` notes would have content stored in `!content.html`
-- File note: content is stored in the file itself
 
 ## Children
 
@@ -134,7 +169,9 @@ If only some children are listed in YAML metadata, those are placed in the order
 
 ### Canonical notes
 
-A given note is required to be defined in exactly one filesystem location - its **canonical path**. If the note is initially created on a filesystem, this is the canonical path. If being newly written from a Trilium server, a note path will be chosen (algorithm TBD) to contain the filesystem representation, while the others will be considered as clones.
+A given note is required to be defined in exactly one filesystem path - its **canonical path**. If the note is initially created on a filesystem, this is the canonical path. If being newly written from a Trilium server and the path is ambiguous due to notes having multiple parents, a note path will be chosen (algorithm TBD) to contain the filesystem representation. Other branches will be considered as clones.
+
+As mentioned previously, the `#filesystemPath` label can optionally be maintained to reflect its **canonical path**.
 
 ### Clone notes
 
