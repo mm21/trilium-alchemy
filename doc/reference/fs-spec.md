@@ -9,7 +9,7 @@ In general, this specification is similar to Trilium's .zip export format. Howev
 
 ### Motivation
 
-Trilium is fundamentally more powerful than a filesystem for categorizing information. Nonetheless, it can be valuable to maintain core sources of truth in a traditional filesystem format. Trilium is then viewed as an engine to "hydrate" this information, providing a UI for it and managing metadata.
+Trilium is fundamentally more powerful than a filesystem for categorizing information. Nonetheless, it can be valuable to maintain core sources of truth in a traditional filesystem format. This allows the use of powerful and familiar tools such as `git` to track changes, and convenient (though less rich than Trilium itself) offline access to one's information. Trilium is then viewed as an engine to "hydrate" this information, providing a UI for it and visualizing its relationship with other information.
 
 In particular, this system should provide first-class support for Markdown notes by utilizing YAML frontmatter to contain Trilium's metadata.
 
@@ -36,6 +36,8 @@ If a given subtree fails to meet these requirements, attempting to synchronize i
 ## Sync context
 
 The **sync context** is comprised of a number of **sync mappings** from one **sync endpoint** to another. It has a root folder, **sync root**, on the filesystem.
+
+There is a configuration file, by default `!context.yaml` placed in **sync root**.
 
 ### Sync endpoints
 
