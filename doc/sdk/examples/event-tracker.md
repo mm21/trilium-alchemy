@@ -25,9 +25,7 @@ Eventually sync functionality will be provided by a CLI to provide equivalent fu
 ```
 
 ```{warning}
-Any existing children the destination note will be deleted. Therefore you may want to install it in an empty subtree so as to not tamper with your existing notes.
+Any existing children of the destination note will be deleted, so you should install it into an empty subtree. To be safe, if the installation script detects existing children it requires that you pass `--clobber` to delete them.
 
-In fact, especially at this stage, it's recommended to only run this example on a temporary Trilium instance, not your production instance.
-
-To be safe, the installation script requires that you pass `--clobber` to delete existing children.
+This example is recommended to be installed in a non-production Trilium instance as it creates many notes, including a theme.
 ```

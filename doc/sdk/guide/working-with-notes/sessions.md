@@ -47,7 +47,7 @@ session = Session(HOST, token=TOKEN)
 You can then interact with Trilium in various ways as documented in the {ref}`API <trilium_alchemy>`. For example, perform a note search to get todos:
 
 ```
-todo_list = session.search('#todo')
+todo_list = session.search("#todo")
 ```
 
 Then [clone](https://github.com/zadam/trilium/wiki/Cloning-notes) them to today's [Day note](https://github.com/zadam/trilium/wiki/Day-notes) using {obj}`Session.get_today_note`:
