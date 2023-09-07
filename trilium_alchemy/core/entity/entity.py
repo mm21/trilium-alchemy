@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Any, Generator
-from abc import ABC, ABCMeta, abstractmethod
-from graphlib import TopologicalSorter
-from collections.abc import Iterable
 import logging
+from abc import ABC, ABCMeta, abstractmethod
+from collections.abc import Iterable
+from graphlib import TopologicalSorter
+from typing import Generator, Generic, Protocol, Type, TypeVar, cast, overload
 
 from pydantic import BaseModel
+from trilium_client.exceptions import ApiException, NotFoundException
 
-from trilium_client.exceptions import NotFoundException, ApiException
+import trilium_alchemy
 
+from ..exceptions import *
+from ..session import Session, require_session
+
+# isort: off
 from .model import (
     Model,
     ModelContainer,
@@ -20,11 +25,10 @@ from .model import (
     WriteOnceDescriptor,
     ExtensionDescriptor,
 )
-from .types import State
-from ..exceptions import *
-from ..session import Session, require_session
 
-import trilium_alchemy
+# isort: on
+
+from .types import State
 
 __all__ = [
     "Entity",
@@ -76,7 +80,7 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         # entity id, or None to create new one
         entity_id: str | None = None,
         # session, or None to use default session (populated by require_session)
-        session: Session = None,
+        session: Session | None = None,
         # backing model, if already loaded
         model_backing: ModelT | None = None,
         # whether entity is being created (otherwise inferred from whether
@@ -102,15 +106,14 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
 
             # return cached object
             return entity
-        else:
-            # proceed with creation of new object
-            return super().__new__(cls)
+        # proceed with creation of new object
+        return super().__new__(cls)
 
     @require_session
     def __init__(
         self,
         entity_id: str | None = None,
-        session: Session = None,
+        session: Session | None = None,
         model_backing: ModelT | None = None,
         create: bool | None = None,
     ):
@@ -462,15 +465,41 @@ class EntityIdDescriptor:
     :raises ReadOnlyError: Upon write attempt
     """
 
-    def __get__(self, ent, objtype=None):
-        return ent._entity_id
+    @overload
+    def __get__(self, ent: None, objtype: None) -> EntityIdDescriptor:
+        ...
+
+    @overload
+    def __get__(
+        self, ent: EntityIdDescriptor, objtype=type[EntityIdDescriptor]
+    ) -> str:
+        ...
+
+    def __get__(
+        self,
+        ent: EntityIdDescriptor | None,
+        objtype: type[EntityIdDescriptor] | None = None,
+    ) -> EntityIdDescriptor | str:
+        if ent is None:
+            return self
+        return cast(str, ent._entity_id)
 
     def __set__(self, ent, val):
         raise ReadOnlyError("_entity_id", ent)
 
 
+class SupportConstructor(Iterable, Protocol):
+    """
+    Protocol for supporting constructor.
+    """
+
+    def __init__(self, __iterable: Iterable):
+        ...
+
+
 def normalize_entities(
-    entities: Entity | Iterable[Entity], collection_cls=list
+    entities: Entity | Iterable[Entity],
+    collection_cls: Type[SupportConstructor] = list,
 ) -> Iterable[Entity]:
     """
     Take an entity or iterable of entities and return an iterable.
@@ -484,6 +513,6 @@ def normalize_entities(
     ):
         # have iterable
         return entities
-    else:
-        # have single entity, but put in list first since Note is iterable
-        return collection_cls([entities])
+
+    # have single entity, but put in list first since Note is iterable
+    return collection_cls([entities])

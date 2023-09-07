@@ -9,7 +9,7 @@ import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
-from typing import IO, Any, Iterator, Literal, Type
+from typing import IO, Any, Iterator, Literal, Type, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -98,7 +98,7 @@ def require_note_id(func):
     return _declarative_note_id
 
 
-def patch_init(init, doc: str = None):
+def patch_init(init, doc: str | None = None):
     """
     Insert provided init function in class's declarative init sequence.
     """
@@ -161,9 +161,8 @@ def get_cls(ent: Note | Type[Note]) -> Type[Note]:
     if type(ent) is Meta:
         # have class
         return ent
-    else:
-        # have instance
-        return type(ent)
+    # have instance
+    return cast(Type[Note], type(ent))
 
 
 def is_inherited(cls: Type[Mixin], attr: str) -> bool:
@@ -603,7 +602,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     ```
     """
 
-    note_id: str | None = EntityIdDescriptor()
+    note_id: EntityIdDescriptor | str | None = EntityIdDescriptor()
     """
     Read-only access to `noteId`. Will be `None`{l=python} if
     newly created with no `note_id` specified and not yet flushed.
@@ -707,13 +706,13 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         title: str = "new note",
         note_type: str = "text",
         mime: str = "text/html",
-        parents: Iterable[Note | Branch] | Note | Branch = None,
-        children: Iterable[Note | Branch] = None,
-        attributes: Iterable[Attribute] = None,
-        content: str | bytes | IO = None,
-        note_id: str = None,
-        template: Note | Type[Note] = None,
-        session: Session = None,
+        parents: Iterable[Note | Branch] | Note | Branch | None = None,
+        children: Iterable[Note | Branch] | None = None,
+        attributes: Iterable[Attribute] | None = None,
+        content: str | bytes | IO | None = None,
+        note_id: str | None = None,
+        template: Note | Type[Note] | None = None,
+        session: Session | None = None,
         **kwargs,
     ):
         """
@@ -808,11 +807,11 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
     @classmethod
-    def _from_id(cls, note_id: str, session: Session = None):
+    def _from_id(cls, note_id: str, session: Session | None = None):
         return Note(note_id=note_id, session=session)
 
     @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session = None):
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
         return Note(note_id=model.note_id, model_backing=model, session=session)
 
     def __iadd__(
@@ -878,7 +877,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         return self
 
-    def __getitem__(self, key: str) -> str | Note:
+    def __getitem__(self, key: str) -> str | Note | None:
         """
         Return value of first attribute with provided name.
 
@@ -893,8 +892,8 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
             if isinstance(attr, Relation):
                 return attr.target
-            else:
-                return attr.value
+            return attr.value
+        return None
 
     def __setitem__(self, key: str, value_spec: ValueSpec):
         """
@@ -1070,7 +1069,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return type(self) is not Note
 
     @classmethod
-    def _get_decl_id(cls, parent: Note = None):
+    def _get_decl_id(cls, parent: Note | None = None):
         """
         Try to get a note_id. If one is returned, this note has a deterministic
         note_id and will get the same one every time it's instantiated.
@@ -1142,7 +1141,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                     # get default field
                     fields_update[field] = self._model._field_default(field)
 
-    def _derive_id(self, cls, base) -> str:
+    def _derive_id(self, cls, base) -> str | None:
         """
         Generate a declarative entity id unique to this note with namespace
         per class. Increments a sequence number per base, so e.g. there can be
@@ -1161,8 +1160,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
             sequence = self._get_sequence(cls, base)
             return id_hash(f"{prefix}_{base}_{sequence}")
-        else:
-            return None
+        return None
 
     def _get_sequence(self, cls, base):
         if cls not in self._sequence_map:
