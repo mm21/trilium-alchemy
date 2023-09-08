@@ -471,14 +471,14 @@ class EntityIdDescriptor:
 
     @overload
     def __get__(
-        self, ent: EntityIdDescriptor, objtype=type[EntityIdDescriptor]
+        self, ent: EntityIdDescriptor, objtype=type["EntityIdDescriptor"]
     ) -> str:
         ...
 
     def __get__(
         self,
         ent: EntityIdDescriptor | None,
-        objtype: type[EntityIdDescriptor] | None = None,
+        objtype: type["EntityIdDescriptor"] | None = None,
     ) -> EntityIdDescriptor | str:
         if ent is None:
             return self
