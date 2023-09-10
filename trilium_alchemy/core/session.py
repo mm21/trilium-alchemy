@@ -214,8 +214,8 @@ class Session:
         If `entities = None`{l=python}, flushes all dirty entities.
 
         ```{note}
-        You may equivalently invoke `flush` on an {obj}`Entity` to flush it
-        along with its dependencies.
+        You may equivalently invoke {obj}`Entity.flush` to flush an
+        {obj}`Entity` along with its dependencies.
         ```
 
         :param entities: Entities for which to commit changes, internally processed as a {obj}`set` and sorted according to dependencies
