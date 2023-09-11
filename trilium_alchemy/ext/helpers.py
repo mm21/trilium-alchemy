@@ -39,6 +39,7 @@ from typing import Type, Any
 from ..core import (
     Note,
     Mixin,
+    IconMixin,
     Branch,
     Attribute,
     label,
@@ -62,24 +63,6 @@ __all__ = [
     "BaseRootSystem",
     "BaseRoot",
 ]
-
-
-# TODO: should this be published? enable icon = "..." capability for any Note
-# subclass
-class IconMixin(Mixin):
-    icon: str = None
-    """
-    If provided, defines value of `#iconClass` label.
-    """
-
-    def init(self, attributes: list[Attribute], children: list[Branch]):
-        """
-        Set `#iconClass` value by defining {obj}`IconMixin.icon`.
-        """
-        if self.icon:
-            attributes += [
-                self.create_declarative_label("iconClass", self.icon)
-            ]
 
 
 class BaseTemplate(Note, IconMixin):

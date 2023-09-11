@@ -14,11 +14,12 @@ import os
 from typing import Type, Literal, Any
 from functools import wraps, partial
 
-from .note.note import Note, patch_init
+from .note.note import Note, Mixin, patch_init
 from .branch import Branch
 from .attribute import Attribute, Label, Relation
 
 __all__ = [
+    "IconMixin",
     "label",
     "relation",
     "label_def",
@@ -29,11 +30,44 @@ __all__ = [
 __canonical_syms__ = __all__
 
 
-def _check_name(name: str, attributes: list[Attribute]):
+def check_name(name: str, accumulate=False):
     """
-    Check if attribute with this name already exists.
+    Check if attribute with this name already exists, and bail out if so
+    and accumulate is False.
     """
-    return name in {a.name for a in attributes}
+
+    def _check_name(func):
+        @wraps(func)
+        def wrapper(self, attributes: list[Attribute], children: list[Branch]):
+            if accumulate is False and any(name == a.name for a in attributes):
+                return
+            return func(self, attributes, children)
+
+        return wrapper
+
+    return _check_name
+
+
+class IconMixin(Mixin):
+    """
+    Enables setting the attribute {obj}`IconMixin.icon` to automatically add
+    as value of `#iconClass` label.
+    """
+
+    icon: str = None
+    """
+    If provided, defines value of `#iconClass` label.
+    """
+
+    @check_name("iconClass")
+    def init(self, attributes: list[Attribute], children: list[Branch]):
+        """
+        Set `#iconClass` value by defining {obj}`IconMixin.icon`.
+        """
+        if self.icon:
+            attributes += [
+                self.create_declarative_label("iconClass", self.icon)
+            ]
 
 
 def label(
@@ -58,10 +92,8 @@ def label(
     :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
     """
 
-    def init(self, *, attributes: list[Attribute], **kwargs):
-        if not accumulate and _check_name(name, attributes):
-            return
-
+    @check_name(name, accumulate=accumulate)
+    def init(self, attributes: list[Attribute], children: list[Branch]):
         attributes += [
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable
@@ -109,10 +141,8 @@ def relation(
     :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
     """
 
-    def init(self, *, attributes: list[Attribute], **kwargs):
-        if not accumulate and _check_name(name, attributes):
-            return
-
+    @check_name(name, accumulate=accumulate)
+    def init(self, attributes: list[Attribute], children: list[Branch]):
         assert (
             target_cls._is_singleton
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -259,8 +289,8 @@ def children(*children: Type[Note] | tuple[Type[Note], dict[str, Any]]):
     :param children: Tuple of `Type[Note]`{l=python} or `(Type[Note], dict)`{l=python}
     """
 
-    def init(self, **kwargs):
-        kwargs["children"] += list(children)
+    def init(self, attributes: list[Attribute], children_: list[Branch]):
+        children_ += list(children)
 
     return patch_init(init)
 
@@ -284,9 +314,7 @@ def child(child: Type[Note], prefix: str = "", expanded: bool = False):
     :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
     """
 
-    def init(self, **kwargs):
-        kwargs["children"].append(
-            (child, {"prefix": prefix, "expanded": expanded})
-        )
+    def init(self, attributes: list[Attribute], children: list[Branch]):
+        children.append((child, {"prefix": prefix, "expanded": expanded}))
 
     return patch_init(init)

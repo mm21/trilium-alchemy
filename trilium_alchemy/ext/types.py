@@ -2,7 +2,7 @@
 Defines basic note types used in extensions.
 """
 
-from ..core import Note
+from ..core import Note, IconMixin
 
 __all__ = [
     "CodeNote",
@@ -14,12 +14,13 @@ __all__ = [
 ]
 
 
-class CodeNote(Note):
+class CodeNote(Note, IconMixin):
     """
     Defines a `code` note.
     """
 
     note_type = "code"
+    icon = "bx bx-code"
 
 
 class JsFrontendNote(CodeNote):
