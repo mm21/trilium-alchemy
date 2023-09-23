@@ -470,21 +470,19 @@ class EntityIdDescriptor:
         ...
 
     @overload
-    def __get__(
-        self, ent: EntityIdDescriptor, objtype=type["EntityIdDescriptor"]
-    ) -> str:
+    def __get__(self, ent: Entity, objtype: type[Entity]) -> str:
         ...
 
     def __get__(
         self,
-        ent: EntityIdDescriptor | None,
-        objtype: type["EntityIdDescriptor"] | None = None,
+        ent: Entity | None,
+        objtype: type[Entity] | None = None,
     ) -> EntityIdDescriptor | str:
         if ent is None:
             return self
         return cast(str, ent._entity_id)
 
-    def __set__(self, ent, val):
+    def __set__(self, ent: Entity, val: Any):
         raise ReadOnlyError("_entity_id", ent)
 
 
