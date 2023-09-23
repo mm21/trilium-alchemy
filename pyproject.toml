@@ -39,6 +39,7 @@ sphinx-autodoc2        = { git = "https://github.com/mm21/sphinx-autodoc2.git" }
 sphinx-copybutton      = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
 toml-sort              = "^0.23.1"
+mypy = "^1.5.1"
 
 [tool.black]
 include     = '\.pyi?$|SConstruct$'
