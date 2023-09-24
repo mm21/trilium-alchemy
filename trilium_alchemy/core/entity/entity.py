@@ -12,7 +12,7 @@ from trilium_client.exceptions import ApiException, NotFoundException
 import trilium_alchemy
 
 from ..exceptions import *
-from ..session import Session, require_session
+from ..session import Session, SessionContainer, require_session
 
 # isort: off
 from .model import (
@@ -50,7 +50,7 @@ __rollup__ = [
 ModelT = TypeVar("ModelT", bound=Model)
 
 
-class Entity(Generic[ModelT], ABC, ModelContainer):
+class Entity(Generic[ModelT], ABC, SessionContainer, ModelContainer):
     """
     Base class for Trilium entities.
 
@@ -64,9 +64,6 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
 
     # init state
     _init_done: bool = False
-
-    # session for access to API and cache
-    _session: Session = None
 
     # current state
     _state: State = None
@@ -94,7 +91,6 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
             # sanity check: cached object can be subclass or superclass
             # enables equivalency of declarative definitions, e.g.:
             # Note(note_id='root') and Root()
-            # TODO: check if cls extends existing entity and set __class__ if so
             assert isinstance(entity, cls) or issubclass(cls, type(entity))
 
             if cls is not type(entity) and issubclass(cls, type(entity)):
@@ -131,8 +127,8 @@ class Entity(Generic[ModelT], ABC, ModelContainer):
         # which instantiate it (set as target of relation)
         self._init_done = True
 
-        self._session = session
         self._state = State.CLEAN
+        SessionContainer.__init__(self, session)
         ModelContainer.__init__(self, self._model_cls(self))
 
         if entity_id is None:

@@ -29,7 +29,7 @@ from ..entity.model import (
 # isort: on
 
 from ..exceptions import *
-from ..session import Session, require_session
+from ..session import Session, SessionContainer, require_session
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
 from .content import Content, ContentDescriptor
@@ -118,7 +118,10 @@ def patch_init(init, doc: str | None = None):
 
         @wraps(init_decl_old)
         def _init_decl(
-            self, cls_decl, attributes: list[Attribute], children: list[ChildSpecT]
+            self,
+            cls_decl,
+            attributes: list[Attribute],
+            children: list[ChildSpecT],
         ):
             if cls is cls_decl:
                 # invoke init patch
@@ -238,7 +241,7 @@ class Meta(ABCMeta):
         return note_cls
 
 
-class Mixin(ABC, metaclass=Meta):
+class Mixin(ABC, SessionContainer, metaclass=Meta):
     """
     Reusable collection of attributes, children, and fields
     (`note_id`, `title`, `type`, `mime`) which can be inherited by a
@@ -350,9 +353,9 @@ class Mixin(ABC, metaclass=Meta):
     child ids.
     """
 
-    _child_id_seed: str|None = None
+    _child_id_seed: str | None = None
 
-    def __init__(self, child_id_seed: str|None):
+    def __init__(self, child_id_seed: str | None):
         self._sequence_map = dict()
         self._child_id_seed = child_id_seed
 
