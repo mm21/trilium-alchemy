@@ -118,7 +118,7 @@ def patch_init(init, doc: str | None = None):
 
         @wraps(init_decl_old)
         def _init_decl(
-            self, cls_decl, attributes: list[Attribute], children: list[Branch]
+            self, cls_decl, attributes: list[Attribute], children: list[ChildSpecT]
         ):
             if cls is cls_decl:
                 # invoke init patch
@@ -350,8 +350,11 @@ class Mixin(ABC, metaclass=Meta):
     child ids.
     """
 
-    def __init__(self):
+    _child_id_seed: str|None = None
+
+    def __init__(self, child_id_seed: str|None):
         self._sequence_map = dict()
+        self._child_id_seed = child_id_seed
 
     def init(
         self, attributes: list[Attribute], children: list[ChildSpecT]
@@ -479,9 +482,9 @@ class Mixin(ABC, metaclass=Meta):
     # Base declarative init method which can be patched by decorators
     def _init_decl(
         self,
-        cls_decl: Type[Note],
+        cls_decl: type[Mixin],
         attributes: list[Attribute],
-        children: list[Branch],
+        children: list[ChildSpecT],
     ):
         pass
 
@@ -490,53 +493,6 @@ class Mixin(ABC, metaclass=Meta):
         for cls in type(self).mro():
             if issubclass(cls, Mixin) and cls.content_file:
                 return cls
-
-    # Return handle of file specified by content_file
-    def _get_content_fh(self) -> IO:
-        # get class which defined content_file
-        cls = self._get_content_cls()
-        assert cls is not None
-
-        # get path to content from class
-        module = inspect.getmodule(cls)
-        content_path: str
-
-        assert module is not None
-        assert self.content_file is not None
-
-        try:
-            # assume we're in a package context
-            # (e.g. trilium_alchemy installation)
-            module_path = module.__name__.split(".")
-
-            content_file = self.content_file.split("/")
-            basename = content_file[-1]
-            module_rel = content_file[:-1]
-
-            try:
-                module.__module__
-            except AttributeError:
-                # have a package
-                pass
-            else:
-                # have a module, we want a package
-                del module_path[-1]
-
-            module_content = ".".join(module_path + module_rel)
-
-            with importlib.resources.path(module_content, basename) as path:
-                content_path = str(path)
-        except ModuleNotFoundError as e:
-            # not in a package context (e.g. test code, standalone script)
-            path_folder = os.path.dirname(str(module.__file__))
-            content_path = os.path.join(path_folder, self.content_file)
-
-        assert os.path.isfile(
-            content_path
-        ), f"Content file specified by {cls} does not exist: {content_path}"
-
-        mode = "r" if self.is_string else "rb"
-        return open(content_path, mode)
 
     def _derive_id(self, cls: type[object], base: str) -> str | None:
         """
@@ -801,8 +757,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             assert self.note_id == note_id
             return
 
-        Mixin.__init__(self)
-        self._child_id_seed = child_id_seed
+        Mixin.__init__(self, child_id_seed)
 
         # get from parent, if True
         if force_leaf:
@@ -1189,3 +1144,50 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                 else:
                     # get default field
                     fields_update[field] = self._model._field_default(field)
+
+    # Return handle of file specified by content_file
+    def _get_content_fh(self) -> IO:
+        # get class which defined content_file
+        cls = self._get_content_cls()
+        assert cls is not None
+
+        # get path to content from class
+        module = inspect.getmodule(cls)
+        content_path: str
+
+        assert module is not None
+        assert self.content_file is not None
+
+        try:
+            # assume we're in a package context
+            # (e.g. trilium_alchemy installation)
+            module_path = module.__name__.split(".")
+
+            content_file = self.content_file.split("/")
+            basename = content_file[-1]
+            module_rel = content_file[:-1]
+
+            try:
+                module.__module__
+            except AttributeError:
+                # have a package
+                pass
+            else:
+                # have a module, we want a package
+                del module_path[-1]
+
+            module_content = ".".join(module_path + module_rel)
+
+            with importlib.resources.path(module_content, basename) as path:
+                content_path = str(path)
+        except ModuleNotFoundError as e:
+            # not in a package context (e.g. test code, standalone script)
+            path_folder = os.path.dirname(str(module.__file__))
+            content_path = os.path.join(path_folder, self.content_file)
+
+        assert os.path.isfile(
+            content_path
+        ), f"Content file specified by {cls} does not exist: {content_path}"
+
+        mode = "r" if self.is_string else "rb"
+        return open(content_path, mode)
