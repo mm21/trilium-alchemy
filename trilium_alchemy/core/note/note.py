@@ -117,15 +117,15 @@ def patch_init(init, doc: str | None = None):
         init_decl_old = cls._init_decl
 
         @wraps(init_decl_old)
-        def _init_decl(self, cls_decl, *, attributes, children):
+        def _init_decl(
+            self, cls_decl, attributes: list[Attribute], children: list[Branch]
+        ):
             if cls is cls_decl:
                 # invoke init patch
-                init(self, attributes=attributes, children=children)
+                init(self, attributes, children)
 
                 # invoke old init
-                init_decl_old(
-                    self, cls_decl, attributes=attributes, children=children
-                )
+                init_decl_old(self, cls_decl, attributes, children)
 
         cls._init_decl = _init_decl
 
@@ -465,9 +465,7 @@ class Mixin(ABC, metaclass=Meta):
         for cls in type(self).mro():
             if issubclass(cls, Mixin):
                 # invoke init chain added by decorators
-                cls._init_decl(
-                    self, cls, attributes=attributes, children=children
-                )
+                cls._init_decl(self, cls, attributes, children)
 
                 # invoke manually implemented init()
                 if not is_inherited(cls, "init"):
@@ -479,7 +477,12 @@ class Mixin(ABC, metaclass=Meta):
         return attributes, children
 
     # Base declarative init method which can be patched by decorators
-    def _init_decl(self, cls_decl, *, attributes, children):
+    def _init_decl(
+        self,
+        cls_decl: Type[Note],
+        attributes: list[Attribute],
+        children: list[Branch],
+    ):
         pass
 
     # Return class which specified content_file

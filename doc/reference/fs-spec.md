@@ -93,6 +93,8 @@ Allow Trilium to generate `noteId`? Would require extra handling to update files
 
 If `noteIdSeed` is provided in `!meta.yaml`, this value is used to generate `noteId` as the SHA-256 hash of `noteIdSeed`, base64-encoded with replacement of `+` and `/`.
 
+A corresponding label `#noteIdSeed` is automatically created.
+
 ## Metadata
 
 Note metadata is stored in YAML format. Placement of the YAML document depends on note type and sync configuration.
@@ -116,17 +118,20 @@ For `*.md` file-based notes, frontmatter can be utilized to provide a more conci
 To avoid duplication of information, title is inferred based on how the note is specified:
 
 - Folder-based note: folder name
-- File-based note: **base name** of the file (e.g. `Hello world.md` would have the title `Hello world`)
+- File-based note: explicitly provided in YAML
 
-For simplicity, multiple child notes with the same title are currently not allowed. There may be a future mechanism to accommodate this, e.g. appending title with a suffix like `~2`.
+For simplicity, multiple child notes with the same title or `#originalFilename` label are currently not allowed. There may be a future mechanism to accommodate this, e.g. appending title with a suffix like `~2`.
 
 ```{todo}
 Generate filesystem path as slug of title? (could also enable duplicate titles)
+- But it could be unusual behavior for paths to change when titles change
 ```
 
 ### Type, MIME
 
 For file-based notes, `type` and `mime` are derived from the file itself if not specified in the metadata YAML.
+
+In particular, for Markdown notes `type` is always `code` and `mime` is `text/x-markdown`. For brevity these are always omitted from the YAML config.
 
 ### Position values
 
@@ -140,9 +145,9 @@ For ease of maintenance, `attributeId` is not specified. The synchronization alg
 
 #### Maintenance of `#filesystemPath` label
 
-If configured, notes can be labeled with the path to their file/folder representation relative to the **sync root**.
+If configured, notes can be automatically labeled with the path to their file/folder representation relative to the **sync root**.
 
-This allows referencing of notes in a flexible and maintainable way. For example, a note could be referenced in a Markdown file as follows:
+This enables referencing of notes in a flexible and maintainable way. For example, a note could be referenced in a Markdown file as follows:
 
 ```markdown
 - [Related note relative to current file](filesystemPath:note-1.md)
