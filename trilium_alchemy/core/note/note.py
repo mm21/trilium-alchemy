@@ -9,7 +9,7 @@ import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
-from typing import IO, Any, Iterator, Literal, Type, cast
+from typing import IO, Any, Iterator, Literal, Type, TypeVar, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -39,6 +39,16 @@ __all__ = [
     "Note",
     "Mixin",
 ]
+
+
+ChildSpecT = TypeVar("ChildSpecT", bound=Branch | "Note" | Type["Note"])
+"""
+Specifies a child to be declaratively added: may be a Branch (if prefix
+required), a Note object, or Note class.
+
+TODO: can also be tuple of (Note|Type[Note], dict[str, Any]) with the dict
+providing branch args
+"""
 
 
 STRING_NOTE_TYPES = {
@@ -323,7 +333,7 @@ class Mixin(ABC, metaclass=Meta):
     ```
     """
 
-    _force_leaf = False
+    _force_leaf: bool = False
     """
     If we applied the triliumAlchemyDeclarative CSS class to templates and
     their children, the user wouldn't be able to modify children of instances
@@ -334,14 +344,17 @@ class Mixin(ABC, metaclass=Meta):
     even though we still want to maintain the template itself declaratively.
     """
 
-    # Raise exception if instantiated directly
+    _sequence_map: dict[type, dict[str, int]] | None = None
+    """
+    State to keep track of sequence numbers for deterministic attribute/
+    child ids.
+    """
+
     def __init__(self):
-        raise Exception(
-            "Not allowed to instantiate Mixin: subclass in Note instead"
-        )
+        self._sequence_map = dict()
 
     def init(
-        self, attributes: list[Attribute], children: list[Branch | Note]
+        self, attributes: list[Attribute], children: list[ChildSpecT]
     ) -> dict[str, Any] | None:
         """
         Optionally provided by {obj}`Note` or {obj}`Mixin` subclass
@@ -439,9 +452,9 @@ class Mixin(ABC, metaclass=Meta):
     # Invoke declarative init and return tuple of attributes, children
     def _init_mixin(
         self, fields_update: dict[str, Any]
-    ) -> tuple[list[Attribute], list[Branch | Note | Type[Note]]]:
+    ) -> tuple[list[Attribute], list[ChildSpecT]]:
         attributes: list[Attribute] = list()
-        children: list[Branch | Note | Type[Note]] = list()
+        children: list[ChildSpecT] = list()
 
         # traverse MRO to add attributes and children in an intuitive order.
         # for each class in the MRO:
@@ -476,14 +489,18 @@ class Mixin(ABC, metaclass=Meta):
                 return cls
 
     # Return handle of file specified by content_file
-    def _get_content_fh(self):
+    def _get_content_fh(self) -> IO:
         # get class which defined content_file
         cls = self._get_content_cls()
         assert cls is not None
 
         # get path to content from class
         module = inspect.getmodule(cls)
-        content_path: str | None = None
+        content_path: str
+
+        assert module is not None
+        assert self.content_file is not None
+
         try:
             # assume we're in a package context
             # (e.g. trilium_alchemy installation)
@@ -505,10 +522,10 @@ class Mixin(ABC, metaclass=Meta):
             module_content = ".".join(module_path + module_rel)
 
             with importlib.resources.path(module_content, basename) as path:
-                content_path = path
+                content_path = str(path)
         except ModuleNotFoundError as e:
             # not in a package context (e.g. test code, standalone script)
-            path_folder = os.path.dirname(module.__file__)
+            path_folder = os.path.dirname(str(module.__file__))
             content_path = os.path.join(path_folder, self.content_file)
 
         assert os.path.isfile(
@@ -517,6 +534,39 @@ class Mixin(ABC, metaclass=Meta):
 
         mode = "r" if self.is_string else "rb"
         return open(content_path, mode)
+
+    def _derive_id(self, cls: type[object], base: str) -> str | None:
+        """
+        Generate a declarative entity id unique to this note with namespace
+        per class. Increments a sequence number per base, so e.g. there can be
+        multiple attributes with the same name.
+        """
+
+        if self.note_id:
+            # if child_id_seed was passed during init, use that to generate
+            # deterministic child note id invariant of the root id.
+            # this enables setting a tree of ids based on the app name rather
+            # than the root note it's installed to
+            if self._child_id_seed:
+                prefix = self._child_id_seed
+            else:
+                prefix = self.note_id
+
+            sequence = self._get_sequence(cls, base)
+            return id_hash(f"{prefix}_{base}_{sequence}")
+
+        return None
+
+    def _get_sequence(self, cls, base):
+        if cls not in self._sequence_map:
+            self._sequence_map[cls] = dict()
+
+        if base in self._sequence_map[cls]:
+            self._sequence_map[cls][base] += 1
+        else:
+            self._sequence_map[cls][base] = 0
+
+        return self._sequence_map[cls][base]
 
 
 class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
@@ -683,10 +733,6 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     _children: Children = None
     _content: Content = None
 
-    # state to keep track of sequence numbers for deterministic attribute/
-    # child ids
-    _sequence_map: dict[type, dict[str, int]] = None
-
     @require_session
     @require_model
     @require_note_id
@@ -752,7 +798,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             assert self.note_id == note_id
             return
 
-        self._sequence_map = dict()
+        Mixin.__init__(self)
         self._child_id_seed = child_id_seed
 
         # get from parent, if True
@@ -1069,7 +1115,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return type(self) is not Note
 
     @classmethod
-    def _get_decl_id(cls, parent: Note | None = None):
+    def _get_decl_id(cls, parent: Mixin | None = None):
         """
         Try to get a note_id. If one is returned, this note has a deterministic
         note_id and will get the same one every time it's instantiated.
@@ -1140,35 +1186,3 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                 else:
                     # get default field
                     fields_update[field] = self._model._field_default(field)
-
-    def _derive_id(self, cls, base) -> str | None:
-        """
-        Generate a declarative entity id unique to this note with namespace
-        per class. Increments a sequence number per base, so e.g. there can be
-        multiple attributes with the same name.
-        """
-
-        if self.note_id:
-            # if child_id_seed was passed during init, use that to generate
-            # deterministic child ids invariant of the root id.
-            # this enables setting a tree of ids based on the app name rather
-            # than the root note it's installed to
-            if self._child_id_seed:
-                prefix = self._child_id_seed
-            else:
-                prefix = self.note_id
-
-            sequence = self._get_sequence(cls, base)
-            return id_hash(f"{prefix}_{base}_{sequence}")
-        return None
-
-    def _get_sequence(self, cls, base):
-        if cls not in self._sequence_map:
-            self._sequence_map[cls] = dict()
-
-        if base in self._sequence_map[cls]:
-            self._sequence_map[cls][base] += 1
-        else:
-            self._sequence_map[cls][base] = 0
-
-        return self._sequence_map[cls][base]
