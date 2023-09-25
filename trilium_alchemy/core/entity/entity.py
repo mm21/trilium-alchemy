@@ -492,7 +492,7 @@ class SupportConstructor(Iterable, Protocol):
 
 
 def normalize_entities(
-    entities: Entity | Iterable[Entity],
+    entities: Entity | tuple | Iterable[Entity | tuple],
     collection_cls: Type[SupportConstructor] = list,
 ) -> Iterable[Entity]:
     """

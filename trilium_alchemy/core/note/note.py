@@ -614,74 +614,74 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     ```
     """
 
-    note_id: EntityIdDescriptor | str | None = EntityIdDescriptor()
+    note_id: str | None = EntityIdDescriptor()  # type: ignore
     """
     Read-only access to `noteId`. Will be `None`{l=python} if
     newly created with no `note_id` specified and not yet flushed.
     """
 
-    title: str = FieldDescriptor("title")
+    title: str = FieldDescriptor("title")  # type: ignore
     """
     Note title.
     """
 
     # TODO: custom descriptor for type w/validation
-    note_type: str = FieldDescriptor("type")
+    note_type: str = FieldDescriptor("type")  # type: ignore
     """
     Note type.
     """
 
-    mime: str = FieldDescriptor("mime")
+    mime: str = FieldDescriptor("mime")  # type: ignore
     """
     MIME type.
     """
 
-    is_protected: bool = ReadOnlyFieldDescriptor("is_protected")
+    is_protected: bool = ReadOnlyFieldDescriptor("is_protected")  # type: ignore
     """
     Whether this note is protected.
     """
 
-    date_created: str = ReadOnlyFieldDescriptor("date_created")
+    date_created: str = ReadOnlyFieldDescriptor("date_created")  # type: ignore
     """
     Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
     """
 
-    date_modified: str = ReadOnlyFieldDescriptor("date_modified")
+    date_modified: str = ReadOnlyFieldDescriptor("date_modified")  # type: ignore
     """
     Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
     """
 
-    utc_date_created: str = ReadOnlyFieldDescriptor("utc_date_created")
+    utc_date_created: str = ReadOnlyFieldDescriptor("utc_date_created")  # type: ignore
     """
     UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")
+    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")  # type: ignore
     """
     UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    attributes: Attributes = ExtensionDescriptor("_attributes")
+    attributes: Attributes = ExtensionDescriptor("_attributes")  # type: ignore
     """
     Interface to attributes, both owned and inherited.
     """
 
-    branches: Branches = ExtensionDescriptor("_branches")
+    branches: Branches = ExtensionDescriptor("_branches")  # type: ignore
     """
     Interface to branches, both parent and child.
     """
 
-    parents: Parents = ExtensionDescriptor("_parents")
+    parents: Parents = ExtensionDescriptor("_parents")  # type: ignore
     """
     Interface to parent notes.
     """
 
-    children: Children = ExtensionDescriptor("_children")
+    children: Children = ExtensionDescriptor("_children")  # type: ignore
     """
     Interface to child notes.
     """
 
-    content: str | bytes = ContentDescriptor("_content")
+    content: str | bytes = ContentDescriptor("_content")  # type: ignore
     """
     Interface to note content. See {obj}`trilium_alchemy.core.note.content.Content`.
     """
@@ -689,11 +689,11 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     _model_cls = NoteModel
 
     # model extensions
-    _attributes: Attributes = None
-    _branches: Branches = None
-    _parents: Parents = None
-    _children: Children = None
-    _content: Content = None
+    _attributes: Attributes
+    _branches: Branches
+    _parents: Parents
+    _children: Children
+    _content: Content
 
     @require_session
     @require_model
@@ -745,7 +745,9 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         # normalize args
         if parents is not None:
-            parents = normalize_entities(parents)
+            parents_iter: Iterable[Note | Branch] = cast(
+                Iterable[Note | Branch], normalize_entities(parents)
+            )
 
         init_done = self._init_done
 
@@ -772,7 +774,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             "note_type": note_type,
             "mime": mime,
             "attributes": attributes,
-            "parents": parents,
+            "parents": parents_iter,
             "children": children,
             "content": content,
         }
@@ -782,7 +784,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         # set content last as note type/mime are required to determine
         # expected content type (text or binary)
-        content = fields_update.pop("content")
+        content = cast(str | bytes | IO | None, fields_update.pop("content"))
 
         # set new fields
         self._set_attrs(**fields_update)
@@ -794,16 +796,27 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         self._set_attrs(content=content)
 
         # assign template if provided
-        if template:
+        if template is not None:
+            template_obj: Note
+            template_cls: type[Note] = get_cls(template)
+
             if type(template) is Meta:
+                # have class
+
                 assert (
-                    template._is_singleton
+                    template_cls._is_singleton is True
                 ), "Template target must be singleton class"
-                template = template(session=session)
+
+                # instantiate target
+                template_obj = template_cls(session=session)
+            else:
+                # have instance
+                template_obj = cast(Note, template)
+
             assert isinstance(
-                template, Note
-            ), f"Template target must be a Note, have {type(template)}"
-            self += Relation("template", template, session=session)
+                template_obj, Note
+            ), f"Template target must be a Note, have {type(template_obj)}"
+            self += Relation("template", template_obj, session=session)
 
     @property
     def _str_short(self):
@@ -843,23 +856,22 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         entities = normalize_entities(entity)
 
-        for entity in entities:
-            if isinstance(entity, Attribute):
-                self.attributes.owned.append(entity)
-            elif isinstance(entity, Note) or type(entity) is tuple:
+        for ent in entities:
+            if isinstance(ent, Attribute):
+                self.attributes.owned.append(ent)
+            elif isinstance(ent, Note) or type(ent) is tuple:
                 # add child note
-                self.branches.children.append(entity)
+                self.branches.children.append(ent)
             else:
                 assert isinstance(
-                    entity, Branch
-                ), f"Unknown type for +=: {type(entity)}"
-                branch = entity
+                    ent, Branch
+                ), f"Unknown type for +=: {type(ent)}"
+                branch = ent
 
                 if branch.parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
                     # note += Branch(parent=note, child=child)
-
                     self.branches.children.append(branch)
                 else:
                     # note += Branch(parent=parent)
@@ -878,9 +890,10 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-        parents = normalize_entities(parent, collection_cls=set)
 
-        self.branches.parents |= parents
+        # iterate and add individually for repeatability
+        for p in normalize_entities(parent):
+            self.branches.parents.add(p)
 
         return self
 
@@ -995,7 +1008,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         # check if note is subclassed
         if self._is_declarative:
             # get fields populated in class
-            for field in NoteModel.fields_update_alias:
+            for field in cast(Iterable[str], NoteModel.fields_update_alias):
                 self._get_decl_field(fields_update, field)
 
             # invoke init chain defined on mixin
