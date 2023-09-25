@@ -144,7 +144,7 @@ def relation(
     @check_name(name, accumulate=accumulate)
     def init(self, attributes: list[Attribute], children: list[Branch]):
         assert (
-            target_cls._is_singleton
+            target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
 
         # instantiate target first

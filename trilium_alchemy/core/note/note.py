@@ -9,7 +9,8 @@ import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
-from typing import IO, Any, Iterator, Literal, Type, TypeVar, cast
+from types import ModuleType
+from typing import IO, Any, Generic, Iterator, Literal, TypeVar, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -41,12 +42,12 @@ __all__ = [
 ]
 
 
-ChildSpecT = TypeVar("ChildSpecT", bound=Branch | "Note" | Type["Note"])
+ChildSpecT = TypeVar("ChildSpecT", Branch, "Note", type["Note"])
 """
 Specifies a child to be declaratively added: may be a Branch (if prefix
 required), a Note object, or Note class.
 
-TODO: can also be tuple of (Note|Type[Note], dict[str, Any]) with the dict
+TODO: can also be tuple of (Note|type[Note], dict[str, Any]) with the dict
 providing branch args
 """
 
@@ -167,7 +168,7 @@ def id_hash(seed: str) -> str:
     return condensed_string
 
 
-def get_cls(ent: Note | Type[Note]) -> Type[Note]:
+def get_cls(ent: Note | type[Note]) -> type[Note]:
     """
     Check if note is a class or instance and return the class.
     """
@@ -175,10 +176,10 @@ def get_cls(ent: Note | Type[Note]) -> Type[Note]:
         # have class
         return ent
     # have instance
-    return cast(Type[Note], type(ent))
+    return cast(type[Note], type(ent))
 
 
-def is_inherited(cls: Type[Mixin], attr: str) -> bool:
+def is_inherited(cls: type[Mixin], attr: str) -> bool:
     """
     Check if given attribute is inherited from superclass (True) or defined on this
     class (False).
@@ -423,7 +424,7 @@ class Mixin(ABC, SessionContainer, metaclass=Meta):
         )
 
     def create_declarative_child(
-        self, child_cls: Type[Note], **kwargs
+        self, child_cls: type[Note], **kwargs
     ) -> Branch:
         """
         Create a child {obj}`Note` with deterministic `note_id` and return a
@@ -531,7 +532,13 @@ class Mixin(ABC, SessionContainer, metaclass=Meta):
         return self._sequence_map[cls][base]
 
 
-class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
+class Note(
+    Entity[NoteModel],
+    Mixin,
+    MutableMapping,
+    Generic[ChildSpecT],
+    metaclass=Meta,
+):
     """
     Encapsulates a note and provides a base class for declarative notes.
 
@@ -719,7 +726,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         attributes: Iterable[Attribute] | None = None,
         content: str | bytes | IO | None = None,
         note_id: str | None = None,
-        template: Note | Type[Note] | None = None,
+        template: Note | type[Note] | None = None,
         session: Session | None = None,
         **kwargs,
     ):
@@ -804,7 +811,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                 # have class
 
                 assert (
-                    template_cls._is_singleton is True
+                    template_cls._is_singleton()
                 ), "Template target must be singleton class"
 
                 # instantiate target
@@ -1012,6 +1019,8 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                 self._get_decl_field(fields_update, field)
 
             # invoke init chain defined on mixin
+            attributes: list[Attribute]
+            children: list[ChildSpecT]
             attributes, children = self._init_mixin(fields_update)
 
             # add originalFilename label if content set from file
@@ -1067,7 +1076,9 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                         branch_kwargs = dict()
 
                     if type(child_cls) is Meta:
-                        branch = self.create_declarative_child(child_cls)
+                        branch = self.create_declarative_child(
+                            cast(type[Note], child_cls)
+                        )
 
                         # set branch kwargs
                         for key, value in branch_kwargs.items():
@@ -1095,8 +1106,11 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         note_id and will get the same one every time it's instantiated.
         """
 
+        module: ModuleType | None = inspect.getmodule(cls)
+        assert module is not None
+
         # get fully qualified class name
-        cls_name = f"{inspect.getmodule(cls).__name__}.{cls.__name__}"
+        cls_name = f"{module.__name__}.{cls.__name__}"
 
         if hasattr(cls, "note_id_"):
             # note_id provided and renamed by metaclass
@@ -1112,7 +1126,6 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             # singleton parent, so try to generate deterministic id
             return parent._derive_id(Note, cls_name)
 
-    @property
     @classmethod
     def _is_singleton(cls) -> bool:
         return cls._get_decl_id() is not None
