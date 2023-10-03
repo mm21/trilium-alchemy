@@ -43,7 +43,7 @@ class Relation(Attribute):
         name: str,
         target: note.Note,
         inheritable: bool = False,
-        session: Session = None,
+        session: Session | None = None,
         **kwargs,
     ):
         """

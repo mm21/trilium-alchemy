@@ -237,7 +237,7 @@ class Meta(ABCMeta):
 
             cls_init(self, **kwargs)
 
-        note_cls.__init__ = __init__
+        note_cls.__init__ = __init__  # type: ignore
 
         return note_cls
 
@@ -448,12 +448,15 @@ class Mixin(ABC, SessionContainer, metaclass=Meta):
         # check if ids are known
         if self.note_id is not None:
             # if ids are known at this point, also generate branch id
-            branch_id = Branch._gen_branch_id(self, child)
+            branch_id = Branch._gen_branch_id(cast(Note, self), child)
         else:
             branch_id = None
 
         return Branch(
-            parent=self, child=child, branch_id=branch_id, session=self._session
+            parent=cast(Note, self),
+            child=child,
+            branch_id=branch_id,
+            session=self._session,
         )
 
     # Invoke declarative init and return tuple of attributes, children
@@ -521,6 +524,8 @@ class Mixin(ABC, SessionContainer, metaclass=Meta):
         return None
 
     def _get_sequence(self, cls, base):
+        assert self._sequence_map is not None
+
         if cls not in self._sequence_map:
             self._sequence_map[cls] = dict()
 
@@ -904,23 +909,16 @@ class Note(
 
         return self
 
-    def __getitem__(self, key: str) -> str | Note | None:
+    def __getitem__(self, key: str) -> str | Note:
         """
         Return value of first attribute with provided name.
 
         :raises KeyError: No such attribute
         """
-
-        # get list of attributes with name
-        attrs = self.attributes[key]
-
-        if len(attrs):
-            attr = attrs[0]
-
-            if isinstance(attr, Relation):
-                return attr.target
-            return attr.value
-        return None
+        attr = self.attributes[key][0]
+        if isinstance(attr, Relation):
+            return attr.target
+        return attr.value
 
     def __setitem__(self, key: str, value_spec: ValueSpec):
         """
@@ -991,7 +989,7 @@ class Note(
 
         # collect set of entities
         flush_set = {attr for attr in self.attributes.owned}
-        flush_set.add(self)
+        flush_set.add(self)  # type: ignore
 
         self._session.flush(flush_set)
 
