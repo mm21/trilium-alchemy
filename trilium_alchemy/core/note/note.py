@@ -435,29 +435,85 @@ class Mixin(ABC, SessionContainer, metaclass=Meta):
         Instantiate provided class as a declarative child of the current
         note by generating a deterministic id and returning the
         corresponding branch.
-        """
-        child_note_id = child_cls._get_decl_id(self)
 
-        child = child_cls(
+        If the parent note's note_id is not set, the child note's may not be.
+        If the child's note_id is not set, a new note will be created upon
+        every instantiation. This is the case for non-singleton subclasses.
+        """
+        child_note_id: str | None = child_cls._get_decl_id(self)
+
+        child: Note = child_cls(
             note_id=child_note_id,
             session=self._session,
             force_leaf=self._force_leaf,
             **kwargs,
         )
 
-        # check if ids are known
-        if self.note_id is not None:
-            # if ids are known at this point, also generate branch id
-            branch_id = Branch._gen_branch_id(cast(Note, self), child)
-        else:
-            branch_id = None
+        return self._normalize_child(child)
 
-        return Branch(
-            parent=cast(Note, self),
-            child=child,
-            branch_id=branch_id,
-            session=self._session,
-        )
+    def _normalize_child(self, child: Note | Branch) -> Branch:
+        """
+        Take child as Note or Branch and return a Branch.
+        """
+
+        if isinstance(child, Note):
+            # check if ids are known
+            if self.note_id is not None:
+                # if ids are known at this point, also generate branch id
+                branch_id = Branch._gen_branch_id(cast(Note, self), child)
+            else:
+                branch_id = None
+
+            return Branch(
+                parent=cast(Note, self),
+                child=child,
+                branch_id=branch_id,
+                session=self._session,
+            )
+        else:
+            # ensure we have a Branch
+            assert isinstance(child, Branch)
+            return child
+
+    def _normalize_child_spec(
+        self, child_spec_raw: ChildSpecT | tuple[ChildSpecT, dict]
+    ) -> Branch:
+        """
+        Take ChildSpecT or tuple of
+        (child_spec: ChildSpecT, branch_kwargs: dict)
+        and return a Branch.
+        """
+        branch: Branch
+        child_spec: ChildSpecT
+        branch_kwargs: dict
+
+        # extract branch args if provided
+        if isinstance(child_spec_raw, tuple):
+            child_spec, branch_kwargs = child_spec_raw
+        else:
+            child_spec = child_spec_raw
+            branch_kwargs = dict()
+
+        if isinstance(child_spec, type(Note)):
+            # have Note class
+            branch = self.create_declarative_child(cast(type[Note], child_spec))
+        else:
+            # have Note or Branch
+            branch = self._normalize_child(cast(Note | Branch, child_spec))
+
+        # set branch kwargs
+        for key, value in branch_kwargs.items():
+            setattr(branch, key, value)
+
+        return branch
+
+    def _normalize_children(self, children: list[ChildSpecT]) -> list[Branch]:
+        """
+        Instantiate any Note classes provided and normalize as child Branch.
+        """
+        return [
+            self._normalize_child_spec(child_spec) for child_spec in children
+        ]
 
     # Invoke declarative init and return tuple of attributes, children
     def _init_mixin(
@@ -756,8 +812,9 @@ class Note(
             logging.warning(f"Unexpected kwargs: {kwargs}")
 
         # normalize args
+        parents_iter: Iterable[Note | Branch] | None = None
         if parents is not None:
-            parents_iter: Iterable[Note | Branch] = cast(
+            parents_iter = cast(
                 Iterable[Note | Branch], normalize_entities(parents)
             )
 
@@ -1058,31 +1115,16 @@ class Note(
             else:
                 # not a leaf note: free to update children
                 if fields_update["children"] is not None:
+                    # prepend provided children
+
+                    children = fields_update["children"] + children
+
                     fields_update["children"] += children
-                else:
-                    fields_update["children"] = children
+                    children = fields_update["children"]
 
-            # instantiate any classes provided, either through
-            # @children decorator or constructor
-            if fields_update["children"] is not None:
-                for index, child_spec in enumerate(fields_update["children"]):
-                    # extract branch args if provided
-                    if type(child_spec) is tuple:
-                        child_cls, branch_kwargs = child_spec
-                    else:
-                        child_cls = child_spec
-                        branch_kwargs = dict()
-
-                    if type(child_cls) is Meta:
-                        branch = self.create_declarative_child(
-                            cast(type[Note], child_cls)
-                        )
-
-                        # set branch kwargs
-                        for key, value in branch_kwargs.items():
-                            setattr(branch, key, value)
-
-                        fields_update["children"][index] = branch
+                # instantiate any classes provided, either through
+                # @children decorator or constructor
+                fields_update["children"] = self._normalize_children(children)
 
     @property
     def is_string(self) -> bool:
@@ -1094,11 +1136,11 @@ class Note(
         return is_string(self.note_type, self.mime)
 
     @property
-    def _is_declarative(self):
+    def _is_declarative(self) -> bool:
         return type(self) is not Note
 
     @classmethod
-    def _get_decl_id(cls, parent: Mixin | None = None):
+    def _get_decl_id(cls, parent: Mixin | None = None) -> str | None:
         """
         Try to get a note_id. If one is returned, this note has a deterministic
         note_id and will get the same one every time it's instantiated.
@@ -1123,6 +1165,8 @@ class Note(
             # not declared as singleton, but possibly created by
             # singleton parent, so try to generate deterministic id
             return parent._derive_id(Note, cls_name)
+
+        return None
 
     @classmethod
     def _is_singleton(cls) -> bool:
