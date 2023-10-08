@@ -172,7 +172,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     """
     Check if note is a class or instance and return the class.
     """
-    if type(ent) is Meta:
+    if isinstance(ent, BaseMeta):
         # have class
         return ent
     # have instance
@@ -191,7 +191,7 @@ def is_inherited(cls: type[Mixin], attr: str) -> bool:
     )
 
 
-class Meta(ABCMeta):
+class BaseMeta(ABCMeta):
     """
     Use metaclass for Mixin to initialize list of descriptions for
     decorators added to it. Inherits decorator docs from bases.
@@ -223,26 +223,34 @@ class Meta(ABCMeta):
                     attrs[field_new] = attrs[field]
                     del attrs[field]
 
+        return super().__new__(cls, name, bases, attrs)
+
+
+class NoteMeta(BaseMeta):
+    """
+    Additionally wrap __init__ to take defaults as None. This is needed to
+    avoid clobbering title/type/mime for existing notes, but still
+    document the defaults for new note creation in the API.
+    """
+
+    def __new__(cls, name, bases, attrs):
         note_cls = super().__new__(cls, name, bases, attrs)
         cls_init = note_cls.__init__
 
-        # wrap __init__ to take defaults as None. this is needed to
-        # avoid clobbering title/type/mime for existing notes, but still
-        # document the defaults for new note creation in the API
         @wraps(cls_init)
-        def __init__(self, **kwargs):
+        def __init__(self, *args, **kwargs):
             for field in NoteModel.fields_update_alias:
                 if field not in kwargs:
                     kwargs[field] = None
 
-            cls_init(self, **kwargs)
+            cls_init(self, *args, **kwargs)
 
         note_cls.__init__ = __init__  # type: ignore
 
         return note_cls
 
 
-class Mixin(ABC, SessionContainer, metaclass=Meta):
+class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
     """
     Reusable collection of attributes, children, and fields
     (`note_id`, `title`, `type`, `mime`) which can be inherited by a
@@ -598,7 +606,7 @@ class Note(
     Mixin,
     MutableMapping,
     Generic[ChildSpecT],
-    metaclass=Meta,
+    metaclass=NoteMeta,
 ):
     """
     Encapsulates a note and provides a base class for declarative notes.
@@ -820,7 +828,7 @@ class Note(
 
         init_done = self._init_done
 
-        # invoke base init
+        # invoke Entity init
         super().__init__(
             entity_id=note_id,
             session=session,
@@ -831,6 +839,7 @@ class Note(
             assert self.note_id == note_id
             return
 
+        # invoke Mixin init
         Mixin.__init__(self, child_id_seed)
 
         # get from parent, if True
@@ -869,7 +878,7 @@ class Note(
             template_obj: Note
             template_cls: type[Note] = get_cls(template)
 
-            if type(template) is Meta:
+            if type(template) is NoteMeta:
                 # have class
 
                 assert (
