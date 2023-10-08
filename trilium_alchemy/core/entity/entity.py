@@ -482,18 +482,9 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", ent)
 
 
-class SupportConstructor(Iterable, Protocol):
-    """
-    Protocol for supporting constructor.
-    """
-
-    def __init__(self, __iterable: Iterable):
-        ...
-
-
 def normalize_entities(
     entities: Entity | tuple | Iterable[Entity | tuple],
-    collection_cls: Type[SupportConstructor] = list,
+    collection_cls: Type[Iterable] = list,
 ) -> Iterable[Entity]:
     """
     Take an entity or iterable of entities and return an iterable.
