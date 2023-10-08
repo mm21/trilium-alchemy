@@ -174,7 +174,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     """
     if isinstance(ent, BaseMeta):
         # have class
-        return ent
+        return cast(type[Note], ent)
     # have instance
     return cast(type[Note], type(ent))
 
