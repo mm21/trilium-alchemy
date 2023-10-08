@@ -630,12 +630,22 @@ class Session:
         return default_session is self
 
 
-"""
-Decorator to use default Session if none provided.
-"""
+class SessionContainer:
+    """
+    Indicates that an object is associated with a Session.
+    """
+
+    _session: Session
+
+    def __init__(self, session: Session):
+        self._session = session
 
 
 def require_session(func):
+    """
+    Decorator to use default Session if none provided.
+    """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         # validate session

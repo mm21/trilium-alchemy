@@ -166,7 +166,11 @@ class Model(ABC):
 
     @classmethod
     @property
-    def fields_update_alias(cls):
+    def fields_update_alias(cls) -> Iterable[str]:
+        """
+        Maps aliased fields to canonical fields using fields_alias if
+        provided.
+        """
         if cls.fields_alias:
             fields_update = cls.fields_update.copy()
             for alias, field in cls.fields_alias.items():

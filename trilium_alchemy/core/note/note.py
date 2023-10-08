@@ -9,7 +9,8 @@ import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
-from typing import IO, Any, Iterator, Literal, Type
+from types import ModuleType
+from typing import IO, Any, Generic, Iterator, Literal, TypeVar, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -29,7 +30,7 @@ from ..entity.model import (
 # isort: on
 
 from ..exceptions import *
-from ..session import Session, require_session
+from ..session import Session, SessionContainer, require_session
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
 from .content import Content, ContentDescriptor
@@ -39,6 +40,16 @@ __all__ = [
     "Note",
     "Mixin",
 ]
+
+
+ChildSpecT = TypeVar("ChildSpecT", Branch, "Note", type["Note"])
+"""
+Specifies a child to be declaratively added: may be a Branch (if prefix
+required), a Note object, or Note class.
+
+TODO: can also be tuple of (Note|type[Note], dict[str, Any]) with the dict
+providing branch args
+"""
 
 
 STRING_NOTE_TYPES = {
@@ -98,7 +109,7 @@ def require_note_id(func):
     return _declarative_note_id
 
 
-def patch_init(init, doc: str = None):
+def patch_init(init, doc: str | None = None):
     """
     Insert provided init function in class's declarative init sequence.
     """
@@ -108,7 +119,10 @@ def patch_init(init, doc: str = None):
 
         @wraps(init_decl_old)
         def _init_decl(
-            self, cls_decl, attributes: list[Attribute], children: list[Branch]
+            self,
+            cls_decl,
+            attributes: list[Attribute],
+            children: list[ChildSpecT],
         ):
             if cls is cls_decl:
                 # invoke init patch
@@ -154,19 +168,18 @@ def id_hash(seed: str) -> str:
     return condensed_string
 
 
-def get_cls(ent: Note | Type[Note]) -> Type[Note]:
+def get_cls(ent: Note | type[Note]) -> type[Note]:
     """
     Check if note is a class or instance and return the class.
     """
-    if type(ent) is Meta:
+    if isinstance(ent, BaseMeta):
         # have class
         return ent
-    else:
-        # have instance
-        return type(ent)
+    # have instance
+    return cast(type[Note], type(ent))
 
 
-def is_inherited(cls: Type[Mixin], attr: str) -> bool:
+def is_inherited(cls: type[Mixin], attr: str) -> bool:
     """
     Check if given attribute is inherited from superclass (True) or defined on this
     class (False).
@@ -178,7 +191,7 @@ def is_inherited(cls: Type[Mixin], attr: str) -> bool:
     )
 
 
-class Meta(ABCMeta):
+class BaseMeta(ABCMeta):
     """
     Use metaclass for Mixin to initialize list of descriptions for
     decorators added to it. Inherits decorator docs from bases.
@@ -210,26 +223,34 @@ class Meta(ABCMeta):
                     attrs[field_new] = attrs[field]
                     del attrs[field]
 
+        return super().__new__(cls, name, bases, attrs)
+
+
+class NoteMeta(BaseMeta):
+    """
+    Additionally wrap __init__ to take defaults as None. This is needed to
+    avoid clobbering title/type/mime for existing notes, but still
+    document the defaults for new note creation in the API.
+    """
+
+    def __new__(cls, name, bases, attrs):
         note_cls = super().__new__(cls, name, bases, attrs)
         cls_init = note_cls.__init__
 
-        # wrap __init__ to take defaults as None. this is needed to
-        # avoid clobbering title/type/mime for existing notes, but still
-        # document the defaults for new note creation in the API
         @wraps(cls_init)
-        def __init__(self, **kwargs):
+        def __init__(self, *args, **kwargs):
             for field in NoteModel.fields_update_alias:
                 if field not in kwargs:
                     kwargs[field] = None
 
-            cls_init(self, **kwargs)
+            cls_init(self, *args, **kwargs)
 
-        note_cls.__init__ = __init__
+        note_cls.__init__ = __init__  # type: ignore
 
         return note_cls
 
 
-class Mixin(ABC, metaclass=Meta):
+class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
     """
     Reusable collection of attributes, children, and fields
     (`note_id`, `title`, `type`, `mime`) which can be inherited by a
@@ -324,7 +345,7 @@ class Mixin(ABC, metaclass=Meta):
     ```
     """
 
-    _force_leaf = False
+    _force_leaf: bool = False
     """
     If we applied the triliumAlchemyDeclarative CSS class to templates and
     their children, the user wouldn't be able to modify children of instances
@@ -335,14 +356,20 @@ class Mixin(ABC, metaclass=Meta):
     even though we still want to maintain the template itself declaratively.
     """
 
-    # Raise exception if instantiated directly
-    def __init__(self):
-        raise Exception(
-            "Not allowed to instantiate Mixin: subclass in Note instead"
-        )
+    _sequence_map: dict[type, dict[str, int]] | None = None
+    """
+    State to keep track of sequence numbers for deterministic attribute/
+    child ids.
+    """
+
+    _child_id_seed: str | None = None
+
+    def __init__(self, child_id_seed: str | None):
+        self._sequence_map = dict()
+        self._child_id_seed = child_id_seed
 
     def init(
-        self, attributes: list[Attribute], children: list[Branch | Note]
+        self, attributes: list[Attribute], children: list[ChildSpecT]
     ) -> dict[str, Any] | None:
         """
         Optionally provided by {obj}`Note` or {obj}`Mixin` subclass
@@ -405,7 +432,7 @@ class Mixin(ABC, metaclass=Meta):
         )
 
     def create_declarative_child(
-        self, child_cls: Type[Note], **kwargs
+        self, child_cls: type[Note], **kwargs
     ) -> Branch:
         """
         Create a child {obj}`Note` with deterministic `note_id` and return a
@@ -416,33 +443,92 @@ class Mixin(ABC, metaclass=Meta):
         Instantiate provided class as a declarative child of the current
         note by generating a deterministic id and returning the
         corresponding branch.
-        """
-        child_note_id = child_cls._get_decl_id(self)
 
-        child = child_cls(
+        If the parent note's note_id is not set, the child note's may not be.
+        If the child's note_id is not set, a new note will be created upon
+        every instantiation. This is the case for non-singleton subclasses.
+        """
+        child_note_id: str | None = child_cls._get_decl_id(self)
+
+        child: Note = child_cls(
             note_id=child_note_id,
             session=self._session,
             force_leaf=self._force_leaf,
             **kwargs,
         )
 
-        # check if ids are known
-        if self.note_id is not None:
-            # if ids are known at this point, also generate branch id
-            branch_id = Branch._gen_branch_id(self, child)
-        else:
-            branch_id = None
+        return self._normalize_child(child)
 
-        return Branch(
-            parent=self, child=child, branch_id=branch_id, session=self._session
-        )
+    def _normalize_child(self, child: Note | Branch) -> Branch:
+        """
+        Take child as Note or Branch and return a Branch.
+        """
+
+        if isinstance(child, Note):
+            # check if ids are known
+            if self.note_id is not None:
+                # if ids are known at this point, also generate branch id
+                branch_id = Branch._gen_branch_id(cast(Note, self), child)
+            else:
+                branch_id = None
+
+            return Branch(
+                parent=cast(Note, self),
+                child=child,
+                branch_id=branch_id,
+                session=self._session,
+            )
+        else:
+            # ensure we have a Branch
+            assert isinstance(child, Branch)
+            return child
+
+    def _normalize_child_spec(
+        self, child_spec_raw: ChildSpecT | tuple[ChildSpecT, dict]
+    ) -> Branch:
+        """
+        Take ChildSpecT or tuple of
+        (child_spec: ChildSpecT, branch_kwargs: dict)
+        and return a Branch.
+        """
+        branch: Branch
+        child_spec: ChildSpecT
+        branch_kwargs: dict
+
+        # extract branch args if provided
+        if isinstance(child_spec_raw, tuple):
+            child_spec, branch_kwargs = child_spec_raw
+        else:
+            child_spec = child_spec_raw
+            branch_kwargs = dict()
+
+        if isinstance(child_spec, type(Note)):
+            # have Note class
+            branch = self.create_declarative_child(cast(type[Note], child_spec))
+        else:
+            # have Note or Branch
+            branch = self._normalize_child(cast(Note | Branch, child_spec))
+
+        # set branch kwargs
+        for key, value in branch_kwargs.items():
+            setattr(branch, key, value)
+
+        return branch
+
+    def _normalize_children(self, children: list[ChildSpecT]) -> list[Branch]:
+        """
+        Instantiate any Note classes provided and normalize as child Branch.
+        """
+        return [
+            self._normalize_child_spec(child_spec) for child_spec in children
+        ]
 
     # Invoke declarative init and return tuple of attributes, children
     def _init_mixin(
         self, fields_update: dict[str, Any]
-    ) -> tuple[list[Attribute], list[Branch | Note | Type[Note]]]:
+    ) -> tuple[list[Attribute], list[ChildSpecT]]:
         attributes: list[Attribute] = list()
-        children: list[Branch | Note | Type[Note]] = list()
+        children: list[ChildSpecT] = list()
 
         # traverse MRO to add attributes and children in an intuitive order.
         # for each class in the MRO:
@@ -467,9 +553,9 @@ class Mixin(ABC, metaclass=Meta):
     # Base declarative init method which can be patched by decorators
     def _init_decl(
         self,
-        cls_decl: Type[Note],
+        cls_decl: type[Mixin],
         attributes: list[Attribute],
-        children: list[Branch],
+        children: list[ChildSpecT],
     ):
         pass
 
@@ -479,51 +565,49 @@ class Mixin(ABC, metaclass=Meta):
             if issubclass(cls, Mixin) and cls.content_file:
                 return cls
 
-    # Return handle of file specified by content_file
-    def _get_content_fh(self):
-        # get class which defined content_file
-        cls = self._get_content_cls()
-        assert cls is not None
+    def _derive_id(self, cls: type[object], base: str) -> str | None:
+        """
+        Generate a declarative entity id unique to this note with namespace
+        per class. Increments a sequence number per base, so e.g. there can be
+        multiple attributes with the same name.
+        """
 
-        # get path to content from class
-        module = inspect.getmodule(cls)
-        content_path: str | None = None
-        try:
-            # assume we're in a package context
-            # (e.g. trilium_alchemy installation)
-            module_path = module.__name__.split(".")
-
-            content_file = self.content_file.split("/")
-            basename = content_file[-1]
-            module_rel = content_file[:-1]
-
-            try:
-                module.__module__
-            except AttributeError:
-                # have a package
-                pass
+        if self.note_id:
+            # if child_id_seed was passed during init, use that to generate
+            # deterministic child note id invariant of the root id.
+            # this enables setting a tree of ids based on the app name rather
+            # than the root note it's installed to
+            if self._child_id_seed:
+                prefix = self._child_id_seed
             else:
-                # have a module, we want a package
-                del module_path[-1]
+                prefix = self.note_id
 
-            module_content = ".".join(module_path + module_rel)
+            sequence = self._get_sequence(cls, base)
+            return id_hash(f"{prefix}_{base}_{sequence}")
 
-            with importlib.resources.path(module_content, basename) as path:
-                content_path = path
-        except ModuleNotFoundError as e:
-            # not in a package context (e.g. test code, standalone script)
-            path_folder = os.path.dirname(module.__file__)
-            content_path = os.path.join(path_folder, self.content_file)
+        return None
 
-        assert os.path.isfile(
-            content_path
-        ), f"Content file specified by {cls} does not exist: {content_path}"
+    def _get_sequence(self, cls, base):
+        assert self._sequence_map is not None
 
-        mode = "r" if self.is_string else "rb"
-        return open(content_path, mode)
+        if cls not in self._sequence_map:
+            self._sequence_map[cls] = dict()
+
+        if base in self._sequence_map[cls]:
+            self._sequence_map[cls][base] += 1
+        else:
+            self._sequence_map[cls][base] = 0
+
+        return self._sequence_map[cls][base]
 
 
-class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
+class Note(
+    Entity[NoteModel],
+    Mixin,
+    MutableMapping,
+    Generic[ChildSpecT],
+    metaclass=NoteMeta,
+):
     """
     Encapsulates a note and provides a base class for declarative notes.
 
@@ -606,74 +690,74 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     ```
     """
 
-    note_id: str | None = EntityIdDescriptor()
+    note_id: str | None = EntityIdDescriptor()  # type: ignore
     """
     Read-only access to `noteId`. Will be `None`{l=python} if
     newly created with no `note_id` specified and not yet flushed.
     """
 
-    title: str = FieldDescriptor("title")
+    title: str = FieldDescriptor("title")  # type: ignore
     """
     Note title.
     """
 
     # TODO: custom descriptor for type w/validation
-    note_type: str = FieldDescriptor("type")
+    note_type: str = FieldDescriptor("type")  # type: ignore
     """
     Note type.
     """
 
-    mime: str = FieldDescriptor("mime")
+    mime: str = FieldDescriptor("mime")  # type: ignore
     """
     MIME type.
     """
 
-    is_protected: bool = ReadOnlyFieldDescriptor("is_protected")
+    is_protected: bool = ReadOnlyFieldDescriptor("is_protected")  # type: ignore
     """
     Whether this note is protected.
     """
 
-    date_created: str = ReadOnlyFieldDescriptor("date_created")
+    date_created: str = ReadOnlyFieldDescriptor("date_created")  # type: ignore
     """
     Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
     """
 
-    date_modified: str = ReadOnlyFieldDescriptor("date_modified")
+    date_modified: str = ReadOnlyFieldDescriptor("date_modified")  # type: ignore
     """
     Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
     """
 
-    utc_date_created: str = ReadOnlyFieldDescriptor("utc_date_created")
+    utc_date_created: str = ReadOnlyFieldDescriptor("utc_date_created")  # type: ignore
     """
     UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")
+    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")  # type: ignore
     """
     UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    attributes: Attributes = ExtensionDescriptor("_attributes")
+    attributes: Attributes = ExtensionDescriptor("_attributes")  # type: ignore
     """
     Interface to attributes, both owned and inherited.
     """
 
-    branches: Branches = ExtensionDescriptor("_branches")
+    branches: Branches = ExtensionDescriptor("_branches")  # type: ignore
     """
     Interface to branches, both parent and child.
     """
 
-    parents: Parents = ExtensionDescriptor("_parents")
+    parents: Parents = ExtensionDescriptor("_parents")  # type: ignore
     """
     Interface to parent notes.
     """
 
-    children: Children = ExtensionDescriptor("_children")
+    children: Children = ExtensionDescriptor("_children")  # type: ignore
     """
     Interface to child notes.
     """
 
-    content: str | bytes = ContentDescriptor("_content")
+    content: str | bytes = ContentDescriptor("_content")  # type: ignore
     """
     Interface to note content. See {obj}`trilium_alchemy.core.note.content.Content`.
     """
@@ -681,15 +765,11 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
     _model_cls = NoteModel
 
     # model extensions
-    _attributes: Attributes = None
-    _branches: Branches = None
-    _parents: Parents = None
-    _children: Children = None
-    _content: Content = None
-
-    # state to keep track of sequence numbers for deterministic attribute/
-    # child ids
-    _sequence_map: dict[type, dict[str, int]] = None
+    _attributes: Attributes
+    _branches: Branches
+    _parents: Parents
+    _children: Children
+    _content: Content
 
     @require_session
     @require_model
@@ -710,13 +790,13 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         title: str = "new note",
         note_type: str = "text",
         mime: str = "text/html",
-        parents: Iterable[Note | Branch] | Note | Branch = None,
-        children: Iterable[Note | Branch] = None,
-        attributes: Iterable[Attribute] = None,
-        content: str | bytes | IO = None,
-        note_id: str = None,
-        template: Note | Type[Note] = None,
-        session: Session = None,
+        parents: Iterable[Note | Branch] | Note | Branch | None = None,
+        children: Iterable[Note | Branch] | None = None,
+        attributes: Iterable[Attribute] | None = None,
+        content: str | bytes | IO | None = None,
+        note_id: str | None = None,
+        template: Note | type[Note] | None = None,
+        session: Session | None = None,
         **kwargs,
     ):
         """
@@ -740,12 +820,15 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             logging.warning(f"Unexpected kwargs: {kwargs}")
 
         # normalize args
+        parents_iter: Iterable[Note | Branch] | None = None
         if parents is not None:
-            parents = normalize_entities(parents)
+            parents_iter = cast(
+                Iterable[Note | Branch], normalize_entities(parents)
+            )
 
         init_done = self._init_done
 
-        # invoke base init
+        # invoke Entity init
         super().__init__(
             entity_id=note_id,
             session=session,
@@ -756,8 +839,8 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             assert self.note_id == note_id
             return
 
-        self._sequence_map = dict()
-        self._child_id_seed = child_id_seed
+        # invoke Mixin init
+        Mixin.__init__(self, child_id_seed)
 
         # get from parent, if True
         if force_leaf:
@@ -769,7 +852,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             "note_type": note_type,
             "mime": mime,
             "attributes": attributes,
-            "parents": parents,
+            "parents": parents_iter,
             "children": children,
             "content": content,
         }
@@ -779,7 +862,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         # set content last as note type/mime are required to determine
         # expected content type (text or binary)
-        content = fields_update.pop("content")
+        content = cast(str | bytes | IO | None, fields_update.pop("content"))
 
         # set new fields
         self._set_attrs(**fields_update)
@@ -791,16 +874,27 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         self._set_attrs(content=content)
 
         # assign template if provided
-        if template:
-            if type(template) is Meta:
+        if template is not None:
+            template_obj: Note
+            template_cls: type[Note] = get_cls(template)
+
+            if type(template) is NoteMeta:
+                # have class
+
                 assert (
-                    template._is_singleton
+                    template_cls._is_singleton()
                 ), "Template target must be singleton class"
-                template = template(session=session)
+
+                # instantiate target
+                template_obj = template_cls(session=session)
+            else:
+                # have instance
+                template_obj = cast(Note, template)
+
             assert isinstance(
-                template, Note
-            ), f"Template target must be a Note, have {type(template)}"
-            self += Relation("template", template, session=session)
+                template_obj, Note
+            ), f"Template target must be a Note, have {type(template_obj)}"
+            self += Relation("template", template_obj, session=session)
 
     @property
     def _str_short(self):
@@ -811,11 +905,11 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
     @classmethod
-    def _from_id(cls, note_id: str, session: Session = None):
+    def _from_id(cls, note_id: str, session: Session | None = None):
         return Note(note_id=note_id, session=session)
 
     @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session = None):
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
         return Note(note_id=model.note_id, model_backing=model, session=session)
 
     def __iadd__(
@@ -840,23 +934,22 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         entities = normalize_entities(entity)
 
-        for entity in entities:
-            if isinstance(entity, Attribute):
-                self.attributes.owned.append(entity)
-            elif isinstance(entity, Note) or type(entity) is tuple:
+        for ent in entities:
+            if isinstance(ent, Attribute):
+                self.attributes.owned.append(ent)
+            elif isinstance(ent, Note) or type(ent) is tuple:
                 # add child note
-                self.branches.children.append(entity)
+                self.branches.children.append(ent)
             else:
                 assert isinstance(
-                    entity, Branch
-                ), f"Unknown type for +=: {type(entity)}"
-                branch = entity
+                    ent, Branch
+                ), f"Unknown type for +=: {type(ent)}"
+                branch = ent
 
                 if branch.parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
                     # note += Branch(parent=note, child=child)
-
                     self.branches.children.append(branch)
                 else:
                     # note += Branch(parent=parent)
@@ -875,9 +968,10 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-        parents = normalize_entities(parent, collection_cls=set)
 
-        self.branches.parents |= parents
+        # iterate and add individually for repeatability
+        for p in normalize_entities(parent):
+            self.branches.parents.add(p)
 
         return self
 
@@ -887,17 +981,10 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         :raises KeyError: No such attribute
         """
-
-        # get list of attributes with name
-        attrs = self.attributes[key]
-
-        if len(attrs):
-            attr = attrs[0]
-
-            if isinstance(attr, Relation):
-                return attr.target
-            else:
-                return attr.value
+        attr = self.attributes[key][0]
+        if isinstance(attr, Relation):
+            return attr.target
+        return attr.value
 
     def __setitem__(self, key: str, value_spec: ValueSpec):
         """
@@ -968,7 +1055,7 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
 
         # collect set of entities
         flush_set = {attr for attr in self.attributes.owned}
-        flush_set.add(self)
+        flush_set.add(self)  # type: ignore
 
         self._session.flush(flush_set)
 
@@ -992,10 +1079,12 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         # check if note is subclassed
         if self._is_declarative:
             # get fields populated in class
-            for field in NoteModel.fields_update_alias:
+            for field in cast(Iterable[str], NoteModel.fields_update_alias):
                 self._get_decl_field(fields_update, field)
 
             # invoke init chain defined on mixin
+            attributes: list[Attribute]
+            children: list[ChildSpecT]
             attributes, children = self._init_mixin(fields_update)
 
             # add originalFilename label if content set from file
@@ -1035,29 +1124,16 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             else:
                 # not a leaf note: free to update children
                 if fields_update["children"] is not None:
+                    # prepend provided children
+
+                    children = fields_update["children"] + children
+
                     fields_update["children"] += children
-                else:
-                    fields_update["children"] = children
+                    children = fields_update["children"]
 
-            # instantiate any classes provided, either through
-            # @children decorator or constructor
-            if fields_update["children"] is not None:
-                for index, child_spec in enumerate(fields_update["children"]):
-                    # extract branch args if provided
-                    if type(child_spec) is tuple:
-                        child_cls, branch_kwargs = child_spec
-                    else:
-                        child_cls = child_spec
-                        branch_kwargs = dict()
-
-                    if type(child_cls) is Meta:
-                        branch = self.create_declarative_child(child_cls)
-
-                        # set branch kwargs
-                        for key, value in branch_kwargs.items():
-                            setattr(branch, key, value)
-
-                        fields_update["children"][index] = branch
+                # instantiate any classes provided, either through
+                # @children decorator or constructor
+                fields_update["children"] = self._normalize_children(children)
 
     @property
     def is_string(self) -> bool:
@@ -1069,18 +1145,21 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
         return is_string(self.note_type, self.mime)
 
     @property
-    def _is_declarative(self):
+    def _is_declarative(self) -> bool:
         return type(self) is not Note
 
     @classmethod
-    def _get_decl_id(cls, parent: Note = None):
+    def _get_decl_id(cls, parent: Mixin | None = None) -> str | None:
         """
         Try to get a note_id. If one is returned, this note has a deterministic
         note_id and will get the same one every time it's instantiated.
         """
 
+        module: ModuleType | None = inspect.getmodule(cls)
+        assert module is not None
+
         # get fully qualified class name
-        cls_name = f"{inspect.getmodule(cls).__name__}.{cls.__name__}"
+        cls_name = f"{module.__name__}.{cls.__name__}"
 
         if hasattr(cls, "note_id_"):
             # note_id provided and renamed by metaclass
@@ -1096,7 +1175,8 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
             # singleton parent, so try to generate deterministic id
             return parent._derive_id(Note, cls_name)
 
-    @property
+        return None
+
     @classmethod
     def _is_singleton(cls) -> bool:
         return cls._get_decl_id() is not None
@@ -1145,35 +1225,49 @@ class Note(Entity[NoteModel], Mixin, MutableMapping, metaclass=Meta):
                     # get default field
                     fields_update[field] = self._model._field_default(field)
 
-    def _derive_id(self, cls, base) -> str:
-        """
-        Generate a declarative entity id unique to this note with namespace
-        per class. Increments a sequence number per base, so e.g. there can be
-        multiple attributes with the same name.
-        """
+    # Return handle of file specified by content_file
+    def _get_content_fh(self) -> IO:
+        # get class which defined content_file
+        cls = self._get_content_cls()
+        assert cls is not None
 
-        if self.note_id:
-            # if child_id_seed was passed during init, use that to generate
-            # deterministic child ids invariant of the root id.
-            # this enables setting a tree of ids based on the app name rather
-            # than the root note it's installed to
-            if self._child_id_seed:
-                prefix = self._child_id_seed
+        # get path to content from class
+        module = inspect.getmodule(cls)
+        content_path: str
+
+        assert module is not None
+        assert self.content_file is not None
+
+        try:
+            # assume we're in a package context
+            # (e.g. trilium_alchemy installation)
+            module_path = module.__name__.split(".")
+
+            content_file = self.content_file.split("/")
+            basename = content_file[-1]
+            module_rel = content_file[:-1]
+
+            try:
+                module.__module__
+            except AttributeError:
+                # have a package
+                pass
             else:
-                prefix = self.note_id
+                # have a module, we want a package
+                del module_path[-1]
 
-            sequence = self._get_sequence(cls, base)
-            return id_hash(f"{prefix}_{base}_{sequence}")
-        else:
-            return None
+            module_content = ".".join(module_path + module_rel)
 
-    def _get_sequence(self, cls, base):
-        if cls not in self._sequence_map:
-            self._sequence_map[cls] = dict()
+            with importlib.resources.path(module_content, basename) as path:
+                content_path = str(path)
+        except ModuleNotFoundError as e:
+            # not in a package context (e.g. test code, standalone script)
+            path_folder = os.path.dirname(str(module.__file__))
+            content_path = os.path.join(path_folder, self.content_file)
 
-        if base in self._sequence_map[cls]:
-            self._sequence_map[cls][base] += 1
-        else:
-            self._sequence_map[cls][base] = 0
+        assert os.path.isfile(
+            content_path
+        ), f"Content file specified by {cls} does not exist: {content_path}"
 
-        return self._sequence_map[cls][base]
+        mode = "r" if self.is_string else "rb"
+        return open(content_path, mode)

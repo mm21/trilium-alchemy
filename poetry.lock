@@ -680,6 +680,20 @@ testing = ["beautifulsoup4", "coverage[toml]", "pytest (>=7,<8)", "pytest-cov", 
 testing-docutils = ["pygments", "pytest (>=7,<8)", "pytest-param-files (>=0.3.4,<0.4.0)"]
 
 [[package]]
+name = "nodeenv"
+version = "1.8.0"
+description = "Node.js virtual environment builder"
+optional = false
+python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*"
+files = [
+    {file = "nodeenv-1.8.0-py2.py3-none-any.whl", hash = "sha256:df865724bb3c3adc86b3876fa209771517b0cfe596beff01a92700e0e8be4cec"},
+    {file = "nodeenv-1.8.0.tar.gz", hash = "sha256:d51e0c37e64fbf47d017feac3145cdbb58836d7eee8c6f6d3b6880c5456227d2"},
+]
+
+[package.dependencies]
+setuptools = "*"
+
+[[package]]
 name = "packaging"
 version = "23.1"
 description = "Core utilities for Python packages"
@@ -887,6 +901,24 @@ files = [
 
 [package.extras]
 plugins = ["importlib-metadata"]
+
+[[package]]
+name = "pyright"
+version = "1.1.329"
+description = "Command line wrapper for pyright"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyright-1.1.329-py3-none-any.whl", hash = "sha256:c16f88a7ac14ddd0513e62fec56d69c37e3c6b412161ad16aa23a9c7e3dabaf4"},
+    {file = "pyright-1.1.329.tar.gz", hash = "sha256:5baf82ff5ecb8c8b3ac400e8536348efbde0b94a09d83d5b440c0d143fd151a8"},
+]
+
+[package.dependencies]
+nodeenv = ">=1.6.0"
+
+[package.extras]
+all = ["twine (>=3.4.1)"]
+dev = ["twine (>=3.4.1)"]
 
 [[package]]
 name = "pytest"
@@ -1470,4 +1502,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "807a86136efd67ee5794fd83b20ec53923a05d8acf058224ea088b2aa425dbfa"
+content-hash = "183464ba78c8677bbb8405558370fbef20813689bb918b87089e17e379c7747d"

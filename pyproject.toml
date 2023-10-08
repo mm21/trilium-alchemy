@@ -39,6 +39,7 @@ sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
 toml-sort = "^0.23.1"
+pyright = "^1.1.329"
 
 [tool.black]
 include = '\.pyi?$|SConstruct$'
@@ -47,6 +48,10 @@ line-length = 80
 [tool.tomlsort]
 no_sort_tables = true
 sort_table_keys = true
+
+[tool.mypy]
+ignore_missing_imports = true
+python_version = "3.10"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
