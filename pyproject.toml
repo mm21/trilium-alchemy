@@ -28,7 +28,9 @@ trilium-client = "^0.1.0"
 black = "^23.3.0"
 furo = "^2023.5.20"
 genbadge = {extras = ["all"], version = "^1.1.0"}
+mypy = {extras = ["reports"], version = "^1.5.1"}
 myst-parser = "^2.0.0"
+pyright = "^1.1.329"
 pytest = "^7.3.1"
 pytest-cov = "^4.1.0"
 pytest-dependency = "^0.5.1"
@@ -39,7 +41,6 @@ sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
 toml-sort = "^0.23.1"
-pyright = "^1.1.329"
 
 [tool.black]
 include = '\.pyi?$|SConstruct$'
