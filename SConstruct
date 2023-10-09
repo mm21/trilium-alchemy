@@ -8,14 +8,66 @@ Clean coverage reports:
   scons cov --clean
 """
 
+from SCons import Node
+from typing import Callable
+import json
 import subprocess
+
+
+def run(
+    *args, capture_output: bool = False, **kwargs
+) -> subprocess.CompletedProcess:
+    """
+    Run the command and return the CompletedProcess. Essentially a wrapper for
+    subprocess.run() with custom defaults.
+    """
+    cmd = list(args)
+
+    print(f"Running: {' '.join(cmd)}")
+
+    process: subprocess.CompletedProcess = subprocess.run(
+        cmd, capture_output=capture_output, text=True, **kwargs
+    )
+
+    return process
+
+
+def alias(
+    name: str,
+    artifacts: list[Node],
+    sources: list[Node],
+    builder: Callable,
+    always: bool = False,
+    shell: bool = True,
+):
+    """
+    Create and return an alias, and perform bookkeeping.
+    """
+    node = env.Command(artifacts, sources, builder, shell=shell)
+    env.Clean(node, artifacts)
+
+    if always:
+        AlwaysBuild(node)
+
+    return env.Alias(name, node)
+
 
 env = Environment()
 
-PACKAGE = "trilium_client"
+PACKAGE = "trilium_alchemy"
+
 BUILD_DIR = "build"
 
+# output directories
 TEST_BUILD_DIR = f"{BUILD_DIR}/test"
+MYPY_BUILD_DIR = f"{BUILD_DIR}/mypy"
+PYRIGHT_BUILD_DIR = f"{BUILD_DIR}/pyright"
+DOC_BUILD_DIR = f"{BUILD_DIR}/doc"
+BADGE_BUILD_DIR = "badges"
+
+# ------------------------------------------------------------------------------
+# Alias: test
+# ------------------------------------------------------------------------------
 test_junit = env.File(f"{TEST_BUILD_DIR}/junit.xml")
 test_cov_data = env.File(f"{TEST_BUILD_DIR}/.coverage")
 test_cov_html = env.Dir(f"{TEST_BUILD_DIR}/htmlcov")
@@ -28,26 +80,6 @@ test_artifacts = [
     test_cov_xml,
 ]
 
-DOC_BUILD_DIR = f"{BUILD_DIR}/doc"
-doc_html = env.Dir(f"{DOC_BUILD_DIR}/html")
-doc_source = env.Dir("doc")
-
-BADGE_BUILD_DIR = "badges"
-badge_pytest = env.File(f"{BADGE_BUILD_DIR}/tests.svg")
-badge_cov = env.File(f"{BADGE_BUILD_DIR}/cov.svg")
-
-badge_artifacts = [
-    badge_pytest,
-    badge_cov,
-]
-
-
-def run(*args):
-    cmd = list(args)
-
-    print(f"Running: {' '.join(cmd)}")
-    subprocess.check_call(cmd)
-
 
 def run_pytest(target, source, env):
     run(
@@ -59,6 +91,82 @@ def run_pytest(target, source, env):
     )
 
 
+test = alias("test", test_artifacts, [], run_pytest)
+
+# ------------------------------------------------------------------------------
+# Alias: mypy
+# ------------------------------------------------------------------------------
+mypy_html = env.Dir(f"{MYPY_BUILD_DIR}/html")
+mypy_xml = env.Dir(f"{MYPY_BUILD_DIR}/xml")
+
+mypy_artifacts = [
+    mypy_html,
+    mypy_xml,
+]
+
+
+def run_mypy(target, source, env):
+    process = run(
+        "mypy",
+        "--html-report",
+        str(target[0]),
+        "--cobertura-xml-report",
+        str(target[1]),
+        PACKAGE,
+    )
+
+
+mypy = alias("mypy", mypy_artifacts, [], run_mypy, always=True)
+
+# ------------------------------------------------------------------------------
+# Alias: pyright
+# ------------------------------------------------------------------------------
+pyright_json = env.File(f"{PYRIGHT_BUILD_DIR}/report.json")
+
+pyright_artifacts = [
+    pyright_json,
+]
+
+
+def run_pyright(target, source, env):
+    process = run(
+        "pyright",
+        "--outputjson",
+        PACKAGE,
+        capture_output=True,
+    )
+
+    with open(str(target[0]), "w") as fh:
+        fh.write(process.stdout)
+    print(f"Saved pyright report to: {str(target[0])}")
+
+    # parse report
+    report = json.loads(process.stdout)
+
+    errors = report["summary"]["errorCount"]
+    warnings = report["summary"]["warningCount"]
+
+    print(f"  {errors} errors, {warnings} warnings")
+
+
+pyright = alias("pyright", pyright_artifacts, [], run_pyright, always=True)
+
+# ------------------------------------------------------------------------------
+# Alias: analysis
+# ------------------------------------------------------------------------------
+env.Alias("analysis", [mypy, pyright])
+
+# ------------------------------------------------------------------------------
+# Alias: doc
+# ------------------------------------------------------------------------------
+doc_html = env.Dir(f"{DOC_BUILD_DIR}/html")
+doc_source = env.Dir("doc")
+
+doc_artifacts = [
+    doc_html,
+]
+
+
 def run_sphinx(target, source, env):
     run(
         "sphinx-build",
@@ -66,6 +174,21 @@ def run_sphinx(target, source, env):
         str(source[0]),
         str(target[0]),
     )
+
+
+# always=True to always rebuild and rely on sphinx's caching mechanism
+doc = alias("doc", doc_artifacts, [doc_source], run_sphinx, always=True)
+
+# ------------------------------------------------------------------------------
+# Alias: badges
+# ------------------------------------------------------------------------------
+badge_pytest = env.File(f"{BADGE_BUILD_DIR}/tests.svg")
+badge_cov = env.File(f"{BADGE_BUILD_DIR}/cov.svg")
+
+badge_artifacts = [
+    badge_pytest,
+    badge_cov,
+]
 
 
 def run_genbadge(target, source, env):
@@ -88,6 +211,14 @@ def run_genbadge(target, source, env):
     )
 
 
+badges = alias(
+    "badges", badge_artifacts, [test_junit, test_cov_xml], run_genbadge
+)
+
+
+# ------------------------------------------------------------------------------
+# Alias: format
+# ------------------------------------------------------------------------------
 def run_format(target, source, env):
     run(
         "black",
@@ -101,25 +232,4 @@ def run_format(target, source, env):
     )
 
 
-# tests
-test = env.Command(test_artifacts, [], run_pytest, shell=True)
-env.Clean(test, test_artifacts)
-env.Alias("test", test)
-
-# html docs
-html = env.Command(doc_html, doc_source, run_sphinx, shell=True)
-env.Clean(html, doc_html)
-env.Alias("html", html)
-AlwaysBuild(html)
-
-# badges
-badges = env.Command(
-    badge_artifacts, [test_junit, test_cov_xml], run_genbadge, shell=True
-)
-env.Clean(badges, badge_artifacts)
-env.Alias("badges", badges)
-
-# formatting
-format_ = env.Command(["format"], [], run_format, shell=True)
-env.Alias("format", format_)
-AlwaysBuild(format_)
+format_ = alias("format", ["format"], [], run_format, always=True)
