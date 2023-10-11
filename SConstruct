@@ -52,6 +52,8 @@ def alias(
 
 env = Environment()
 
+Default(None)
+
 PACKAGE = "trilium_alchemy"
 
 BUILD_DIR = "build"
