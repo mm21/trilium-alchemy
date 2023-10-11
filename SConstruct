@@ -14,9 +14,7 @@ import json
 import subprocess
 
 
-def run(
-    *args, capture_output: bool = False, **kwargs
-) -> subprocess.CompletedProcess:
+def run(*args, **kwargs) -> subprocess.CompletedProcess:
     """
     Run the command and return the CompletedProcess. Essentially a wrapper for
     subprocess.run() with custom defaults.
@@ -26,7 +24,7 @@ def run(
     print(f"Running: {' '.join(cmd)}")
 
     process: subprocess.CompletedProcess = subprocess.run(
-        cmd, capture_output=capture_output, text=True, **kwargs
+        cmd, text=True, **kwargs
     )
 
     return process
@@ -34,7 +32,7 @@ def run(
 
 def alias(
     name: str,
-    artifacts: list[Node],
+    targets: list[Node],
     sources: list[Node],
     builder: Callable,
     always: bool = False,
@@ -43,8 +41,8 @@ def alias(
     """
     Create and return an alias, and perform bookkeeping.
     """
-    node = env.Command(artifacts, sources, builder, shell=shell)
-    env.Clean(node, artifacts)
+    node = env.Command(targets, sources, builder, shell=shell)
+    env.Clean(node, targets)
 
     if always:
         AlwaysBuild(node)
@@ -73,7 +71,7 @@ test_cov_data = env.File(f"{TEST_BUILD_DIR}/.coverage")
 test_cov_html = env.Dir(f"{TEST_BUILD_DIR}/htmlcov")
 test_cov_xml = env.File(f"{TEST_BUILD_DIR}/coverage.xml")
 
-test_artifacts = [
+test_targets = [
     test_junit,
     test_cov_data,
     test_cov_html,
@@ -91,7 +89,7 @@ def run_pytest(target, source, env):
     )
 
 
-test = alias("test", test_artifacts, [], run_pytest)
+test = alias("test", test_targets, [], run_pytest)
 
 # ------------------------------------------------------------------------------
 # Alias: mypy
@@ -99,7 +97,7 @@ test = alias("test", test_artifacts, [], run_pytest)
 mypy_html = env.Dir(f"{MYPY_BUILD_DIR}/html")
 mypy_xml = env.Dir(f"{MYPY_BUILD_DIR}/xml")
 
-mypy_artifacts = [
+mypy_targets = [
     mypy_html,
     mypy_xml,
 ]
@@ -116,14 +114,14 @@ def run_mypy(target, source, env):
     )
 
 
-mypy = alias("mypy", mypy_artifacts, [], run_mypy, always=True)
+mypy = alias("mypy", mypy_targets, [], run_mypy, always=True)
 
 # ------------------------------------------------------------------------------
 # Alias: pyright
 # ------------------------------------------------------------------------------
 pyright_json = env.File(f"{PYRIGHT_BUILD_DIR}/report.json")
 
-pyright_artifacts = [
+pyright_targets = [
     pyright_json,
 ]
 
@@ -149,20 +147,19 @@ def run_pyright(target, source, env):
     print(f"  {errors} errors, {warnings} warnings")
 
 
-pyright = alias("pyright", pyright_artifacts, [], run_pyright, always=True)
+pyright = alias("pyright", pyright_targets, [], run_pyright, always=True)
 
 # ------------------------------------------------------------------------------
 # Alias: analysis
 # ------------------------------------------------------------------------------
-env.Alias("analysis", [mypy, pyright])
+analysis = env.Alias("analysis", [mypy, pyright])
 
 # ------------------------------------------------------------------------------
 # Alias: doc
 # ------------------------------------------------------------------------------
 doc_html = env.Dir(f"{DOC_BUILD_DIR}/html")
-doc_source = env.Dir("doc")
 
-doc_artifacts = [
+doc_targets = [
     doc_html,
 ]
 
@@ -171,13 +168,13 @@ def run_sphinx(target, source, env):
     run(
         "sphinx-build",
         "-T",  # show full traceback upon error
-        str(source[0]),
+        "doc",
         str(target[0]),
     )
 
 
 # always=True to always rebuild and rely on sphinx's caching mechanism
-doc = alias("doc", doc_artifacts, [doc_source], run_sphinx, always=True)
+doc = alias("doc", doc_targets, [], run_sphinx, always=True)
 
 # ------------------------------------------------------------------------------
 # Alias: badges
@@ -185,7 +182,7 @@ doc = alias("doc", doc_artifacts, [doc_source], run_sphinx, always=True)
 badge_pytest = env.File(f"{BADGE_BUILD_DIR}/tests.svg")
 badge_cov = env.File(f"{BADGE_BUILD_DIR}/cov.svg")
 
-badge_artifacts = [
+badge_targets = [
     badge_pytest,
     badge_cov,
 ]
@@ -212,7 +209,7 @@ def run_genbadge(target, source, env):
 
 
 badges = alias(
-    "badges", badge_artifacts, [test_junit, test_cov_xml], run_genbadge
+    "badges", badge_targets, [test_junit, test_cov_xml], run_genbadge
 )
 
 
