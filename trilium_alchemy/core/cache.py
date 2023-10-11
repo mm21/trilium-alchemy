@@ -38,18 +38,20 @@ class Cache:
         )
 
     def flush(
-        self, entity_set: set[trilium_alchemy.core.entity.abc.Entity] = None
+        self,
+        entities: Iterable[trilium_alchemy.core.entity.Entity] | None = None,
     ):
         """
         Flushes provided entities and all dependencies, or all dirty entities
-        if entity_set not provided.
+        if entities not provided.
         """
 
-        if entity_set is None:
-            entity_set = self.dirty_set
+        entities_iter: Iterable[trilium_alchemy.core.entity.Entity]
+
+        entities_iter = self.dirty_set if entities is None else entities
 
         # filter by dirty state
-        dirty_set = {entity for entity in entity_set if entity._is_dirty}
+        dirty_set = {entity for entity in entities_iter if entity._is_dirty}
 
         # first pass validation of entities provided by user
         self._validate(dirty_set)

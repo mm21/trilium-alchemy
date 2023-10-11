@@ -1024,6 +1024,14 @@ class Note(
         """
         return len(self.attributes._name_map)
 
+    def __bool__(self) -> bool:
+        """
+        Ensure reliable check for truthiness since otherwise it will default
+        to going by len(), meaning a note with no attributes would evaluate to
+        False.
+        """
+        return True
+
     def export_zip(
         self,
         dest_path: str,

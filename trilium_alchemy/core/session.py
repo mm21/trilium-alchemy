@@ -9,7 +9,7 @@ Eventually will be generalized to accommodate different types of sessions:
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import overload, TypeVar, Generic, Type, Callable, Literal
+from typing import overload, TypeVar, Generic, Type, Callable, Literal, cast
 from collections.abc import Iterable
 from functools import wraps
 import urllib.parse
@@ -34,26 +34,7 @@ from .exceptions import *
 
 __all__ = ["Session"]
 
-default_session: Session = None
-
-
-def etapi_helper(func):
-    """
-    Decorator to facilitate ETAPI helpers which pass through arguments and
-    return a Note object.
-    """
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs) -> trilium_alchemy.core.note.Note:
-        # get name of etapi method based on func name
-        api_name = func.__name__
-        etapi_method = getattr(self.api, api_name)
-
-        model: EtapiNoteModel = etapi_method(*args, **kwargs)
-
-        return trilium_alchemy.core.note.Note._from_model(model, session=self)
-
-    return wrapper
+default_session: Session | None = None
 
 
 class SessionType(Enum):
@@ -95,7 +76,7 @@ class Session:
     provided by user.
     """
 
-    _api: DefaultApi
+    _api: DefaultApi | None
     """
     ETAPI client object.
     """
@@ -105,12 +86,12 @@ class Session:
     Cache object.
     """
 
-    _etapi_headers: str
+    _etapi_headers: dict[str, str]
     """
     Common ETAPI HTTP headers for manual requests.
     """
 
-    _root_position_base_val = None
+    _root_position_base_val: int | None = None
     """
     Base position of root tree (just the position of root__hidden branch).
     Access using Session._root_position_base.
@@ -126,8 +107,8 @@ class Session:
     def __init__(
         self,
         host: str,
-        token: str = None,
-        password: str = None,
+        token: str | None = None,
+        password: str | None = None,
         default: bool = True,
     ):
         """
@@ -204,7 +185,10 @@ class Session:
         if self._logout_pending:
             self.logout()
 
-    def flush(self, entities: Iterable[trilium_alchemy.core.abc.Entity] = None):
+    def flush(
+        self,
+        entities: Iterable[trilium_alchemy.core.entity.Entity] | None = None,
+    ):
         """
         Commits pending changes to Trilium via ETAPI.
 
@@ -225,13 +209,13 @@ class Session:
     def search(
         self,
         query: str,
-        order_by: str = None,
-        order_direction: Literal["asc", "desc"] = None,
-        limit: int = None,
+        order_by: str | None = None,
+        order_direction: Literal["asc", "desc"] | None = None,
+        limit: int | None = None,
         fast_search: bool = False,
         include_archived_notes: bool = False,
-        ancestor_note: trilium_alchemy.core.note.Note = None,
-        ancestor_depth: int = None,
+        ancestor_note: trilium_alchemy.core.note.Note | None = None,
+        ancestor_depth: int | None = None,
         debug: bool = False,
     ) -> list[trilium_alchemy.core.note.Note]:
         """
@@ -258,27 +242,31 @@ class Session:
         if order_by:
             order_by = urllib.parse.quote(order_by)
 
-        ancestor_note_id = ancestor_note.note_id if ancestor_note else None
+        ancestor_note_id: str | None = (
+            ancestor_note.note_id if ancestor_note is not None else None
+        )
 
         # take bool in interface and convert to str
-        fast_search = str(fast_search).lower()
-        include_archived_notes = str(include_archived_notes).lower()
-        debug = str(debug).lower()
+        fast_search_arg: str = str(fast_search).lower()
+        include_archived_notes_arg: str = str(include_archived_notes).lower()
+        debug_arg = str(debug).lower()
 
         # take int in interface and convert to str
-        if ancestor_depth:
-            ancestor_depth = str(ancestor_depth)
+        ancestor_depth_arg: str | None
+        ancestor_depth_arg = (
+            str(ancestor_depth) if ancestor_depth is not None else None
+        )
 
         response: SearchResponse = self.api.search_notes(
             query,
             order_by=order_by,
             order_direction=order_direction,
             limit=limit,
-            fast_search=fast_search,
-            include_archived_notes=include_archived_notes,
+            fast_search=fast_search_arg,
+            include_archived_notes=include_archived_notes_arg,
             ancestor_note_id=ancestor_note_id,
-            ancestor_depth=ancestor_depth,
-            debug=debug,
+            ancestor_depth=ancestor_depth_arg,
+            debug=debug_arg,
         )
 
         # print debug info, if any
@@ -300,7 +288,7 @@ class Session:
 
     def export_zip(
         self,
-        note: trilium_alchemy.Note,
+        note: trilium_alchemy.core.note.Note,
         dest_path: str,
         export_format: Literal["html", "markdown"] = "html",
     ):
@@ -321,7 +309,7 @@ class Session:
             note.note_id is not None
         ), f"Source note {note.str_short} must have a note_id for export"
 
-        zip_file: bytes = None
+        zip_file: bytes
 
         url = f"{self._base_path}/notes/{note.note_id}/export"
         response = requests.get(url, headers=self._etapi_headers)
@@ -336,7 +324,7 @@ class Session:
 
     def import_zip(
         self,
-        note: trilium_alchemy.Note,
+        note: trilium_alchemy.core.note.Note,
         src_path: str,
     ):
         """
@@ -355,7 +343,7 @@ class Session:
             note.note_id is not None
         ), f"Destination note {note.str_short} must have a note_id for import"
 
-        zip_file: bytes = None
+        zip_file: bytes
 
         # read input zip
         with open(src_path, "rb") as fh:
@@ -372,6 +360,7 @@ class Session:
 
         # convert response to model
         response_model = NoteWithBranch(**response.json())
+        assert response_model.note is not None
 
         # use returned note model to refresh note
         note._refresh_model(response_model.note)
@@ -382,7 +371,6 @@ class Session:
         """
         return self.get_day_note(datetime.date.today())
 
-    @etapi_helper
     def get_day_note(
         self, date: datetime.date
     ) -> trilium_alchemy.core.note.Note:
@@ -391,8 +379,8 @@ class Session:
 
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
+        return self._etapi_wrapper(self.api.get_day_note, date)
 
-    @etapi_helper
     def get_week_note(
         self, date: datetime.date
     ) -> trilium_alchemy.core.note.Note:
@@ -401,24 +389,24 @@ class Session:
 
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
+        return self._etapi_wrapper(self.api.get_week_note, date)
 
-    @etapi_helper
     def get_month_note(self, month: str) -> trilium_alchemy.core.note.Note:
         """
         Returns a month note for a given date. Gets created if doesn't exist.
 
         :param month: Month in the form `yyyy-mm`, e.g. `2023-07`
         """
+        return self._etapi_wrapper(self.api.get_month_note, month)
 
-    @etapi_helper
     def get_year_note(self, year: str) -> trilium_alchemy.core.note.Note:
         """
         Returns a year note for a given date. Gets created if doesn't exist.
 
         :param year: Year as string
         """
+        return self._etapi_wrapper(self.api.get_year_note, year)
 
-    @etapi_helper
     def get_inbox_note(
         self, date: datetime.date
     ) -> trilium_alchemy.core.note.Note:
@@ -429,6 +417,7 @@ class Session:
 
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
+        return self._etapi_wrapper(self.api.get_inbox_note, date)
 
     def get_app_info(self) -> AppInfo:
         """
@@ -486,8 +475,8 @@ class Session:
 
         response_model = Login201Response.parse_obj(json.loads(response.text))
 
-        token: str = response_model.auth_token
-        assert isinstance(token, str)
+        assert isinstance(response_model.auth_token, str)
+        token: str = cast(str, response_model.auth_token)
 
         return token
 
@@ -520,6 +509,15 @@ class Session:
             # once there are no more refs to this Session
             self._api = None
 
+    def deregister_default(self):
+        """
+        If this session was registered as default, deregister it. No-op
+        otherwise.
+        """
+        if self._is_default:
+            global default_session
+            default_session = None
+
     @property
     def root(self) -> trilium_alchemy.core.note.Note:
         """
@@ -535,7 +533,7 @@ class Session:
         return len(self.dirty_set)
 
     @property
-    def dirty_set(self) -> set[trilium_alchemy.Entity]:
+    def dirty_set(self) -> set[trilium_alchemy.core.entity.Entity]:
         """
         All dirty {obj}`Entity` objects.
         """
@@ -544,7 +542,10 @@ class Session:
     @property
     def dirty_map(
         self,
-    ) -> dict[trilium_alchemy.State, set[trilium_alchemy.Entity]]:
+    ) -> dict[
+        trilium_alchemy.core.entity.types.State,
+        set[trilium_alchemy.core.entity.Entity],
+    ]:
         """
         Mapping of state to dirty {obj}`Entity` objects
         in that state.
@@ -555,10 +556,13 @@ class Session:
         ```
         """
 
-        index = {
-            trilium_alchemy.State.CREATE: set(),
-            trilium_alchemy.State.UPDATE: set(),
-            trilium_alchemy.State.DELETE: set(),
+        index: dict[
+            trilium_alchemy.core.entity.types.State,
+            set[trilium_alchemy.core.entity.Entity],
+        ] = {
+            trilium_alchemy.core.entity.types.State.CREATE: set(),
+            trilium_alchemy.core.entity.types.State.UPDATE: set(),
+            trilium_alchemy.core.entity.types.State.DELETE: set(),
         }
 
         for entity in self._cache.dirty_set:
@@ -591,7 +595,7 @@ class Session:
         return f"{self.host}/etapi"
 
     @property
-    def _root_position_base(self):
+    def _root_position_base(self) -> int:
         """
         Return the position of root__hidden branch, used as the base for
         child branches of the root note. If child branch positions aren't
@@ -615,19 +619,16 @@ class Session:
 
         return self._root_position_base_val
 
-    def deregister_default(self):
-        """
-        If this session was registered as default, deregister it. No-op
-        otherwise.
-        """
-        if self._is_default:
-            global default_session
-            default_session = None
-
     @property
     def _is_default(self) -> bool:
         global default_session
         return default_session is self
+
+    def _etapi_wrapper(
+        self, method: Callable, *args, **kwargs
+    ) -> trilium_alchemy.core.note.Note:
+        model: EtapiNoteModel = method(*args, **kwargs)
+        return trilium_alchemy.core.note.Note._from_model(model, session=self)
 
 
 class SessionContainer:
