@@ -27,5 +27,5 @@ class ValidationError(Exception):
     """
 
     def __init__(self, errors: list[Exception]):
-        errors = "\n".join([str(e) for e in errors])
-        super().__init__(self, f"Errors found during validation: {errors}")
+        errors_str = "\n".join([str(e) for e in errors])
+        super().__init__(self, f"Errors found during validation: {errors_str}")

@@ -8,5 +8,3 @@ compared to the last sync.
 To initially build `SyncState`, it can be created from any
 {obj}`Session`.
 """
-
-__all__ = []
