@@ -344,8 +344,6 @@ class MystRenderer(RendererBase):
                         if ancestor_sym := self.symbol_map.lookup(ancestor):
                             ancestor = ancestor_sym.canonical.virt_path
 
-                        print(f"--- ancestor of {child_name}: {ancestor}")
-
                         if ancestor in ancestors_skip:
                             continue
 
