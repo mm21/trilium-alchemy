@@ -4,7 +4,7 @@ Implements a cache of Trilium entities.
 
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Any
+from typing import overload, TypeVar, Generic, Type, Any, Iterable
 import graphlib
 import logging
 
@@ -19,16 +19,16 @@ class Cache:
     and synchronizes with Trilium upon flush.
     """
 
-    session: session.Session
-
     entity_map: dict[str, trilium_alchemy.core.entity.Entity]
     """Mapping of entity id to entity object"""
 
     dirty_set: set[trilium_alchemy.core.entity.Entity]
     """Set of objects which need to be synchronized with Trilium"""
 
+    _session: session.Session
+
     def __init__(self, session: session.Session):
-        self.session = session
+        self._session = session
         self.entity_map = dict()
         self.dirty_set = set()
 
@@ -71,7 +71,7 @@ class Cache:
         )
 
         # create topological sorter
-        sorter = graphlib.TopologicalSorter()
+        sorter: graphlib.TopologicalSorter = graphlib.TopologicalSorter()
 
         # populate and prepare sorter
         for entity in dirty_set:
@@ -85,13 +85,19 @@ class Cache:
         # branches. this avoids any notes being accidentally
         # deleted by an ancestor being deleted
         branches = {
-            b for b in dirty_set if isinstance(b, trilium_alchemy.Branch)
+            b
+            for b in dirty_set
+            if isinstance(b, trilium_alchemy.core.branch.Branch)
         }
         created_branches = {
-            b for b in branches if b.state is trilium_alchemy.State.CREATE
+            b
+            for b in branches
+            if b.state is trilium_alchemy.core.entity.types.State.CREATE
         }
         deleted_branches = {
-            b for b in branches if b.state is trilium_alchemy.State.DELETE
+            b
+            for b in branches
+            if b.state is trilium_alchemy.core.entity.types.State.DELETE
         }
 
         for branch_deleted in deleted_branches:
@@ -112,7 +118,7 @@ class Cache:
 
         # refresh ordering for changed branch positions
         for note in refresh_set:
-            self.session.refresh_note_ordering(note)
+            self._session.refresh_note_ordering(note)
 
     def add(self, entity: trilium_alchemy.core.entity.Entity) -> None:
         """
@@ -128,10 +134,12 @@ class Cache:
                 f"Added to cache: entity_id={entity._entity_id}, type={type(entity)}"
             )
 
-    def _validate(self, entity_set: set[trilium_alchemy.Entity]):
-        # check all provided entities and if errors encountered,
-        # raise an exception with a list of errors
-        errors = []
+    def _validate(self, entity_set: set[trilium_alchemy.core.entity.Entity]):
+        """
+        Check all provided entities and if errors encountered, raise an
+        exception with a list of errors.
+        """
+        errors: list[str] = []
         for entity in entity_set:
             # handle validation error
             try:
@@ -147,13 +155,17 @@ class Cache:
         entity: trilium_alchemy.core.entity.Entity,
         dirty_set: set[trilium_alchemy.core.entity.Entity],
     ):
-        """Recursively add entity's dependencies to set if they're dirty"""
+        """
+        Recursively add entity's dependencies to set if they're dirty.
+        """
         for dep in entity._dependencies:
             if dep._is_dirty:
                 dirty_set.add(dep)
                 self._flush_gather(dep, dirty_set)
 
-    def _check_refresh(self, dirty_set: set[trilium_alchemy.Entity]):
+    def _check_refresh(
+        self, dirty_set: set[trilium_alchemy.core.entity.Entity]
+    ):
         """
         Return set of notes with changed child branch positions. These need
         to be refreshed in the UI after they're flushed.
@@ -167,29 +179,31 @@ class Cache:
 
         return refresh_set
 
-    def _summary(self, dirty_set: set[trilium_alchemy.Entity]) -> str:
+    def _summary(
+        self, dirty_set: set[trilium_alchemy.core.entity.Entity]
+    ) -> str:
         """
         Return a brief summary of how many entities are in each state.
         """
 
         def state_map():
             return {
-                trilium_alchemy.State.CREATE: 0,
-                trilium_alchemy.State.UPDATE: 0,
-                trilium_alchemy.State.DELETE: 0,
+                trilium_alchemy.core.entity.types.State.CREATE: 0,
+                trilium_alchemy.core.entity.types.State.UPDATE: 0,
+                trilium_alchemy.core.entity.types.State.DELETE: 0,
             }
 
         index = {
-            trilium_alchemy.Note: state_map(),
-            trilium_alchemy.Attribute: state_map(),
-            trilium_alchemy.Branch: state_map(),
+            trilium_alchemy.core.note.Note: state_map(),
+            trilium_alchemy.core.attribute.Attribute: state_map(),
+            trilium_alchemy.core.branch.Branch: state_map(),
         }
 
-        def get_cls(entity: trilium_alchemy.Entity):
+        def get_cls(entity: trilium_alchemy.core.entity.Entity):
             classes = [
-                trilium_alchemy.Note,
-                trilium_alchemy.Attribute,
-                trilium_alchemy.Branch,
+                trilium_alchemy.core.note.Note,
+                trilium_alchemy.core.attribute.Attribute,
+                trilium_alchemy.core.branch.Branch,
             ]
 
             for cls in classes:
@@ -202,9 +216,9 @@ class Cache:
 
             index[cls][entity._state] += 1
 
-        notes = index[trilium_alchemy.Note]
-        attributes = index[trilium_alchemy.Attribute]
-        branches = index[trilium_alchemy.Branch]
+        notes = index[trilium_alchemy.core.note.Note]
+        attributes = index[trilium_alchemy.core.attribute.Attribute]
+        branches = index[trilium_alchemy.core.branch.Branch]
 
         # return (create/update/delete) counts
         def states(index):

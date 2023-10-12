@@ -10,7 +10,7 @@ from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
 from types import ModuleType
-from typing import IO, Any, Generic, Iterator, Literal, TypeVar, cast
+from typing import IO, Any, Generic, Iterator, Literal, TypeVar, Union, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -42,15 +42,26 @@ __all__ = [
 ]
 
 
-ChildSpecT = TypeVar("ChildSpecT", Branch, "Note", type["Note"])
+# TODO: find out why references to TypeVars can't be resolved in API docs,
+# then this can be used in API (e.g. @children)
+# TODO: encapsulate "Note" | type["Note"] | Branch
+BranchSpecT = TypeVar(
+    "BranchSpecT",
+    bound=Union[
+        "Note",
+        type["Note"],
+        Branch,
+        tuple[Union["Note", type["Note"], Branch], dict[str, Any]],
+    ],
+)
 """
-Specifies a child to be declaratively added: may be a Branch (if prefix
-required), a Note object, or Note class.
+Specifies a branch to be declaratively added as child. May be:
 
-TODO: can also be tuple of (Note|type[Note], dict[str, Any]) with the dict
-providing branch args
+- {obj}`Note` instance
+- {obj}`Note` subclass
+- {obj}`Branch` instance
+- Tuple of `(Note|type[Note]|Branch, dict[str, Any])`{l=python} with dict providing branch kwargs
 """
-
 
 STRING_NOTE_TYPES = {
     "text",
@@ -122,7 +133,7 @@ def patch_init(init, doc: str | None = None):
             self,
             cls_decl,
             attributes: list[Attribute],
-            children: list[ChildSpecT],
+            children: list[BranchSpecT],
         ):
             if cls is cls_decl:
                 # invoke init patch
@@ -250,7 +261,12 @@ class NoteMeta(BaseMeta):
         return note_cls
 
 
-class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
+class Mixin(
+    ABC,
+    SessionContainer,
+    Generic[BranchSpecT],
+    metaclass=BaseMeta,
+):
     """
     Reusable collection of attributes, children, and fields
     (`note_id`, `title`, `type`, `mime`) which can be inherited by a
@@ -369,7 +385,9 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
         self._child_id_seed = child_id_seed
 
     def init(
-        self, attributes: list[Attribute], children: list[ChildSpecT]
+        self,
+        attributes: list[Attribute],
+        children: list[Note | type[Note] | Branch],
     ) -> dict[str, Any] | None:
         """
         Optionally provided by {obj}`Note` or {obj}`Mixin` subclass
@@ -388,6 +406,7 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
         decorator-patched inits followed by {obj}`Mixin.init`.
         ```
         """
+        ...
 
     def create_declarative_label(
         self, name: str, value: str = "", inheritable: bool = False
@@ -483,28 +502,28 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
             assert isinstance(child, Branch)
             return child
 
-    def _normalize_child_spec(
-        self, child_spec_raw: ChildSpecT | tuple[ChildSpecT, dict]
-    ) -> Branch:
+    def _normalize_branch(self, branch_spec: BranchSpecT) -> Branch:
         """
-        Take ChildSpecT or tuple of
-        (child_spec: ChildSpecT, branch_kwargs: dict)
-        and return a Branch.
+        Take child as BranchSpecT and return a Branch.
         """
         branch: Branch
-        child_spec: ChildSpecT
+        child_spec: Note | type[Note] | Branch
         branch_kwargs: dict
 
         # extract branch args if provided
-        if isinstance(child_spec_raw, tuple):
-            child_spec, branch_kwargs = child_spec_raw
+        if isinstance(branch_spec, tuple):
+            # child, branch_kwargs = cast(
+            #    tuple[Note | type[Note] | Branch, dict[str, Any]], branch_spec
+            # )
+            child_spec, branch_kwargs = branch_spec
         else:
-            child_spec = child_spec_raw
+            child_spec = cast(Note | type[Note] | Branch, branch_spec)
             branch_kwargs = dict()
 
         if isinstance(child_spec, type(Note)):
             # have Note class
-            branch = self.create_declarative_child(cast(type[Note], child_spec))
+            child_cls: type[Note] = cast(type[Note], child_spec)
+            branch = self.create_declarative_child(child_cls)
         else:
             # have Note or Branch
             branch = self._normalize_child(cast(Note | Branch, child_spec))
@@ -515,20 +534,18 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
 
         return branch
 
-    def _normalize_children(self, children: list[ChildSpecT]) -> list[Branch]:
+    def _normalize_children(self, children: list[BranchSpecT]) -> list[Branch]:
         """
         Instantiate any Note classes provided and normalize as child Branch.
         """
-        return [
-            self._normalize_child_spec(child_spec) for child_spec in children
-        ]
+        return [self._normalize_branch(branch_spec) for branch_spec in children]
 
     # Invoke declarative init and return tuple of attributes, children
     def _init_mixin(
         self, fields_update: dict[str, Any]
-    ) -> tuple[list[Attribute], list[ChildSpecT]]:
+    ) -> tuple[list[Attribute], list[BranchSpecT]]:
         attributes: list[Attribute] = list()
-        children: list[ChildSpecT] = list()
+        children: list[BranchSpecT] = list()
 
         # traverse MRO to add attributes and children in an intuitive order.
         # for each class in the MRO:
@@ -543,7 +560,11 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
 
                 # invoke manually implemented init()
                 if not is_inherited(cls, "init"):
-                    fields = cls.init(self, attributes, children)
+                    fields = cls.init(
+                        self,
+                        attributes,
+                        cast(list[Note | type[Note] | Branch], children),
+                    )
                     if fields:
                         # TODO: restrict fields which can be updated
                         fields_update.update(fields)
@@ -555,7 +576,7 @@ class Mixin(ABC, SessionContainer, metaclass=BaseMeta):
         self,
         cls_decl: type[Mixin],
         attributes: list[Attribute],
-        children: list[ChildSpecT],
+        children: list[BranchSpecT],
     ):
         pass
 
@@ -605,7 +626,7 @@ class Note(
     Entity[NoteModel],
     Mixin,
     MutableMapping,
-    Generic[ChildSpecT],
+    Generic[BranchSpecT],
     metaclass=NoteMeta,
 ):
     """
@@ -1092,7 +1113,7 @@ class Note(
 
             # invoke init chain defined on mixin
             attributes: list[Attribute]
-            children: list[ChildSpecT]
+            children: list[BranchSpecT]
             attributes, children = self._init_mixin(fields_update)
 
             # add originalFilename label if content set from file

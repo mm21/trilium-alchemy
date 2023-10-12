@@ -29,7 +29,7 @@ from trilium_client.models.search_response import SearchResponse
 from trilium_client.exceptions import ApiException
 
 import trilium_alchemy
-from . import cache
+from .cache import Cache
 from .exceptions import *
 
 __all__ = ["Session"]
@@ -81,7 +81,7 @@ class Session:
     ETAPI client object.
     """
 
-    _cache: cache.Cache
+    _cache: Cache
     """
     Cache object.
     """
@@ -154,7 +154,7 @@ class Session:
         self._api = DefaultApi(ApiClient(config))
 
         # create cache
-        self._cache = cache.Cache(self)
+        self._cache = Cache(self)
 
         # test connection to trilium server
         try:

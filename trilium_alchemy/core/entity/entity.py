@@ -50,7 +50,7 @@ __rollup__ = [
 ModelT = TypeVar("ModelT", bound=Model)
 
 
-class Entity(Generic[ModelT], ABC, SessionContainer, ModelContainer):
+class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
     """
     Base class for Trilium entities.
 

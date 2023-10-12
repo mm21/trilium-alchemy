@@ -26,6 +26,6 @@ class ValidationError(Exception):
     - {obj}`Branch` created but parent or child is not set
     """
 
-    def __init__(self, errors: list[Exception]):
-        errors_str = "\n".join([str(e) for e in errors])
+    def __init__(self, errors: list[str]):
+        errors_str = "\n".join([e for e in errors])
         super().__init__(self, f"Errors found during validation: {errors_str}")

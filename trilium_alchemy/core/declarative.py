@@ -11,10 +11,10 @@ as children of {obj}`Note` subclasses force setting {obj}`Branch.expanded`.
 from __future__ import annotations
 
 import os
-from typing import Type, Literal, Any
+from typing import Iterable, Literal, Any, cast
 from functools import wraps, partial
 
-from .note.note import Note, Mixin, patch_init
+from .note.note import Note, Mixin, BranchSpecT, patch_init
 from .branch import Branch
 from .attribute import Attribute, Label, Relation
 
@@ -38,7 +38,9 @@ def check_name(name: str, accumulate=False):
 
     def _check_name(func):
         @wraps(func)
-        def wrapper(self, attributes: list[Attribute], children: list[Branch]):
+        def wrapper(
+            self, attributes: list[Attribute], children: list[BranchSpecT]
+        ):
             if accumulate is False and any(name == a.name for a in attributes):
                 return
             return func(self, attributes, children)
@@ -54,13 +56,13 @@ class IconMixin(Mixin):
     as value of `#iconClass` label.
     """
 
-    icon: str = None
+    icon: str | None = None
     """
     If provided, defines value of `#iconClass` label.
     """
 
     @check_name("iconClass")
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         """
         Set `#iconClass` value by defining {obj}`IconMixin.icon`.
         """
@@ -93,7 +95,7 @@ def label(
     """
 
     @check_name(name, accumulate=accumulate)
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         attributes += [
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable
@@ -110,7 +112,7 @@ def label(
 
 def relation(
     name: str,
-    target_cls: Type[Note],
+    target_cls: type[Note],
     inheritable: bool = False,
     accumulate: bool = False,
 ):
@@ -142,7 +144,7 @@ def relation(
     """
 
     @check_name(name, accumulate=accumulate)
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         assert (
             target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -223,7 +225,7 @@ def relation_def(
     name: str,
     promoted: bool = True,
     multi: bool = False,
-    inverse: str = None,
+    inverse: str | None = None,
     inheritable: bool = False,
     accumulate: bool = False,
 ):
@@ -268,7 +270,7 @@ def relation_def(
     return label(name, value, inheritable=inheritable, accumulate=accumulate)
 
 
-def children(*children: Type[Note] | tuple[Type[Note], dict[str, Any]]):
+def children(*children: type[Note] | tuple[type[Note], dict[str, Any]]):
     """
     Add {obj}`Note` subclasses as children, implicitly creating a {obj}`Branch`.
 
@@ -286,16 +288,16 @@ def children(*children: Type[Note] | tuple[Type[Note], dict[str, Any]]):
     class Parent(Note): pass
     ```
 
-    :param children: Tuple of `Type[Note]`{l=python} or `(Type[Note], dict)`{l=python}
+    :param children: Tuple of `type[Note]`{l=python} or `(type[Note], dict)`{l=python}
     """
 
-    def init(self, attributes: list[Attribute], children_: list[Branch]):
-        children_ += list(children)
+    def init(self, attributes: list[Attribute], children_: list[BranchSpecT]):
+        children_ += list(cast(Iterable[BranchSpecT], children))
 
     return patch_init(init)
 
 
-def child(child: Type[Note], prefix: str = "", expanded: bool = False):
+def child(child: type[Note], prefix: str = "", expanded: bool = False):
     """
     Instantiate provided class and add as child, implicitly creating
     a {obj}`Branch` and setting provided kwargs.
@@ -314,7 +316,12 @@ def child(child: Type[Note], prefix: str = "", expanded: bool = False):
     :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
     """
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
-        children.append((child, {"prefix": prefix, "expanded": expanded}))
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+        children.append(
+            cast(
+                BranchSpecT,
+                (child, {"prefix": prefix, "expanded": expanded}),
+            )
+        )
 
     return patch_init(init)

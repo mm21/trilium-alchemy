@@ -44,6 +44,7 @@ from ..core import (
     Attribute,
     label,
 )
+from ..core.note.note import BranchSpecT
 from .types import (
     CssNote,
     JsFrontendNote,
@@ -124,7 +125,7 @@ class Workspace(Note, IconMixin):
 
     system: BaseSystem = None
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         # add system note, if provided
         if self.system:
             children.append(self.create_declarative_child(self.system))
@@ -158,7 +159,7 @@ class Theme(CssNote):
     Name of theme, or `None`{l=python} to use class name
     """
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         # default to class name if name not provided
         if self.theme_name is None:
             self.theme_name = type(self).__name__
@@ -298,7 +299,7 @@ class BaseSystem(Note):
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         if self.templates:
             children.append(
                 self.create_declarative_child(
@@ -365,7 +366,7 @@ class BaseRootSystem(BaseSystem):
     List of {obj}`Theme` subclasses
     """
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         if self.themes:
             children.append(
                 self.create_declarative_child(Themes, children=self.themes)
@@ -383,6 +384,6 @@ class BaseRoot(Note):
     title = "root"
     system: Type[BaseRootSystem] = BaseRootSystem
 
-    def init(self, attributes: list[Attribute], children: list[Branch]):
+    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
         if self.system:
             children.append(self.create_declarative_child(self.system))
