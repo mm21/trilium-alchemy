@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Generator, Generic, Protocol, Type, TypeVar, cast, overload
+from typing import Any, Generator, Generic, Type, TypeVar, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
-
-import trilium_alchemy
 
 from ..exceptions import *
 from ..session import Session, SessionContainer, require_session
@@ -60,16 +58,16 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
     # unique id
     # TODO: use WriteOnceDescriptor subclass with automatic invocation
     # of session._cache.add()
-    _entity_id: str = None
+    _entity_id: str = None  # type: ignore
 
     # init state
     _init_done: bool = False
 
     # current state
-    _state: State = None
+    _state: State = None  # type: ignore
 
     # type used to create _model
-    _model_cls: Type[ModelT] = None
+    _model_cls: Type[ModelT] = None  # type: ignore
 
     @require_session
     def __new__(
@@ -85,7 +83,11 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         create: bool | None = None,
     ):
         # check if this object is already cached
-        if entity_id is not None and entity_id in session._cache.entity_map:
+        if (
+            entity_id is not None
+            and session is not None
+            and entity_id in session._cache.entity_map
+        ):
             entity = session._cache.entity_map[entity_id]
 
             # sanity check: cached object can be subclass or superclass
@@ -120,7 +122,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
                 self._session is session
             ), "Attempt to associate new session {session} with entity having existing session {self._session}"
 
-            self._model.setup_check_init(model_backing)
+            self._model.setup_check_init(model_backing)  # type: ignore
             return
 
         # set early since if this is a declarative note, it may create children
@@ -128,7 +130,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         self._init_done = True
 
         self._state = State.CLEAN
-        SessionContainer.__init__(self, session)
+        SessionContainer.__init__(self, session)  # type: ignore
         ModelContainer.__init__(self, self._model_cls(self))
 
         if entity_id is None:
@@ -142,7 +144,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         self._init()
 
         # setup model if needed
-        self._model.setup_check_init(model_backing, create)
+        self._model.setup_check_init(cast(BaseModel, model_backing), create)
 
     def __str__(self):
         return self.str_short
@@ -152,7 +154,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
 
     @classmethod
     @abstractmethod
-    def _from_id(self, entity_id: str, session: Session = None):
+    def _from_id(cls, entity_id: str, session: Session = None):  # type: ignore
         """
         Instantiate this entity from an id.
         """
@@ -160,7 +162,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
 
     @classmethod
     @abstractmethod
-    def _from_model(self, model: BaseModel):
+    def _from_model(cls, model: BaseModel):
         ...
 
     @property
@@ -184,7 +186,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         """
         # don't directly subclass this so it's shown next to str_summary
         # in docs
-        return self._str_short
+        return self._str_short or ""
 
     @property
     def str_summary(self) -> str:
@@ -196,7 +198,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
 
     @property
     @abstractmethod
-    def _str_short(self):
+    def _str_short(self) -> str:
         """
         Implementation of str_short so as to keep it next to str_summary
         in docs.
@@ -205,7 +207,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
 
     @property
     @abstractmethod
-    def _str_safe(self):
+    def _str_safe(self) -> str:
         """
         Return string for debugging and don't invoke model setup.
         """
@@ -497,7 +499,7 @@ def normalize_entities(
         and not isinstance(entities, Entity)
     ):
         # have iterable
-        return entities
+        return cast(Iterable[Entity], entities)
 
     # have single entity, but put in list first since Note is iterable
-    return collection_cls([entities])
+    return collection_cls([entities])  # type: ignore

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from typing import Type, Any, Callable
+import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-import inspect
-import logging
+from typing import Any, Callable, Generator, Iterable, LiteralString, Type
 
 from pydantic import BaseModel
 
 from ..exceptions import *
 from ..session import Session, SessionType
-
 from . import entity as entity_abc
 from .types import State
 
@@ -33,9 +31,9 @@ class Driver(ABC):
     (through ETAPI) or a filesystem.
     """
 
-    entity: entity_abc.Entity = None
+    entity: entity_abc.Entity | None = None
 
-    session: Session = None
+    session: Session | None = None
 
     def __init__(self, entity):
         self.entity = entity
@@ -78,31 +76,31 @@ class Model(ABC):
     """
 
     # pydantic model used in etapi
-    etapi_model: Type[BaseModel] = None
+    etapi_model: Type[BaseModel] | None = None
 
     # class to interface with ETAPI
-    etapi_driver_cls: Type[Driver] = None
+    etapi_driver_cls: Type[Driver] | None = None
 
     # class to interface with filesystem
-    file_driver_cls: Type[Driver] = None
+    file_driver_cls: Type[Driver] | None = None
 
     # mapping of alias to field name
-    fields_alias: dict[str, str] = None
+    fields_alias: dict[str, str] | None = None
 
     # fields allowed for user update
-    fields_update: list[str] = None
+    fields_update: list[str] | None = None
 
     # default values of fields
-    fields_default: dict[str, str] = None
+    fields_default: dict[str, str] | None = None
 
     # entity owning this object
-    entity: entity_abc.Entity = None
+    entity: entity_abc.Entity | None = None
 
     # cached data fetched from backing storage
-    _backing: dict[str, str | int | bool] = None
+    _backing: dict[str, str | int | bool] = None  # type: ignore
 
     # locally modified or created data, not committed to backing storage
-    _working: dict[str, str | int | bool] = None
+    _working: dict[str, str | int | bool] = None  # type: ignore
 
     # whether model setup was completed (populating data from server)
     _setup_done: bool = False
@@ -111,7 +109,7 @@ class Model(ABC):
     _exists: bool | None = None
 
     # list of stateful extensions registered by subclass
-    _extensions: list[StatefulExtension] = None
+    _extensions: list[StatefulExtension] = None  # type: ignore
 
     # driver to interface with backing storage, or None
     # if in-memory only (for VirtualSession)
@@ -128,9 +126,12 @@ class Model(ABC):
         }
 
         if entity.session._type in driver_map:
-            self._driver = driver_map[entity.session._type](entity)
+            self._driver = driver_map[entity.session._type](entity)  # type: ignore
 
-    def __str__(self):
+    def __str__(self) -> LiteralString:
+        if self.fields_update is None or self.entity is None:
+            return ""
+
         fields = list()
 
         for field in self.fields_update:
@@ -171,6 +172,10 @@ class Model(ABC):
         Maps aliased fields to canonical fields using fields_alias if
         provided.
         """
+
+        if cls.fields_update is None:
+            return []
+
         if cls.fields_alias:
             fields_update = cls.fields_update.copy()
             for alias, field in cls.fields_alias.items():
@@ -178,11 +183,13 @@ class Model(ABC):
                     fields_update[fields_update.index(field)] = alias
 
             return fields_update
-        else:
-            return cls.fields_update
+
+        return cls.fields_update
 
     @property
     def exists(self) -> bool:
+        if self._exists is None:
+            return False
         return self._exists
 
     @property
@@ -195,6 +202,8 @@ class Model(ABC):
         """
         Flush model if any fields are changed.
         """
+        if self.entity is None:
+            return (None, None)
 
         if self.entity._state in [State.CREATE, State.UPDATE]:
             # if creating or updating, invoke flush prep
@@ -229,18 +238,22 @@ class Model(ABC):
         if self.entity._state is State.CREATE:
             # set entity id if needed
             if self.entity._entity_id is None:
-                entity_id = getattr(model_new, self.field_entity_id)
+                entity_id = getattr(model_new, self.field_entity_id)  # type: ignore
                 self.entity._set_entity_id(entity_id)
 
         return (model_new, gen)
 
     @property
     def fields_changed(self) -> bool:
-        if self._working is None or self._backing is None:
+        if (
+            self._working is None
+            or self._backing is None
+            or self.fields_update is None
+        ):
             return False
-        else:
-            backing = {k: self._backing[k] for k in self.fields_update}
-            return backing != self._working
+
+        backing = {k: self._backing[k] for k in self.fields_update}
+        return backing != self._working
 
     @property
     def extension_changed(self) -> bool:
@@ -248,6 +261,9 @@ class Model(ABC):
 
     @property
     def is_changed(self) -> bool:
+        if self.entity is None:
+            return False
+
         return (
             self.entity._is_create
             or self.fields_changed
@@ -264,9 +280,9 @@ class Model(ABC):
         """
         Return a dict of all fields which are changed.
         """
-        fields = dict()
 
-        for field in self.fields_update:
+        fields = dict()
+        for field in self.fields_update or []:
             if self._backing[field] != self._working[field]:
                 fields[field] = self._working[field]
 
@@ -277,8 +293,8 @@ class Model(ABC):
         return self._setup_done
 
     def teardown(self) -> None:
-        self._backing = None
-        self._working = None
+        self._backing = None  # type: ignore
+        self._working = None  # type: ignore
         self._setup_done = False
 
         for ext in self._extensions:
@@ -310,7 +326,7 @@ class Model(ABC):
     def check_newer(self, model: BaseModel) -> bool:
         return (
             self._backing is None
-            or model.utc_date_modified > self._backing["utc_date_modified"]
+            or model.utc_date_modified > self._backing["utc_date_modified"]  # type: ignore
         )
 
     def setup(
@@ -330,10 +346,10 @@ class Model(ABC):
         else:
             # attempt to fetch from database if not provided
             if model_backing is None:
-                model_backing = self._driver.fetch()
+                model_backing = self._driver.fetch()  # type: ignore
 
             if model_backing is None:
-                self._backing = None
+                self._backing = None  # type: ignore
 
                 # create is False means expected to exist
                 assert create is None
@@ -346,11 +362,11 @@ class Model(ABC):
         # populate working fields
         if self._exists:
             # reset fields if any; will create on demand if needed
-            self._working = None
+            self._working = None  # type: ignore
         else:
             # populate new working fields
             self._working = {
-                f: self._field_default(f) for f in self.fields_update
+                f: self._field_default(f) for f in (self.fields_update or [])
             }
 
             # move to create state
@@ -421,7 +437,9 @@ class Model(ABC):
 
             # populate working model with copy of backing model, filtered by
             # fields used for update
-            self._working = {k: self._backing[k] for k in self.fields_update}
+            self._working = {
+                k: self._backing[k] for k in (self.fields_update or [])
+            }
 
         if not bypass_validate:
             # validate fields for setting
@@ -460,7 +478,9 @@ class Model(ABC):
         if self.fields_alias and field in self.fields_alias:
             field = self.fields_alias[field]
 
-        assert field in self.fields_default, f"{field} not in defaults"
+        assert (
+            self.fields_default and field in self.fields_default
+        ), f"{field} not in defaults"
         return self.fields_default[field]
 
     @property
@@ -468,6 +488,8 @@ class Model(ABC):
         """
         Return all fields in pydantic model.
         """
+        if self.etapi_model is None or self.etapi_model.__fields__ is None:
+            return set()
         return {k for k in self.etapi_model.__fields__.keys()}
 
 
@@ -477,7 +499,7 @@ class ModelContainer:
     """
 
     # instance of Model
-    _model: Model = None
+    _model: Model = None  # type: ignore
 
     def __init__(self, model: Model):
         self._model = model
@@ -489,7 +511,7 @@ class Extension(ABC, ModelContainer):
     and routes setattr() via ExtensionDescriptor.
     """
 
-    _entity: entity_abc.Entity = None
+    _entity: entity_abc.Entity = None  # type: ignore
 
     def __init__(self, entity: entity_abc.Entity):
         ModelContainer.__init__(self, entity._model)
@@ -603,7 +625,7 @@ class ReadOnlyDescriptor:
 
     def __init__(self, attr: str, allow_none_cb: str | None = None):
         self._attr = attr
-        self._allow_none_cb = allow_none_cb
+        self._allow_none_cb = allow_none_cb  # type: ignore
 
     @require_setup
     def __get__(self, ent: entity_abc.Entity, objtype=None):
@@ -675,9 +697,9 @@ class WriteOnceDescriptor:
     # callback to invoke after setting value
     _validator: Callable
 
-    def __init__(self, attr: str, validator: Callable = None):
+    def __init__(self, attr: str, validator: Callable | None = None):
         self._attr = attr
-        self._validator = validator
+        self._validator = validator  # type: ignore
 
     @require_setup
     def __get__(self, ent: entity_abc.Entity, objtype=None) -> Any:
@@ -697,7 +719,7 @@ class WriteOnceDescriptor:
 
         # invoke validator
         if self._validator:
-            getattr(ent, self._validator)()
+            getattr(ent, self._validator)()  # type: ignore
 
 
 class ExtensionDescriptor:
