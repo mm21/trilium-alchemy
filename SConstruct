@@ -14,6 +14,19 @@ import json
 import subprocess
 
 
+REGRESSION_PATHS = [
+    "trilium_alchemy/core/note/note.py",
+    "trilium_alchemy/core/cache.py",
+    "trilium_alchemy/core/declarative.py",
+    "trilium_alchemy/core/exceptions.py",
+    "trilium_alchemy/core/session.py",
+]
+"""
+Paths currently compliant with static analysis tools. Once the whole project is
+compliant this can be removed.
+"""
+
+
 def run(*args, **kwargs) -> subprocess.CompletedProcess:
     """
     Run the command and return the CompletedProcess. Essentially a wrapper for
@@ -49,6 +62,37 @@ def alias(
 
     return env.Alias(name, node)
 
+
+def get_analysis_files() -> list[str]:
+    """
+    Return a list of files to analyze based on command-line options.
+    """
+
+    files: list[str]
+
+    # check if --regression was passed
+    if GetOption("regression"):
+        files = REGRESSION_PATHS
+    else:
+        files = GetOption("filter") or [PACKAGE]
+
+    return files
+
+
+AddOption(
+    "--regression",
+    dest="regression",
+    action="store_true",
+    help="Filter analysis to all files currently compliant",
+)
+
+AddOption(
+    "--filter",
+    dest="filter",
+    type="string",
+    action="append",
+    help="Filter analysis to provided path(s)",
+)
 
 env = Environment()
 
@@ -106,13 +150,13 @@ mypy_targets = [
 
 
 def run_mypy(target, source, env):
-    process = run(
+    run(
         "mypy",
         "--html-report",
         str(target[0]),
         "--cobertura-xml-report",
         str(target[1]),
-        PACKAGE,
+        *get_analysis_files(),
     )
 
 
@@ -132,7 +176,7 @@ def run_pyright(target, source, env):
     process = run(
         "pyright",
         "--outputjson",
-        PACKAGE,
+        *get_analysis_files(),
         capture_output=True,
     )
 
@@ -143,10 +187,11 @@ def run_pyright(target, source, env):
     # parse report
     report = json.loads(process.stdout)
 
+    files = report["summary"]["filesAnalyzed"]
     errors = report["summary"]["errorCount"]
     warnings = report["summary"]["warningCount"]
 
-    print(f"  {errors} errors, {warnings} warnings")
+    print(f"  {files} files, {errors} errors, {warnings} warnings")
 
 
 pyright = alias("pyright", pyright_targets, [], run_pyright, always=True)
