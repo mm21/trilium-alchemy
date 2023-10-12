@@ -244,14 +244,14 @@ class MystRenderer(RendererBase):
         """Create the content for an exception."""
         yield from self.render_class(item, symbol)
 
-    def check_note_subclass(self, item: ItemData):
+    def _check_subclass(self, item: ItemData, cls_name: str):
         """
-        Check if provided class is a subclass of Note.
+        Check if provided class is a subclass of provided class name.
         """
-        note_subclass = False
+        is_subclass = False
         bases = self.get_bases(item)
-        if "trilium_alchemy.core.note.Note" in bases:
-            note_subclass = True
+        if cls_name in bases:
+            is_subclass = True
         else:
             subclasses = []
             for base in bases:
@@ -259,10 +259,11 @@ class MystRenderer(RendererBase):
                 if item:
                     subclasses.append(item)
             return any(
-                self.check_note_subclass(subclass) for subclass in subclasses
+                self._check_subclass(subclass, cls_name)
+                for subclass in subclasses
             )
 
-        return note_subclass
+        return is_subclass
 
     def render_class(
         self, item: ItemData, symbol: Symbol, **kwargs
@@ -271,11 +272,13 @@ class MystRenderer(RendererBase):
 
         # check if sig should be skipped
         # TODO: make generic, config-based (register callback?)
-        note_subclass = self.check_note_subclass(item)
-        skip_constructor = note_subclass
-        skip_inherited = note_subclass
+        mixin_subclass = (
+            item["full_name"] != "trilium_alchemy.core.note.Note"
+        ) and self._check_subclass(item, "trilium_alchemy.core.note.Mixin")
+        skip_constructor = mixin_subclass
+        skip_inherited = mixin_subclass
 
-        # ancestors to skip for Note subclasses
+        # ancestors to skip
         ancestors_skip = {
             "trilium_alchemy.core.entity.Entity",
             "trilium_alchemy.core.note.Note",
@@ -284,7 +287,7 @@ class MystRenderer(RendererBase):
             "collections.abc.MutableMapping",
         }
 
-        # members to skip for Note subclasses
+        # members to skip
         members_skip = {
             "init",
         }
@@ -431,10 +434,10 @@ class MystRenderer(RendererBase):
         if item.get("annotation"):
             yield f":type: {self.format_annotation(item['annotation'])}"
 
-        value = kwargs["parent"].get_attr_value(short_name)
-
-        if value is not None:
-            yield f"   {value}"
+        # only get value if symbol has a parent (e.g. TypeVar does not)
+        if parent := kwargs.get("parent"):
+            if (value := parent.get_attr_value(short_name)) is not None:
+                yield f"   {value}"
 
         yield ""
 
