@@ -454,6 +454,21 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         ...
 
 
+class PositionMixin:
+    """
+    Mixin to indicate that an Entity subclass has a position field.
+    """
+
+    _position: int
+
+
+# TODO: this is better suited as an intersection type, not yet supported
+# - https://github.com/python/typing/issues/213
+# - https://github.com/CarliJoy/intersection_examples/issues/8
+class OrderedEntity(Entity[ModelT], PositionMixin):
+    pass
+
+
 class EntityIdDescriptor:
     """
     Accessor for read-only entity id.

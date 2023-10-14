@@ -523,6 +523,7 @@ class Mixin(
         if isinstance(child_spec, type(Note)):
             # have Note class
             child_cls: type[Note] = cast(type[Note], child_spec)
+
             branch = self.create_declarative_child(child_cls)
         else:
             # have Note or Branch
@@ -1154,11 +1155,7 @@ class Note(
                 # not a leaf note: free to update children
                 if fields_update["children"] is not None:
                     # prepend provided children
-
                     children = fields_update["children"] + children
-
-                    fields_update["children"] += children
-                    children = fields_update["children"]
 
                 # instantiate any classes provided, either through
                 # @children decorator or constructor

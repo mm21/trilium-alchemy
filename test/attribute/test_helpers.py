@@ -227,6 +227,58 @@ def test_extend(session: Session, note: Note):
     session.flush()
 
 
+def test_slice(session: Session, note: Note):
+    # create attributes
+    note.attributes[0:3] = [
+        Label("label1", session=session),
+        Label("label2", session=session),
+        Label("label3", session=session),
+    ]
+
+    label1, label2, label3 = note.attributes
+
+    assert label1.name == "label1"
+    assert label2.name == "label2"
+    assert label3.name == "label3"
+
+    assert label1.position == 10
+    assert label2.position == 20
+    assert label3.position == 30
+
+    session.flush()
+
+    # shift attributes
+    note.attributes[0:3] = [Label("label0", session=session)] + note.attributes[
+        0:2
+    ]
+
+    label0, label1, label2 = note.attributes
+
+    assert label0.name == "label0"
+    assert label1.name == "label1"
+    assert label2.name == "label2"
+
+    assert label0.position == 10
+    assert label1.position == 20
+    assert label2.position == 30
+
+    assert label3._is_delete
+
+    session.flush()
+
+    # delete attributes
+    del note.attributes[0:2]
+
+    assert label0._is_delete
+    assert label1._is_delete
+    assert not label2._is_delete
+
+    session.flush()
+
+
+# TODO: test to verify attempting to add same attr multiple times fails
+
+
 @mark.label("label1", "value1")
 def test_from_id(session: Session, label: Label):
     label.invalidate()

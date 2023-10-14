@@ -16,6 +16,7 @@ import subprocess
 
 REGRESSION_PATHS = [
     "trilium_alchemy/core/note/note.py",
+    "trilium_alchemy/core/note/extension.py",
     "trilium_alchemy/core/cache.py",
     "trilium_alchemy/core/declarative.py",
     "trilium_alchemy/core/exceptions.py",
@@ -190,8 +191,11 @@ def run_pyright(target, source, env):
     files = report["summary"]["filesAnalyzed"]
     errors = report["summary"]["errorCount"]
     warnings = report["summary"]["warningCount"]
+    informations = report["summary"]["informationCount"]
 
-    print(f"  {files} files, {errors} errors, {warnings} warnings")
+    print(
+        f"  {files} files, {errors} errors, {warnings} warnings, {informations} informations"
+    )
 
 
 pyright = alias("pyright", pyright_targets, [], run_pyright, always=True)

@@ -16,6 +16,7 @@ from ..session import Session, require_session
 from ..entity.entity import (
     Entity,
     EntityIdDescriptor,
+    OrderedEntity,
     State,
 )
 
@@ -142,7 +143,7 @@ def require_attribute_id(func):
     return _require_attribute_id
 
 
-class Attribute(Entity[AttributeModel], ABC):
+class Attribute(OrderedEntity[AttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
 
@@ -181,7 +182,7 @@ class Attribute(Entity[AttributeModel], ABC):
     UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    note: note.Note = ReadOnlyDescriptor("_note")
+    note: note.Note = ReadOnlyDescriptor("_note", allow_none=True)
     """
     Read-only access to note which owns this attribute.
     """
