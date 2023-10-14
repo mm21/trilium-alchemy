@@ -14,7 +14,7 @@ from trilium_client.exceptions import ServiceException, NotFoundException
 
 from ..exceptions import *
 from ..session import Session, require_session
-from ..entity.entity import Entity, EntityIdDescriptor
+from ..entity.entity import Entity, EntityIdDescriptor, OrderedEntity
 from ..entity.model import (
     Driver,
     Model,
@@ -155,7 +155,7 @@ class BranchModel(Model):
     }
 
 
-class Branch(Entity[BranchModel]):
+class Branch(OrderedEntity[BranchModel]):
     """
     Encapsulates a branch, a parent-child association between notes.
 
@@ -344,13 +344,13 @@ class Branch(Entity[BranchModel]):
             # make sure this branch was added to parents of child
             assert (
                 self in self.child.branches.parents
-            ), f"Branch {self} not added to parents of child {self.child}"
+            ), f"Not added to parents of child {self.child}"
 
             # make sure this branch was added to children of parents
             if self.child.note_id != "root":
                 assert (
                     self in self.parent.branches.children
-                ), f"Branch {self} not added to children of parent {self.parent}"
+                ), f"Not added to children of parent {self.parent}"
 
     @property
     def _dependencies(self):

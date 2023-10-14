@@ -623,16 +623,24 @@ class ReadOnlyDescriptor:
     # name of callback used to check if None is allowed
     _allow_none_cb: str
 
-    def __init__(self, attr: str, allow_none_cb: str | None = None):
+    _allow_none: bool
+
+    def __init__(
+        self,
+        attr: str,
+        allow_none_cb: str | None = None,
+        allow_none: bool = False,
+    ):
         self._attr = attr
         self._allow_none_cb = allow_none_cb  # type: ignore
+        self._allow_none = allow_none
 
     @require_setup
     def __get__(self, ent: entity_abc.Entity, objtype=None):
         # access value
         val = getattr(ent, self._attr)
 
-        if val is None:
+        if val is None and not self._allow_none:
             # check if allowed to be None
             if self._allow_none_cb is None:
                 allow_none = False
