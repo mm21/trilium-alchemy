@@ -1,4 +1,5 @@
-from ..._rollup import rollup
+from pyrollup import rollup
+
 from .attribute import *
 from .label import *
 from .relation import *

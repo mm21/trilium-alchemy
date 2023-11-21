@@ -2,7 +2,8 @@
 TriliumAlchemy: an SDK and CLI toolkit for Trilium Notes.
 """
 
-from ._rollup import rollup
+from pyrollup import rollup
+
 from .core import *
 from .ext import *
 from .sync import *

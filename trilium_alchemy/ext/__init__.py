@@ -3,7 +3,8 @@ Builds upon declarative Note definition to streamline Trilium extension
 development.
 """
 
-from .._rollup import rollup
+from pyrollup import rollup
+
 from .types import *
 from .helpers import *
 

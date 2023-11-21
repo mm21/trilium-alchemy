@@ -23,7 +23,8 @@ with Session(HOST, token=TOKEN) as session:
 ```
 """
 
-from .._rollup import rollup
+from pyrollup import rollup
+
 from .session import *
 from .note import *
 from .attribute import *

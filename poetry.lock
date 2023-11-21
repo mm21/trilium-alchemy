@@ -1075,6 +1075,17 @@ all = ["twine (>=3.4.1)"]
 dev = ["twine (>=3.4.1)"]
 
 [[package]]
+name = "pyrollup"
+version = "0.1.0"
+description = "Simple mechanism to rollup API symbols to a Python module from its submodules"
+optional = false
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "pyrollup-0.1.0-py3-none-any.whl", hash = "sha256:a2f73b823e251f6e3c9e14dfe7ce43323824a62fe5fc66d5e6221db6d9fae6ba"},
+    {file = "pyrollup-0.1.0.tar.gz", hash = "sha256:388c152b20b5467d2378462dcc6bac121db3bd98ef1902874caa0e30b24a0f21"},
+]
+
+[[package]]
 name = "pytest"
 version = "7.3.1"
 description = "pytest: simple powerful testing with Python"
@@ -1670,4 +1681,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7d07f2985ddfb6e61ac1f8f1151735599d6bb3d069208d084ef571e38b4f5802"
+content-hash = "7959ca4a3e5b6e400923767287ae5823830f642a715de024189e3dfdee918020"
