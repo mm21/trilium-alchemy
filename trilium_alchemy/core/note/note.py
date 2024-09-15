@@ -328,10 +328,17 @@ class Mixin(
 
     ```{warning}
     If you move this class to a different module, it will result in a different
-    `note_id` which will break any non-declarative relations to it. To avoid
-    changing the `note_id` you can set `note_id_seed` to the original fully
-    qualified class name.
+    `note_id` which will break any non-declarative relations to it. 
+    To enable more portable behavior, set `idempotent` or assign a 
+    `note_id_seed` explicitly.
     ```
+    """
+
+    idempotent: bool = False
+    """
+    If set on a {obj}`Note` subclass, enables deterministic calculation
+    of `note_id` based on the class name. Similar to `singleton`, but only
+    the class name (not fully qualified) is used.
     """
 
     leaf: bool = False
@@ -1193,8 +1200,11 @@ class Note(
         elif cls.note_id_seed:
             # note_id_seed provided
             return id_hash(getattr(cls, "note_id_seed"))
-        elif cls.singleton:
+        elif cls.idempotent:
             # get id from class name
+            return id_hash(cls.__name__)
+        elif cls.singleton:
+            # get id from fully-qualified class name
             return id_hash(cls_name)
         elif parent is not None:
             # not declared as singleton, but possibly created by

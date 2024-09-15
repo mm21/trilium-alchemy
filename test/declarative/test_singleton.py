@@ -1,8 +1,8 @@
 from pytest import mark, fixture
-import pytest_dependency
 from trilium_alchemy import *
 from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash
+from typing import cast
 
 from ..conftest import create_session, note_exists, clean_note, delete_note
 
@@ -38,6 +38,10 @@ class TemplateChild1(Note):
     title = "Child 1"
     note_type = "book"
     mime = "text/plain"
+
+
+class IdempotentTest1(Note):
+    idempotent = True
 
 
 def check_child1(branch: Branch):
@@ -326,7 +330,7 @@ def test_instance(request, session: Session):
     assert inst._is_create
 
     assert len(inst.attributes.owned) == 1
-    template = inst.attributes.owned[0]
+    template = cast(Relation, inst.attributes.owned[0])
 
     assert template.name == "template"
     assert template.target.note_id == id_hash(f"{__name__}.TemplateTest")
@@ -336,3 +340,8 @@ def test_instance(request, session: Session):
     template.flush()
 
     assert inst._is_clean
+
+
+def test_idempotent(session: Session):
+    note = IdempotentTest1(session=session)
+    assert note.note_id == id_hash("IdempotentTest1")

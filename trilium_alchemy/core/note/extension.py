@@ -271,7 +271,7 @@ class List(Collection[U], MutableSequence):
             # ensure positions are consistent
             assert (
                 entity._position > position_prev
-            ), f"Entity has position {entity._position} <= previous entity {position_prev}"
+            ), f"Entity {entity} has position {entity._position} <= previous entity {position_prev}; possibly already placed in list owned by {self._note}"
 
             entity_set.add(entity)
             position_prev = entity._position
