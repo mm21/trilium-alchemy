@@ -1,6 +1,6 @@
 # TriliumAlchemy
 
-Python SDK and CLI toolkit for Trilium Notes.
+Python SDK and CLI toolkit for [Trilium Notes](https://github.com/zadam/trilium).
 
 [![Python versions](https://img.shields.io/pypi/pyversions/trilium-alchemy.svg)](https://pypi.org/project/trilium-alchemy)
 [![PyPI](https://img.shields.io/pypi/v/trilium-alchemy?color=%2334D058&label=pypi%20package)](https://pypi.org/project/trilium-alchemy)
