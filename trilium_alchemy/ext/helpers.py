@@ -67,11 +67,8 @@ __all__ = [
 
 
 class BaseTemplate(Note, IconMixin):
-    singleton = True
-    """
-    Templates should have exactly one instance, allowing
-    them to be targets of declarative relations
-    """
+    # note_id generated from class name
+    idempotent = True
 
     _force_leaf = True
 

@@ -126,7 +126,7 @@ def check_template(branch: Branch):
 
     note = branch.child
 
-    assert note.note_id == id_hash(f"{__name__}.TemplateTest")
+    assert note.note_id == id_hash("TemplateTest")
     assert note.title == "TemplateTest"
     assert note.note_type == "text"
     assert note.mime == "text/html"
@@ -180,7 +180,7 @@ def check_subclass(branch: Branch):
 
     note = branch.child
 
-    assert note.note_id == id_hash(f"{__name__}.TemplateSubclass")
+    assert note.note_id == id_hash(f"TemplateSubclass")
     assert note.title == "TemplateSubclass"
     assert note.note_type == "text"
     assert note.mime == "text/html"
@@ -210,6 +210,7 @@ class SingletonRoot(Note):
 def check_inherited_attributes(note: Note):
     if note.note_id != "testSingletonRoot":
         # check inherited attributes
+
         assert len(note.attributes.inherited) == 2
         label1, label2 = note.attributes.inherited
 
@@ -333,7 +334,7 @@ def test_instance(request, session: Session):
     template = cast(Relation, inst.attributes.owned[0])
 
     assert template.name == "template"
-    assert template.target.note_id == id_hash(f"{__name__}.TemplateTest")
+    assert template.target.note_id == id_hash(f"TemplateTest")
     assert template.target is TemplateTest(session=session)
 
     inst.flush()
