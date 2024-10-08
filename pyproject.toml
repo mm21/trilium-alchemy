@@ -19,11 +19,11 @@ readme = "README.pypi.md"
 version = "0.1.11"
 
 [tool.poetry.dependencies]
-pydantic = "^1.10.12"
+pydantic = "^2"
 python = "^3.10"
 requests = "^2.31.0"
-trilium-client = "^0.1.0"
 pyrollup = "^0.1.0"
+trilium-client = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"

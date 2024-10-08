@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Type, Any, Callable
+from typing import Any, Callable, Generator, Iterable
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
@@ -78,13 +78,13 @@ class Model(ABC):
     """
 
     # pydantic model used in etapi
-    etapi_model: Type[BaseModel] = None
+    etapi_model: type[BaseModel] = None
 
     # class to interface with ETAPI
-    etapi_driver_cls: Type[Driver] = None
+    etapi_driver_cls: type[Driver] = None
 
     # class to interface with filesystem
-    file_driver_cls: Type[Driver] = None
+    file_driver_cls: type[Driver] = None
 
     # mapping of alias to field name
     fields_alias: dict[str, str] = None
@@ -468,7 +468,7 @@ class Model(ABC):
         """
         Return all fields in pydantic model.
         """
-        return {k for k in self.etapi_model.__fields__.keys()}
+        return {k for k in self.etapi_model.model_fields.keys()}
 
 
 class ModelContainer:

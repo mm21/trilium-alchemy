@@ -9,10 +9,9 @@ Eventually will be generalized to accommodate different types of sessions:
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import overload, TypeVar, Generic, Type, Callable, Literal, cast
+from typing import Callable, Literal, cast
 from collections.abc import Iterable
 from functools import wraps
-import urllib.parse
 import requests
 import json
 import datetime
@@ -236,13 +235,6 @@ class Session:
 
         :returns: List of notes
         """
-
-        # generated client is supposed to url encode, but it doesn't work
-        # so manually do it
-        query = urllib.parse.quote(query)
-
-        if order_by:
-            order_by = urllib.parse.quote(order_by)
 
         ancestor_note_id: str | None = (
             ancestor_note.note_id if ancestor_note is not None else None
