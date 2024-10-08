@@ -35,12 +35,11 @@ class MyRoot(BaseRoot):
 """
 from __future__ import annotations
 import os
-from typing import Type, Any
+from typing import Type, cast
 from ..core import (
     Note,
     Mixin,
     IconMixin,
-    Branch,
     Attribute,
     label,
 )
@@ -263,70 +262,95 @@ class Scripts(HiddenCategory):
 
 # TODO: long term: automatically create System and populate by
 # checking bases of classes in module?
+# - e.g. add all notes inheriting from Template to "Templates" note
 @label("iconClass", "bx bx-bracket")
 @label("archived")
 class BaseSystem(Note):
     """
     Base class for a "system" note, a collection of various types of
     infrastructure notes.
+
+    Attributes such as {obj}`BaseSystem.templates` from any base classes
+    are appended.
     """
 
-    templates: list[Type[Template]] = None
+    templates: list[Type[Template]] | None = None
     """
     List of {obj}`Template` subclasses.
     """
 
-    workspace_templates: list[Type[WorkspaceTemplate]] = None
+    workspace_templates: list[Type[WorkspaceTemplate]] | None = None
     """
     List of {obj}`WorkspaceTemplate` subclasses.
     """
 
-    stylesheets: list[Type[AppCss]] = None
+    stylesheets: list[Type[AppCss]] | None = None
     """
     List of {obj}`AppCss` subclasses.
     """
 
-    widgets: list[Type[Widget]] = None
+    widgets: list[Type[Widget]] | None = None
     """
     List of {obj}`Widget` subclasses.
     """
 
-    scripts: list[Type[FrontendScript | BackendScript]] = None
+    scripts: list[Type[FrontendScript | BackendScript]] | None = None
     """
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
-        if self.templates:
-            children.append(
-                self.create_declarative_child(
-                    Templates, children=self.templates
-                )
+    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+        children.append(
+            self.create_declarative_child(
+                Templates, children=self._collect_attribute("templates")
             )
+        )
+        children.append(
+            self.create_declarative_child(
+                WorkspaceTemplates,
+                children=self._collect_attribute("workspace_templates"),
+            )
+        )
+        children.append(
+            self.create_declarative_child(
+                Stylesheets, children=self._collect_attribute("stylesheets")
+            )
+        )
+        children.append(
+            self.create_declarative_child(
+                Widgets, children=self._collect_attribute("widgets")
+            )
+        )
+        children.append(
+            self.create_declarative_child(
+                Scripts, children=self._collect_attribute("scripts")
+            )
+        )
 
-        if self.workspace_templates:
-            children.append(
-                self.create_declarative_child(
-                    WorkspaceTemplates, children=self.workspace_templates
-                )
-            )
+    def _collect_attribute(self, attr: str) -> list[Type[Note]]:
+        """
+        Get the attribute with the given name, appending those of
+        base classes.
+        """
 
-        if self.stylesheets:
-            children.append(
-                self.create_declarative_child(
-                    Stylesheets, children=self.stylesheets
-                )
-            )
+        notes: list[Note] = []
 
-        if self.widgets:
-            children.append(
-                self.create_declarative_child(Widgets, children=self.widgets)
-            )
+        for cls in type(self).mro():
+            if issubclass(cls, BaseSystem):
+                if not hasattr(cls, attr):
+                    continue
 
-        if self.scripts:
-            children.append(
-                self.create_declarative_child(Scripts, children=self.scripts)
-            )
+                attr_list = cast(list[Note] | None, getattr(cls, attr))
+
+                if attr_list is not None:
+                    # validate
+                    assert isinstance(attr_list, list)
+                    for note in attr_list:
+                        assert issubclass(note, Note)
+
+                    notes += attr_list
+
+        return notes
 
 
 # themes are global, so only maintain in root System note
@@ -358,19 +382,21 @@ class BaseRootSystem(BaseSystem):
     and adding a built-in {obj}`BaseSystem` subclass.
     """
 
-    themes: list[Type[Theme]] = None
+    themes: list[Type[Theme]] | None = None
     """
     List of {obj}`Theme` subclasses
     """
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
-        if self.themes:
-            children.append(
-                self.create_declarative_child(Themes, children=self.themes)
-            )
-
+    def init(self, _: list[Attribute], children: list[BranchSpecT]):
         # add built-in system note
         children.append(self.create_declarative_child(TriliumAlchemySystem))
+
+        # add themes
+        children.append(
+            self.create_declarative_child(
+                Themes, children=self._collect_attribute("themes")
+            )
+        )
 
 
 class BaseRoot(Note):
@@ -379,8 +405,8 @@ class BaseRoot(Note):
     """
 
     title = "root"
-    system: Type[BaseRootSystem] = BaseRootSystem
+    system: Type[BaseRootSystem] | None = BaseRootSystem
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
-        if self.system:
+    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+        if self.system is not None:
             children.append(self.create_declarative_child(self.system))
