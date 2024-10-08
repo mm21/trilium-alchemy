@@ -1,0 +1,12 @@
+# Simple Trilium instance to use for testing.
+version: '3'
+services:
+  trilium:
+    image: zadam/trilium:0.63.7
+    restart: always
+    environment:
+      - TRILIUM_DATA_DIR=/home/node/trilium-data
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.trilium_data:/home/node/trilium-data
