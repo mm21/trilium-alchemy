@@ -60,6 +60,7 @@ __all__ = [
     "FrontendScript",
     "BackendScript",
     "BaseSystem",
+    "BaseWorkspaceRoot",
     "BaseRootSystem",
     "BaseRoot",
 ]
@@ -359,6 +360,22 @@ class BaseSystem(Note):
                     notes += attr_list
 
         return notes
+
+
+@label("workspace")
+class BaseWorkspaceRoot(Note):
+    """
+    Base class for a workspace root.
+
+    - Adds `#workspace` label
+    - Adds {obj}`BaseSystem` child note, if attribute `system` is set
+    """
+
+    system: type[BaseSystem] | None = None
+
+    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+        if self.system is not None:
+            children.append(self.create_declarative_child(self.system))
 
 
 # themes are global, so only maintain in root System note

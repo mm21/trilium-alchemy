@@ -368,6 +368,13 @@ class Mixin(
     ```
     """
 
+    hide_new_note: bool = False
+    """
+    Whether to hide "new note" button, regardless of whether it would otherwise
+    be hidden. Can be used to hide "new note" button for e.g. 
+    {obj}`Templates` which otherwise would not hide it.
+    """
+
     _force_leaf: bool = False
     """
     If we applied the triliumAlchemyDeclarative CSS class to templates and
@@ -1139,7 +1146,10 @@ class Note(
             # since the cssClass would be inherited to instances created
             # by user)
             if self.note_id:
-                if not self.leaf and not self._force_leaf:
+                if (
+                    self.hide_new_note
+                    or any([self.leaf, self._force_leaf]) is False
+                ):
                     attributes += [
                         self.create_declarative_label(
                             "cssClass", value="triliumAlchemyDeclarative"
