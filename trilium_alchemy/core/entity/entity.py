@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Generator, Generic, Protocol, Type, TypeVar, cast, overload
+from typing import Any, Generator, Generic, Type, TypeVar, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
-
-import trilium_alchemy
 
 from ..exceptions import *
 from ..session import Session, SessionContainer, require_session

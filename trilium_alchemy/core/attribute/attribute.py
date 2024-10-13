@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable
-from abc import ABC, abstractmethod
+from abc import ABC
 from functools import wraps
 from graphlib import TopologicalSorter
 import logging
@@ -10,7 +9,7 @@ from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.exceptions import NotFoundException
 
 import trilium_alchemy
-from ..exceptions import *
+from ..exceptions import _assert_validate
 from ..session import Session, require_session
 
 from ..entity.entity import (
@@ -330,7 +329,9 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
                 self._note.attributes.owned.remove(self)
 
     def _flush_check(self):
-        assert self._note is not None, "Attribute not assigned to note"
+        _assert_validate(
+            self._note is not None, "Attribute not assigned to note"
+        )
 
     @property
     def _dependencies(self) -> set[Entity]:

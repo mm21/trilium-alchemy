@@ -29,7 +29,7 @@ from ..entity.model import (
 
 # isort: on
 
-from ..exceptions import *
+from ..exceptions import _assert_validate
 from ..session import Session, SessionContainer, require_session
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
@@ -1219,20 +1219,24 @@ class Note(
 
     def _flush_check(self):
         if not self._is_delete:
-            assert len(self.branches.parents) > 0, "Note has no parents"
+            _assert_validate(
+                len(self.branches.parents) > 0, "Note has no parents"
+            )
 
         for branch in self.branches.parents:
-            assert (
-                branch.child is self
-            ), f"Child not set for parent branch {branch}"
+            _assert_validate(
+                branch.child is self,
+                f"Child not set for parent branch {branch}",
+            )
 
             if self.note_id != "root":
-                assert (
-                    branch.parent is not None
-                ), f"Parent not set for branch: {branch}"
+                _assert_validate(
+                    branch.parent is not None,
+                    f"Parent not set for branch: {branch}",
+                )
 
         for branch in self.branches.children:
-            assert branch.parent is self
+            _assert_validate(branch.parent is self)
 
     @property
     def _dependencies(self):

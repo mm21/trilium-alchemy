@@ -29,3 +29,18 @@ class ValidationError(Exception):
     def __init__(self, errors: list[str]):
         errors_str = "\n".join([e for e in errors])
         super().__init__(self, f"Errors found during validation: {errors_str}")
+
+
+class _ValidationError(Exception):
+    """
+    Raised internally during flush if there are any errors for this
+    entity, but aggregated before raising ValidationErrors to user.
+    """
+
+
+def _assert_validate(cond: bool, *args):
+    """
+    Helper to raise a validation error if the condition is False.
+    """
+    if cond is not True:
+        raise _ValidationError(*args)

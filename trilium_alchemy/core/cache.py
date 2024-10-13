@@ -9,7 +9,7 @@ import graphlib
 import logging
 
 import trilium_alchemy
-from .exceptions import *
+from .exceptions import ValidationError, _ValidationError
 from . import session
 
 
@@ -144,8 +144,8 @@ class Cache:
             # handle validation error
             try:
                 entity._flush_check()
-            except AssertionError as e:
-                errors.append(f"{entity}: {e}")
+            except _ValidationError as e:
+                errors.append(f"{entity} {type(entity)}: {e}")
 
         if len(errors) > 0:
             raise ValidationError(errors)

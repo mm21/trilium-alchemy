@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.exceptions import ServiceException, NotFoundException
 
-from ..exceptions import *
+from ..exceptions import _assert_validate
 from ..session import Session, require_session
 from ..entity.entity import Entity, EntityIdDescriptor, OrderedEntity
 from ..entity.model import (
@@ -335,22 +335,24 @@ class Branch(OrderedEntity[BranchModel]):
         self.child = note.Note(note_id=model.note_id, session=self._session)
 
     def _flush_check(self):
-        assert self.child is not None, "No child set"
+        _assert_validate(self.child is not None, "No child set")
 
         if self.child.note_id != "root":
-            assert self.parent is not None, "No parent set"
+            _assert_validate(self.parent is not None, "No parent set")
 
         if self.state is not State.DELETE:
             # make sure this branch was added to parents of child
-            assert (
-                self in self.child.branches.parents
-            ), f"Not added to parents of child {self.child}"
+            _assert_validate(
+                self in self.child.branches.parents,
+                f"Not added to parents of child {self.child}",
+            )
 
             # make sure this branch was added to children of parents
             if self.child.note_id != "root":
-                assert (
-                    self in self.parent.branches.children
-                ), f"Not added to children of parent {self.parent}"
+                _assert_validate(
+                    self in self.parent.branches.children,
+                    f"Not added to children of parent {self.parent}",
+                )
 
     @property
     def _dependencies(self):

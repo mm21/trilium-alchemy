@@ -4,7 +4,7 @@ from typing import overload, TypeVar, Generic, Type, Hashable
 
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
-from ..exceptions import *
+from ..exceptions import _assert_validate
 from ..session import Session, require_session
 from .. import note
 
@@ -84,7 +84,7 @@ class Relation(Attribute):
         self._target = note.Note(note_id=model.value, session=self._session)
 
     def _flush_check(self):
-        assert isinstance(self._target, note.Note)
+        _assert_validate(isinstance(self._target, note.Note))
 
     def _flush_prep(self):
         """

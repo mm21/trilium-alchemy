@@ -43,7 +43,7 @@ from ..core import (
     Attribute,
     label,
 )
-from ..core.note.note import BranchSpecT
+from ..core.note.note import BranchSpecT, is_inherited
 from .types import (
     CssNote,
     JsFrontendNote,
@@ -337,7 +337,12 @@ class BaseSystem(Note):
 
         for cls in type(self).mro():
             if issubclass(cls, BaseSystem):
+                # skip if it doesn't have this attribute
                 if not hasattr(cls, attr):
+                    continue
+
+                # skip if the attribute belongs to a subclass
+                if is_inherited(cls, attr):
                     continue
 
                 attr_list = cast(list[Note] | None, getattr(cls, attr))
@@ -346,8 +351,11 @@ class BaseSystem(Note):
                     # validate
                     assert isinstance(attr_list, list)
                     for note in attr_list:
-                        assert issubclass(note, Note)
+                        assert issubclass(
+                            note, Note
+                        ), f"Got unexpected class in note attribute '{attr}': {note} {type(note)}"
 
+                    # append notes with this attribute
                     notes += attr_list
 
         return notes
