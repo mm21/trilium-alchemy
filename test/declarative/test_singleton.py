@@ -44,11 +44,16 @@ class IdempotentTest1(Note):
     idempotent = True
 
 
-class SegmentTestChild(Note):
-    note_id_segment = "Child"
+class SegmentTestChild2(Note):
+    idempotent_segment = True
 
 
-@children(SegmentTestChild)
+@children(SegmentTestChild2)
+class SegmentTestChild1(Note):
+    note_id_segment = "Child1"
+
+
+@children(SegmentTestChild1)
 class SegmentTestParent(Note):
     note_id_seed = "Parent"
 
@@ -61,6 +66,7 @@ def check_child1(branch: Branch):
 
     assert note.singleton
     assert not note.leaf
+    assert note.note_id_seed_final == f"{__name__}.TemplateChild1"
     assert note.note_id == id_hash(f"{__name__}.TemplateChild1")
     assert note.title == "Child 1"
     assert note.note_type == "book"
@@ -92,6 +98,7 @@ def check_child2(branch: Branch):
 
     assert note.singleton
     assert note.leaf
+    assert note.note_id_seed_final == f"{__name__}.TemplateChild2"
     assert note.note_id == id_hash(f"{__name__}.TemplateChild2")
     assert note.title == "TemplateChild2"
     assert note.note_type == "text"
@@ -135,6 +142,7 @@ def check_template(branch: Branch):
 
     note = branch.child
 
+    assert note.note_id_seed_final == "TemplateTest"
     assert note.note_id == id_hash("TemplateTest")
     assert note.title == "TemplateTest"
     assert note.note_type == "text"
@@ -165,6 +173,7 @@ def check_child3(branch: Branch):
 
     assert note.singleton
     assert not note.leaf
+    assert note.note_id_seed_final == f"{__name__}.{name}"
     assert note.note_id == id_hash(f"{__name__}.{name}")
     assert note.title == name
     assert note.note_type == "text"
@@ -189,7 +198,8 @@ def check_subclass(branch: Branch):
 
     note = branch.child
 
-    assert note.note_id == id_hash(f"TemplateSubclass")
+    assert note.note_id_seed_final == "TemplateSubclass"
+    assert note.note_id == id_hash("TemplateSubclass")
     assert note.title == "TemplateSubclass"
     assert note.note_type == "text"
     assert note.mime == "text/html"
@@ -354,14 +364,23 @@ def test_instance(request, session: Session):
 
 def test_idempotent(session: Session):
     note = IdempotentTest1(session=session)
+    assert note.note_id_seed_final == "IdempotentTest1"
     assert note.note_id == id_hash("IdempotentTest1")
 
 
 def test_note_id_segment(session: Session):
     parent = SegmentTestParent(session=session)
+    assert parent.note_id_seed_final == "Parent"
     assert parent.note_id == id_hash("Parent")
     assert len(parent.children) == 1
 
-    child = parent.children[0]
-    assert isinstance(child, SegmentTestChild)
-    assert child.note_id == id_hash(f"{parent.note_id}_Child_0")
+    child1 = parent.children[0]
+    assert isinstance(child1, SegmentTestChild1)
+    assert child1.note_id_seed_final == "Parent/Child1"
+    assert child1.note_id == id_hash("Parent/Child1")
+    assert len(child1.children) == 1
+
+    child2 = child1.children[0]
+    assert isinstance(child2, SegmentTestChild2)
+    assert child2.note_id_seed_final == "Parent/Child1/SegmentTestChild2"
+    assert child2.note_id == id_hash("Parent/Child1/SegmentTestChild2")

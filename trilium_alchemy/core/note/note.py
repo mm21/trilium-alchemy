@@ -103,8 +103,16 @@ def require_note_id(func):
 
         # get declarative note id
         if kwargs["note_id"] is None:
-            kwargs["note_id"] = get_cls(ent)._get_decl_id()
-            note_id = kwargs["note_id"]
+            decl_id: tuple[str, str | None] | None = get_cls(ent)._get_decl_id()
+
+            note_id: str | None = None
+            note_id_seed_final: str | None = None
+
+            if decl_id is not None:
+                note_id, note_id_seed_final = decl_id
+
+            kwargs["note_id"] = note_id
+            kwargs["note_id_seed_final"] = note_id_seed_final
 
         return func(ent, *args, **kwargs)
 
@@ -337,6 +345,13 @@ class Mixin(
     the class name (not fully qualified) is used.
     """
 
+    idempotent_segment: bool = False
+    """
+    If set on a {obj}`Note` subclass, sets segment name to class name
+    for the purpose of `note_id` calculation. 
+    An explicitly provided {obj}`Mixin.note_id_segment` takes precedence.
+    """
+
     leaf: bool = False
     """
     If set to `True`{l=python} on a {obj}`Note` subclass, disables setting
@@ -382,17 +397,28 @@ class Mixin(
     even though we still want to maintain the template itself declaratively.
     """
 
-    _sequence_map: dict[type, dict[str, int]] | None = None
+    _sequence_map: dict[type, dict[str, int]]
     """
     State to keep track of sequence numbers for deterministic attribute/
     child ids.
     """
 
-    _child_id_seed: str | None = None
+    _note_id_seed_final: str | None
+    """
+    Note id seed, either provided explicitly or derived from parent.
+    """
 
-    def __init__(self, child_id_seed: str | None):
+    def __init__(self, note_id_seed_final: str | None):
         self._sequence_map = dict()
-        self._child_id_seed = child_id_seed
+        self._note_id_seed_final = note_id_seed_final
+
+    @property
+    def note_id_seed_final(self) -> str | None:
+        """
+        Get the seed from which this note's id was derived. Useful for
+        debugging.
+        """
+        return self._note_id_seed_final
 
     def init(
         self,
@@ -477,12 +503,21 @@ class Mixin(
         If the child's note_id is not set, a new note will be created upon
         every instantiation. This is the case for non-singleton subclasses.
         """
-        child_note_id: str | None = child_cls._get_decl_id(self)
+        child_decl_id: tuple[str, str | None] | None = child_cls._get_decl_id(
+            self
+        )
+
+        child_note_id: str | None = None
+        child_note_id_seed_final: str | None = None
+
+        if child_decl_id is not None:
+            child_note_id, child_note_id_seed_final = child_decl_id
 
         child: Note = child_cls(
             note_id=child_note_id,
             session=self._session,
             force_leaf=self._force_leaf,
+            note_id_seed_final=child_note_id_seed_final,
             **kwargs,
         )
 
@@ -597,30 +632,39 @@ class Mixin(
             if issubclass(cls, Mixin) and cls.content_file:
                 return cls
 
-    def _derive_id(self, cls: type[Entity], base: str) -> str | None:
+    def _derive_id_seed(self, cls: type[Entity], base: str) -> str | None:
         """
-        Generate a declarative entity id unique to this note with namespace
-        per class. Increments a sequence number per base, so e.g. there can be
-        multiple attributes with the same name.
+        Attempt to derive id seed for the provided entity based on this note.
         """
 
-        if self.note_id:
-            # if child_id_seed was passed during init, use that to generate
-            # deterministic child note id invariant of the root id.
-            # this enables setting a tree of ids based on the app name rather
-            # than the root note it's installed to
-            if self._child_id_seed:
-                prefix = self._child_id_seed
-            else:
-                prefix = self.note_id
+        # derive from parent's final note_id_seed if possible,
+        # fall back to note_id
+        prefix: str | None = self.note_id_seed_final or self.note_id
 
+        if prefix is not None:
             sequence = self._get_sequence(cls, base)
-            return id_hash(f"{prefix}_{base}_{sequence}")
+            suffix = "" if sequence == 0 else f"_{sequence}"
+
+            return f"{prefix}/{base}{suffix}"
 
         return None
 
-    def _get_sequence(self, cls, base):
-        assert self._sequence_map is not None
+    def _derive_id(self, cls: type[Entity], base: str) -> str | None:
+        """
+        Generate a declarative entity id unique to this note with namespace
+        per entity type.
+
+        Increments a sequence number per base, so e.g. there can be
+        multiple attributes with the same name.
+        """
+        id_seed: str | None = self._derive_id_seed(cls, base)
+        return id_hash(id_seed) if id_seed is not None else None
+
+    def _get_sequence(self, cls: type[Entity], base: str):
+        """
+        Get entity id sequence number given entity type and a base name,
+        e.g. note id seed or attribute name.
+        """
 
         if cls not in self._sequence_map:
             self._sequence_map[cls] = dict()
@@ -843,14 +887,12 @@ class Note(
         :param session: Session, or `None`{l=python} to use default
         """
 
+        # TODO: prefix internal-only kwargs with "_"
         model_backing = kwargs.pop("model_backing")
-        child_id_seed = kwargs.pop(
-            "child_id_seed", None
-        )  # TODO: cleanup, unused
+        note_id_seed_final = kwargs.pop("note_id_seed_final", None)
         force_leaf = kwargs.pop("force_leaf", None)
 
-        if kwargs:
-            logging.warning(f"Unexpected kwargs: {kwargs}")
+        assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
         # normalize args
         parents_iter: Iterable[Note | Branch] | None = None
@@ -873,7 +915,7 @@ class Note(
             return
 
         # invoke Mixin init
-        Mixin.__init__(self, child_id_seed)
+        Mixin.__init__(self, note_id_seed_final)
 
         # get from parent, if True
         if force_leaf:
@@ -943,7 +985,7 @@ class Note(
 
     @classmethod
     def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
-        return Note(note_id=model.note_id, model_backing=model, session=session)
+        return Note(note_id=model.note_id, session=session, model_backing=model)
 
     def __iadd__(
         self,
@@ -1189,7 +1231,9 @@ class Note(
         return type(self) is not Note
 
     @classmethod
-    def _get_decl_id(cls, parent: Mixin | None = None) -> str | None:
+    def _get_decl_id(
+        cls, parent: Mixin | None = None
+    ) -> tuple[str, str | None] | None:
         """
         Try to get a note_id. If one is returned, this note has a deterministic
         note_id and will get the same one every time it's instantiated.
@@ -1198,29 +1242,50 @@ class Note(
         module: ModuleType | None = inspect.getmodule(cls)
         assert module is not None
 
-        # get fully qualified class name
-        cls_name = f"{module.__name__}.{cls.__name__}"
-
         if hasattr(cls, "note_id_"):
-            # note_id provided and renamed by metaclass
-            return getattr(cls, "note_id_")
-        elif cls.note_id_seed:
-            # note_id_seed provided
-            return id_hash(getattr(cls, "note_id_seed"))
+            # note_id explicitly provided, no seed
+            return (getattr(cls, "note_id_"), None)
+
+        # get fully qualified class name
+        fqcn = f"{module.__name__}.{cls.__name__}"
+
+        # attempt to get id seed
+        note_id_seed: str | None = cls._get_note_id_seed(fqcn, parent)
+
+        if note_id_seed is not None:
+            # child note_id derived by seed
+            return id_hash(note_id_seed), note_id_seed
+
+        return None
+
+    @classmethod
+    def _get_note_id_seed(cls, fqcn: str, parent: Mixin | None) -> str | None:
+        """
+        Get the seed used to generate `note_id` for this subclass.
+        """
+        if cls.note_id_seed:
+            # seed provided
+            return cls.note_id_seed
         elif cls.idempotent:
-            # get id from class name (not fully-qualified)
-            return id_hash(cls.__name__)
+            # get seed from class name (not fully-qualified)
+            return cls.__name__
         elif cls.singleton:
             # get id from fully-qualified class name
-            return id_hash(cls_name)
+            return fqcn
         elif parent is not None:
             # not declared as singleton, but possibly created by
             # singleton parent, so try to generate deterministic id
 
             # select base as provided segment or fully-qualified class name
-            base: str = cls.note_id_segment or cls_name
+            base: str
+            if cls.idempotent_segment:
+                # base is class name (not fully-qualified)
+                base = cls.__name__
+            else:
+                # base is segment if provided, else fully-qualified class name
+                base = cls.note_id_segment or fqcn
 
-            return parent._derive_id(Note, base)
+            return parent._derive_id_seed(Note, base)
 
         return None
 
