@@ -42,18 +42,9 @@ __all__ = [
 ]
 
 
-# TODO: find out why references to TypeVars can't be resolved in API docs,
-# then this can be used in API (e.g. @children)
-# TODO: encapsulate "Note" | type["Note"] | Branch
-BranchSpecT = TypeVar(
-    "BranchSpecT",
-    bound=Union[
-        "Note",
-        type["Note"],
-        Branch,
-        tuple[Union["Note", type["Note"], Branch], dict[str, Any]],
-    ],
-)
+type BranchSpecT = "Note" | type["Note"] | Branch | tuple[
+    "Note" | type["Note"] | Branch, dict[str, Any]
+]
 """
 Specifies a branch to be declaratively added as child. May be:
 
@@ -264,7 +255,6 @@ class NoteMeta(BaseMeta):
 class Mixin(
     ABC,
     SessionContainer,
-    Generic[BranchSpecT],
     metaclass=BaseMeta,
 ):
     """
@@ -647,7 +637,6 @@ class Note(
     Entity[NoteModel],
     Mixin,
     MutableMapping,
-    Generic[BranchSpecT],
     metaclass=NoteMeta,
 ):
     """
