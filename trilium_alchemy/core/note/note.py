@@ -304,6 +304,12 @@ class Mixin(
     directly.
     """
 
+    note_id_segment: str | None = None
+    """
+    Segment with which to generate `note_id` given the parent's `note_id`,
+    if no `note_id` is otherwise specified.
+    """
+
     title: str | None = None
     """
     Sets {obj}`title <Note.title>` of {obj}`Note` subclass. If `None`{l=python},
@@ -601,7 +607,7 @@ class Mixin(
             if issubclass(cls, Mixin) and cls.content_file:
                 return cls
 
-    def _derive_id(self, cls: type[object], base: str) -> str | None:
+    def _derive_id(self, cls: type[Entity], base: str) -> str | None:
         """
         Generate a declarative entity id unique to this note with namespace
         per class. Increments a sequence number per base, so e.g. there can be
@@ -849,7 +855,9 @@ class Note(
         """
 
         model_backing = kwargs.pop("model_backing")
-        child_id_seed = kwargs.pop("child_id_seed", None)
+        child_id_seed = kwargs.pop(
+            "child_id_seed", None
+        )  # TODO: cleanup, unused
         force_leaf = kwargs.pop("force_leaf", None)
 
         if kwargs:
@@ -1211,7 +1219,7 @@ class Note(
             # note_id_seed provided
             return id_hash(getattr(cls, "note_id_seed"))
         elif cls.idempotent:
-            # get id from class name
+            # get id from class name (not fully-qualified)
             return id_hash(cls.__name__)
         elif cls.singleton:
             # get id from fully-qualified class name
@@ -1219,7 +1227,11 @@ class Note(
         elif parent is not None:
             # not declared as singleton, but possibly created by
             # singleton parent, so try to generate deterministic id
-            return parent._derive_id(Note, cls_name)
+
+            # select base as provided segment or fully-qualified class name
+            base: str = cls.note_id_segment or cls_name
+
+            return parent._derive_id(Note, base)
 
         return None
 

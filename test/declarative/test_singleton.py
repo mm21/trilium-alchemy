@@ -44,6 +44,15 @@ class IdempotentTest1(Note):
     idempotent = True
 
 
+class SegmentTestChild(Note):
+    note_id_segment = "Child"
+
+
+@children(SegmentTestChild)
+class SegmentTestParent(Note):
+    note_id_seed = "Parent"
+
+
 def check_child1(branch: Branch):
     assert branch.prefix == ""
     assert branch.expanded is False
@@ -346,3 +355,13 @@ def test_instance(request, session: Session):
 def test_idempotent(session: Session):
     note = IdempotentTest1(session=session)
     assert note.note_id == id_hash("IdempotentTest1")
+
+
+def test_note_id_segment(session: Session):
+    parent = SegmentTestParent(session=session)
+    assert parent.note_id == id_hash("Parent")
+    assert len(parent.children) == 1
+
+    child = parent.children[0]
+    assert isinstance(child, SegmentTestChild)
+    assert child.note_id == id_hash(f"{parent.note_id}_Child_0")
