@@ -195,19 +195,17 @@ For example, this mechanism is used internally to add an `iconClass` label for c
 
 ```python
 class IconMixin(Mixin):
-    icon: str = None
+    my_label: str | None = None
     """
-    If provided, defines value of `#iconClass` label.
+    If provided, add attribute `myLabel`.
     """
 
     def init(self, attributes: list[Attribute], children: list[Branch]):
         """
         Set `#iconClass` value by defining {obj}`IconMixin.icon`.
         """
-        if self.icon:
-            attributes += [
-                self.create_declarative_label("iconClass", self.icon)
-            ]
+        if self.my_label:
+            attributes.append(self.create_declarative_label("myLabel", self.my_label)
 ```
 
 (leaf-notes)=
