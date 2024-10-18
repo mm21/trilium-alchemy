@@ -191,21 +191,28 @@ Define {obj}`Note.init` or {obj}`Mixin.init` to add attributes and children dyna
 
 These APIs are required for singleton notes to generate a deterministic id for attributes and children, generating the same subtree every time the {obj}`Note` subclass is instantiated.
 
-For example, this mechanism is used internally to add an `iconClass` label for certain {obj}`Note` subclasses like {obj}`Workspace`:
+For example, a mixin which provides a convenient way to set an attribute `#myLabel` to a given value:
 
 ```python
-class IconMixin(Mixin):
+class MyMixin(Mixin):
+
     my_label: str | None = None
     """
-    If provided, add attribute `myLabel`.
+    If set, add attribute `myLabel` with provided value.
     """
 
     def init(self, attributes: list[Attribute], children: list[Branch]):
-        """
-        Set `#iconClass` value by defining {obj}`IconMixin.icon`.
-        """
         if self.my_label:
-            attributes.append(self.create_declarative_label("myLabel", self.my_label)
+            attributes.append(
+                self.create_declarative_label("myLabel", self.my_label)
+            )
+
+class MyNote(Note, MyMixin):
+    """
+    This note will automatically have the label `#myLabel=my-label-value`.
+    """
+
+    my_label = "my-label-value"
 ```
 
 (leaf-notes)=

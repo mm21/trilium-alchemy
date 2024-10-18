@@ -29,15 +29,6 @@ __all__ = [
 __canonical_syms__ = __all__
 
 
-class IconMixin(Mixin):
-    """
-    Deprecated: Icon functionality built into base Mixin class.
-
-    Enables setting the attribute {obj}`IconMixin.icon` to automatically add
-    as value of `#iconClass` label.
-    """
-
-
 def check_name(name: str, accumulate=False):
     """
     Check if attribute with this name already exists, and bail out if so
