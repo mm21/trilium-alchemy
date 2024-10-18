@@ -386,6 +386,11 @@ class Mixin(
     {obj}`Templates` which otherwise would not hide it.
     """
 
+    icon: str | None = None
+    """
+    If provided, adds `#iconClass` label unless it is already present.
+    """
+
     _force_leaf: bool = False
     """
     If we applied the triliumAlchemyDeclarative CSS class to templates and
@@ -442,7 +447,10 @@ class Mixin(
         decorator-patched inits followed by {obj}`Mixin.init`.
         ```
         """
-        ...
+        if self.icon and all(a.name != "iconClass" for a in attributes):
+            attributes.append(
+                self.create_declarative_label("iconClass", self.icon)
+            )
 
     def create_declarative_label(
         self, name: str, value: str = "", inheritable: bool = False
@@ -1206,7 +1214,7 @@ class Note(
                 # or syncs from a folder
                 assert (
                     len(children) == 0
-                ), f"Attempt to declaratively update children of leaf note {self}"
+                ), f"Attempt to declaratively update children of leaf note {self}, {type(self)}: {children}"
             else:
                 # not a leaf note: free to update children
                 if fields_update["children"] is not None:

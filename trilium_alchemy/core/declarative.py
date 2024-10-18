@@ -19,7 +19,6 @@ from .branch import Branch
 from .attribute import Attribute, Label, Relation
 
 __all__ = [
-    "IconMixin",
     "label",
     "relation",
     "label_def",
@@ -28,6 +27,15 @@ __all__ = [
     "child",
 ]
 __canonical_syms__ = __all__
+
+
+class IconMixin(Mixin):
+    """
+    Deprecated: Icon functionality built into base Mixin class.
+
+    Enables setting the attribute {obj}`IconMixin.icon` to automatically add
+    as value of `#iconClass` label.
+    """
 
 
 def check_name(name: str, accumulate=False):
@@ -48,28 +56,6 @@ def check_name(name: str, accumulate=False):
         return wrapper
 
     return _check_name
-
-
-class IconMixin(Mixin):
-    """
-    Enables setting the attribute {obj}`IconMixin.icon` to automatically add
-    as value of `#iconClass` label.
-    """
-
-    icon: str | None = None
-    """
-    If provided, defines value of `#iconClass` label.
-    """
-
-    @check_name("iconClass")
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
-        """
-        Set `#iconClass` value by defining {obj}`IconMixin.icon`.
-        """
-        if self.icon:
-            attributes += [
-                self.create_declarative_label("iconClass", self.icon)
-            ]
 
 
 def label(
@@ -95,7 +81,9 @@ def label(
     """
 
     @check_name(name, accumulate=accumulate)
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+    def init(
+        self: Note, attributes: list[Attribute], children: list[BranchSpecT]
+    ):
         attributes += [
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable

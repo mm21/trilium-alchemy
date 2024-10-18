@@ -39,7 +39,6 @@ from typing import Type, cast
 from ..core import (
     Note,
     Mixin,
-    IconMixin,
     Attribute,
     label,
 )
@@ -66,7 +65,7 @@ __all__ = [
 ]
 
 
-class BaseTemplate(Note, IconMixin):
+class BaseTemplate(Note):
     # note_id generated from class name
     idempotent = True
 
@@ -111,7 +110,7 @@ class WorkspaceTemplate(BaseTemplate):
 
 
 @label("workspace")
-class Workspace(Note, IconMixin):
+class Workspace(Note):
     """
     Defines a workspace.
 
