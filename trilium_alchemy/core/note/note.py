@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import importlib.resources
 import inspect
@@ -978,6 +979,42 @@ class Note(
                 template_obj, Note
             ), f"Template target must be a Note, have {type(template_obj)}"
             self += Relation("template", template_obj, session=session)
+
+    @property
+    def paths(self) -> list[list[Note]]:
+        """
+        Get list of paths to this note, where each path is a list of
+        ancestor notes.
+        """
+
+        def get_paths(note: Note) -> list[list[Note]]:
+            paths: list[list[Note]] = []
+
+            # get list of parents sorted by title
+            parents: list[Note] = sorted(note.parents, key=lambda n: n.title)
+
+            # if no parents, just add this note
+            if len(parents) == 0:
+                paths.append([note])
+
+            # traverse parents
+            for parent in parents:
+                for path in get_paths(parent):
+                    paths.append(path + [note])
+
+            return paths
+
+        return get_paths(self)
+
+    @property
+    def paths_str(self) -> list[str]:
+        """
+        Get list of paths to this note, where each path is a string
+        like `A > B > C`.
+        """
+        return [
+            " > ".join([note.title for note in path]) for path in self.paths
+        ]
 
     @property
     def _str_short(self):

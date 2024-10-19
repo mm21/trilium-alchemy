@@ -220,3 +220,27 @@ def test_lazy(session: Session, note1: Note, note2: Note, branch: Branch):
 
     title = branch.child.title
     assert note2._model._setup_done
+
+
+def test_paths(session: Session):
+    """
+    Verify API to get note paths.
+    """
+
+    a, b1, b2, c, d = [
+        Note(title=f"Note{i}", session=session) for i in range(5)
+    ]
+
+    a += [b1, b2]
+    c.parents += [b1, b2]
+    c += d
+
+    d_paths = d.paths
+    assert d_paths == [
+        [a, b1, c, d],
+        [a, b2, c, d],
+    ]
+    assert d.paths_str == [
+        "Note0 > Note1 > Note3 > Note4",
+        "Note0 > Note2 > Note3 > Note4",
+    ]

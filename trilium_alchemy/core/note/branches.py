@@ -327,7 +327,8 @@ class Parents(NoteExtension, MutableSet):
 
     def __iter__(self):
         for branch in self._note.branches.parents:
-            yield branch.parent
+            if branch.parent is not None:
+                yield branch.parent
 
     def __len__(self):
         return len(self._note.branches.parents)
