@@ -36,7 +36,7 @@ Instantiate a {obj}`Session` as follows:
 from trilium_alchemy import Session
 
 # your host here
-HOST = "http://localhost"
+HOST = "http://localhost:8080"
 
 # your token here
 TOKEN = "YmcEF6jAWOSv_98jMiIoXEuFHofPqffmjrzS8zOOiLm7Q1DwjS8641YA="
