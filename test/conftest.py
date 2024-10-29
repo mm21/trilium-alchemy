@@ -1,11 +1,19 @@
+from typing import Generator
 import os
 import datetime
 import logging
 import sys
 
-from pytest import fixture, raises, mark
+from pytest import Config, Parser, fixture, raises
 
-from trilium_alchemy import *
+from trilium_alchemy import (
+    Session,
+    Note,
+    Attribute,
+    Branch,
+    Entity,
+    ReadOnlyError,
+)
 
 from trilium_client import DefaultApi
 from trilium_client.models.create_note_def import CreateNoteDef
@@ -31,8 +39,27 @@ TOKEN = os.environ["TRILIUM_TOKEN"]
 PASSWORD = os.environ["TRILIUM_PASSWORD"]
 DATA_DIR = os.environ["TRILIUM_DATA_DIR"]
 
+MARKERS = [
+    "auto_flush",
+    "default_session",
+    "attribute",
+    "label",
+    "relation",
+    "note_title",
+    "note_type",
+    "note_mime",
+    "skip_teardown",
+    "setup",
+    "temp_file",
+]
 
-def pytest_addoption(parser):
+
+def pytest_configure(config: Config) -> None:
+    for marker in MARKERS:
+        config.addinivalue_line("markers", marker)
+
+
+def pytest_addoption(parser: Parser):
     parser.addoption(
         "--clobber",
         action="store_true",
@@ -101,7 +128,7 @@ def session_setup(request):
 
 
 @fixture
-def session(request) -> Session:
+def session(request) -> Generator[Session, None, None]:
     """
     Create a new Session.
 
@@ -129,7 +156,7 @@ def create_session(default=False):
 
 
 @fixture
-def note(request, session: Session) -> Note:
+def note(request, session: Session) -> Generator[Note, None, None]:
     """
     Create a new note "manually" using ETAPI directly; don't rely on framework
     under test to do so.
@@ -150,14 +177,14 @@ def note(request, session: Session) -> Note:
 
 
 @fixture
-def note1(request, session: Session) -> Note:
+def note1(request, session: Session) -> Generator[Note, None, None]:
     note = create_note_fixture(request, session, "note1")
     yield note
     teardown_note(request, session, note.note_id)
 
 
 @fixture
-def note2(request, session: Session, note1) -> Note:
+def note2(request, session: Session, note1) -> Generator[Note, None, None]:
     """
     Take dummy note1 to ensure:
     - note1 is created before note2
