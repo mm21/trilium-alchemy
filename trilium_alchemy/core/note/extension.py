@@ -159,7 +159,7 @@ def check_bailout(func):
     return wrapper
 
 
-class List(Collection[U], MutableSequence):
+class List(Collection[U], MutableSequence[U]):
     """
     Maintain list of entities bound to a note. Used for OwnedAttributes and
     ChildBranches.
@@ -170,10 +170,10 @@ class List(Collection[U], MutableSequence):
     Working list of entity objects, or None if not currently setup.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"List: {None if self._entity_list is None else pformat(self._entity_list)}"
 
-    def __len__(self):
+    def __len__(self) -> int:
         assert self._entity_list is not None
         return len(self._entity_list)
 
@@ -322,7 +322,7 @@ class List(Collection[U], MutableSequence):
             self._entity_list[i]._position = self._get_position(i)
 
 
-class Set(Collection[T], MutableSet):
+class Set(Collection[T], MutableSet[T]):
     """
     Maintain set of entities bound to a note. Used for ParentBranches.
 
@@ -335,8 +335,34 @@ class Set(Collection[T], MutableSet):
     Working set of entity objects, or None if not currently setup.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Set: {None if self._entity_set is None else pformat(self._entity_set)}"
+
+    def __contains__(self, entity: Any) -> bool:
+        assert self._entity_set is not None
+        return entity in self._entity_set
+
+    def __iter__(self) -> Iterable[T]:
+        assert self._entity_set is not None
+        yield from self._entity_set
+
+    def __len__(self) -> int:
+        assert self._entity_set is not None
+        return len(self._entity_set)
+
+    def add(self, value: Any):
+        assert self._entity_set is not None
+
+        entity: T = self._invoke_normalize(value)
+        self._entity_set.add(entity)
+        self._bind_entity(entity)
+
+    def discard(self, value: Any):
+        assert self._entity_set is not None
+
+        entity: T = self._invoke_normalize(value)
+        self._entity_set.discard(entity)
+        self._unbind_entity(entity)
 
     def _contains(self, entity: T) -> bool:
         assert self._entity_set is not None
@@ -369,29 +395,3 @@ class Set(Collection[T], MutableSet):
 
     def _teardown(self):
         self._entity_set = None
-
-    def __contains__(self, entity: Any):
-        assert self._entity_set is not None
-        return entity in self._entity_set
-
-    def __iter__(self):
-        assert self._entity_set is not None
-        yield from self._entity_set
-
-    def __len__(self):
-        assert self._entity_set is not None
-        return len(self._entity_set)
-
-    def add(self, value: Any):
-        assert self._entity_set is not None
-
-        entity: T = self._invoke_normalize(value)
-        self._entity_set.add(entity)
-        self._bind_entity(entity)
-
-    def discard(self, value: Any):
-        assert self._entity_set is not None
-
-        entity: T = self._invoke_normalize(value)
-        self._entity_set.discard(entity)
-        self._unbind_entity(entity)

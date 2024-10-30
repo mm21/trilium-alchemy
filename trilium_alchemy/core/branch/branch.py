@@ -221,7 +221,7 @@ class Branch(OrderedEntity[BranchModel]):
     @require_session
     @require_create
     @require_branch_id
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> Branch:
         return super().__new__(
             cls,
             entity_id=kwargs["branch_id"],
