@@ -2,23 +2,17 @@ from __future__ import annotations
 
 from typing import (
     Any,
-    Callable,
     Generic,
-    Hashable,
     Iterable,
-    Protocol,
     Type,
     TypeVar,
-    Union,
     overload,
 )
 from functools import wraps
 from pprint import pformat
 
-from collections.abc import MutableSequence, MutableSet, MutableMapping
+from collections.abc import MutableSequence, MutableSet
 from abc import ABC, abstractmethod
-
-from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..exceptions import *
 from ..entity.entity import Entity, OrderedEntity
