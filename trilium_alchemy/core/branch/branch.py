@@ -31,39 +31,6 @@ __all__ = [
 ]
 
 
-def require_branch_id(func):
-    """
-    Ensure branch_id is present in kwargs.
-    """
-
-    # ent: may be cls or self
-    @wraps(func)
-    def wrapper(ent, *args, **kwargs):
-        if "branch_id" not in kwargs:
-            kwargs["branch_id"] = None
-
-        return func(ent, *args, **kwargs)
-
-    return wrapper
-
-
-def require_create(func):
-    """
-    Require create flag to avoid clobbering prefix/expanded when loading branch
-    by id.
-    """
-
-    # ent: may be cls or self
-    @wraps(func)
-    def wrapper(ent, *args, **kwargs):
-        if "create" not in kwargs:
-            kwargs["create"] = None
-
-        return func(ent, *args, **kwargs)
-
-    return wrapper
-
-
 class BranchDriver(Driver):
     @property
     def branch(self):
@@ -201,11 +168,11 @@ class Branch(OrderedEntity[BranchModel]):
 
     position: int = ReadOnlyDescriptor("_position")
     """
-    Read-only access to position of this attribute.
+    Read-only access to position of this branch.
 
     ```{note}
-    This is maintained automatically based on the order of this attribute
-    in its note's {obj}`Note.branches.children <Note.branches>` list.
+    This is maintained automatically based on the order of this branch
+    in the parent note's {obj}`Note.branches.children <Note.branches>` list.
     ```
     """
 
@@ -215,18 +182,14 @@ class Branch(OrderedEntity[BranchModel]):
     _child: note.Note = None
     _position: int = FieldDescriptor("note_position")
 
-    @require_create
-    @require_branch_id
     def __new__(cls, *_, **kwargs) -> Branch:
         return super().__new__(
             cls,
-            entity_id=kwargs["branch_id"],
+            entity_id=kwargs.get("branch_id"),
             session=kwargs.get("session"),
-            create=kwargs["create"],
+            create=kwargs.get("create"),
         )
 
-    @require_create
-    @require_branch_id
     def __init__(
         self,
         parent: note.Note = None,
@@ -244,11 +207,10 @@ class Branch(OrderedEntity[BranchModel]):
         :param kwargs: Internal only
         """
 
-        branch_id = kwargs.pop("branch_id")
-        create = kwargs.pop("create")
+        branch_id = kwargs.pop("branch_id", None)
+        create = kwargs.pop("create", None)
 
-        if kwargs:
-            logging.warning(f"Unexpected kwargs: {kwargs}")
+        assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
         super().__init__(
             entity_id=branch_id,
