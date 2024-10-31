@@ -1,3 +1,7 @@
+"""
+Test basic CRUD capability of notes.
+"""
+
 from pytest import mark
 
 from trilium_alchemy import *
@@ -5,13 +9,6 @@ from trilium_alchemy import *
 from ..conftest import check_read_only, note_exists
 
 import datetime
-
-"""
-Test basic CRUD capability of notes.
-"""
-
-# TODO: test_lazy_read: when instantiated by id, ensure model not loaded until
-# accessed
 
 
 # Create new note as a child of provided note
@@ -244,3 +241,89 @@ def test_paths(session: Session):
         "Note0 > Note1 > Note3 > Note4",
         "Note0 > Note2 > Note3 > Note4",
     ]
+
+
+@mark.note_title("Test note")
+@mark.note_type("code")
+@mark.note_mime("text/css")
+@mark.attribute("label1", "value1")
+@mark.attribute("relation1", "root", type="relation")
+def test_copy(session: Session, note: Note, note2: Note):
+    # add content
+    note.content = "Test CSS"
+
+    child1 = Note(title="Test child 1", session=session)
+    child2 = Note(title="Test child 2", session=session)
+
+    # add children
+    note += [
+        Branch(
+            child=child1,
+            prefix="Test prefix",
+            session=session,
+        ),
+        Branch(
+            child=child2,
+            session=session,
+        ),
+    ]
+
+    session.flush()
+
+    def check_copy(note_copy: Note, deep: bool, content: bool):
+        assert note_copy.title == "Test note"
+        assert note_copy.note_type == "code"
+        assert note_copy.mime == "text/css"
+
+        if content:
+            assert note_copy.content == "Test CSS"
+        else:
+            assert note_copy.content == ""
+
+        assert len(note_copy.attributes.owned) == 2
+
+        # check attributes
+        label1, relation1 = note_copy.attributes.owned
+
+        assert isinstance(label1, Label)
+        assert label1.name == "label1"
+        assert label1.value == "value1"
+
+        assert isinstance(relation1, Relation)
+        assert relation1.name == "relation1"
+        assert relation1.target is session.root
+
+        # check children
+        assert len(note_copy.branches.children) == 2
+        branch1, branch2 = note_copy.branches.children
+
+        assert branch1.prefix == "Test prefix"
+        assert branch1.parent is note_copy
+
+        assert branch2.prefix == ""
+        assert branch2.parent is note_copy
+
+        if deep:
+            assert branch1.child is not note.children[0]
+            assert branch2.child is not note.children[1]
+        else:
+            assert branch1.child is note.children[0]
+            assert branch2.child is note.children[1]
+
+    # create deep copy
+    copy_deep = note.copy(deep=True)
+
+    # create shallow copy w/content
+    copy_shallow = note.copy(content=True)
+
+    # place as children of second note
+    note2 += [
+        copy_deep,
+        copy_shallow,
+    ]
+
+    # verify
+    check_copy(copy_deep, True, False)
+    check_copy(copy_shallow, False, True)
+
+    session.flush()

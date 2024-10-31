@@ -696,82 +696,7 @@ class Note(
     Encapsulates a note and provides a base class for declarative notes.
 
     For a detailed walkthrough of how to use this class, see
-    {ref}`Working with notes <working-with-notes-notes>`. Below summarizes a
-    few of the features.
-
-    It's first required to create a {obj}`Session` to connect to Trilium.
-    These examples assume you've done so and assigned it to a variable
-    `session`, and that you will invoke {obj}`session.flush() <Session.flush>`
-    or use a context manager to commit changes.
-
-    There are two fundamental ways of working with notes:
-
-    ```{rubric} Imperative
-    ```
-
-    ```
-    # create new note under root
-    note = Note(title="My note", content="<p>Hello, world!</p>", parents=session.root)
-    ```
-
-    Use the `+=`{l=python} operator to add attributes and branches:
-
-    ```
-    # add label #sorted
-    note += Label("sorted")
-
-    # add child note with branch created implicitly
-    note += Note(title="Child 1")
-
-    # add child note with branch created explicitly
-    note += Branch(child=Note(title="Child 2"))
-    ```
-
-    Use the clone operator `^=`{l=python} to add a note as a parent:
-
-    ```
-    # clone first child to root with branch created implicitly
-    note.children[0] ^= session.root
-    ```
-
-    For single-valued attributes, you can get and set values by indexing
-    into the note object using the attribute name as a key. This works
-    for both labels and relations; the attribute type is inferred by the
-    value set.
-
-    ```
-    # add label #hideChildrenOverview
-    note["hideChildrenOverview"] = ""
-    assert note["hideChildrenOverview"] == ""
-    ```
-
-    Check if a note has an attribute by using `in`{l=python}:
-
-    ```
-    assert "hideChildrenOverview" in note
-    ```
-
-    ```{rubric} Declarative
-    ```
-
-    You can declaratively specify a complete hierarchy of notes and their
-    attributes. See {ref}`declarative-notes` for further discussion of this
-    concept.
-
-    ```
-    class ChildNote(Note):
-        title = "Child note"
-
-    @label("sorted")
-    @children(ChildNote)
-    class MyNote(Note):
-        title = "My note"
-        content = "<p>Hello, world!</p>"
-
-    # create new note under root
-    note = MyNote(parents=session.root)
-    assert note.title == "My note"
-    ```
+    {ref}`Working with notes <working-with-notes-notes>`.
     """
 
     note_id: str | None = EntityIdDescriptor()  # type: ignore
@@ -980,58 +905,6 @@ class Note(
             ), f"Template target must be a Note, have {type(template_obj)}"
             self += Relation("template", template_obj, session=session)
 
-    @property
-    def paths(self) -> list[list[Note]]:
-        """
-        Get list of paths to this note, where each path is a list of
-        ancestor notes.
-        """
-
-        def get_paths(note: Note) -> list[list[Note]]:
-            paths: list[list[Note]] = []
-
-            # get list of parents sorted by title
-            parents: list[Note] = sorted(note.parents, key=lambda n: n.title)
-
-            # if no parents, just add this note
-            if len(parents) == 0:
-                paths.append([note])
-
-            # traverse parents
-            for parent in parents:
-                for path in get_paths(parent):
-                    paths.append(path + [note])
-
-            return paths
-
-        return get_paths(self)
-
-    @property
-    def paths_str(self) -> list[str]:
-        """
-        Get list of paths to this note, where each path is a string
-        like `A > B > C`.
-        """
-        return [
-            " > ".join([note.title for note in path]) for path in self.paths
-        ]
-
-    @property
-    def _str_short(self):
-        return f"Note(title={self.title}, note_id={self.note_id})"
-
-    @property
-    def _str_safe(self):
-        return f"Note(note_id={self._entity_id}, id={id(self)})"
-
-    @classmethod
-    def _from_id(cls, note_id: str, session: Session | None = None):
-        return Note(note_id=note_id, session=session)
-
-    @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
-        return Note(note_id=model.note_id, session=session, model_backing=model)
-
     def __iadd__(
         self,
         entity: Note
@@ -1115,10 +988,10 @@ class Note(
         """
         self.attributes[key] = value_spec
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self is other
 
     def __delitem__(self, key: str):
@@ -1130,7 +1003,7 @@ class Note(
         """
         del self.attributes.owned[key]
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[str]:
         """
         Iterate over owned and inherited attribute names.
 
@@ -1151,6 +1024,122 @@ class Note(
         False.
         """
         return True
+
+    @property
+    def paths(self) -> list[list[Note]]:
+        """
+        Get list of paths to this note, where each path is a list of
+        ancestor notes.
+        """
+
+        def get_paths(note: Note) -> list[list[Note]]:
+            paths: list[list[Note]] = []
+
+            # get list of parents sorted by title
+            parents: list[Note] = sorted(note.parents, key=lambda n: n.title)
+
+            # if no parents, just add this note
+            if len(parents) == 0:
+                paths.append([note])
+
+            # traverse parents
+            for parent in parents:
+                for path in get_paths(parent):
+                    paths.append(path + [note])
+
+            return paths
+
+        return get_paths(self)
+
+    @property
+    def paths_str(self) -> list[str]:
+        """
+        Get list of paths to this note, where each path is a string
+        like `A > B > C`.
+        """
+        return [
+            " > ".join([note.title for note in path]) for path in self.paths
+        ]
+
+    def copy(self, deep: bool = False, content: bool = False) -> Note:
+        """
+        Return a copy of this note, including its title, type, MIME,
+        attributes, and optionally content.
+
+        If `deep` is `False`{l=python}, child notes are cloned to the
+        returned copy. Otherwise, child notes are recursively deep copied.
+
+        ```{note}
+        The returned copy still needs to be placed in the tree hierarchy
+        (added as a child of another note) before `Session.flush()`
+        is invoked.
+        ```
+        """
+
+        # create note
+        note_copy = Note(
+            title=self.title,
+            note_type=self.note_type,
+            mime=self.mime,
+            session=self.session,
+        )
+
+        # copy content if indicated
+        if content:
+            note_copy.content = self.content
+
+        # copy attributes
+        for attr in self.attributes.owned:
+            assert isinstance(attr, Label) or isinstance(attr, Relation)
+
+            if isinstance(attr, Label):
+                note_copy += Label(
+                    attr.name,
+                    value=attr.value,
+                    inheritable=attr.inheritable,
+                    session=self.session,
+                )
+            else:
+                note_copy += Relation(
+                    attr.name,
+                    attr.target,
+                    inheritable=attr.inheritable,
+                    session=self.session,
+                )
+
+        # copy children
+        for branch in self.branches.children:
+            # copy or clone this child
+            child = (
+                branch.child.copy(deep=deep, content=content)
+                if deep
+                else branch.child
+            )
+
+            # create new branch with same prefix
+            note_copy += Branch(
+                child=child,
+                prefix=branch.prefix,
+                session=self.session,
+            )
+
+        return note_copy
+
+    @property
+    def _str_short(self):
+        return f"Note(title={self.title}, note_id={self.note_id})"
+
+    @property
+    def _str_safe(self):
+        return f"Note(note_id={self._entity_id}, id={id(self)})"
+
+    @classmethod
+    def _from_id(cls, note_id: str, session: Session | None = None):
+        return Note(note_id=note_id, session=session)
+
+    @classmethod
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
+        return Note(note_id=model.note_id, session=session, model_backing=model)
 
     def export_zip(
         self,
