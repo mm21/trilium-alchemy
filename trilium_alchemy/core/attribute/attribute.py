@@ -10,7 +10,7 @@ from trilium_client.exceptions import NotFoundException
 
 import trilium_alchemy
 from ..exceptions import _assert_validate
-from ..session import Session, require_session
+from ..session import Session, normalize_session
 
 from ..entity.entity import (
     Entity,
@@ -26,7 +26,6 @@ from ..entity.model import (
     ReadOnlyFieldDescriptor,
     ReadOnlyDescriptor,
     WriteOnceDescriptor,
-    require_model,
 )
 
 from .. import note
@@ -130,18 +129,6 @@ class AttributeModel(Model):
     }
 
 
-def require_attribute_id(func):
-    # ent: may be cls or self
-    @wraps(func)
-    def _require_attribute_id(ent, *args, **kwargs):
-        if "attribute_id" not in kwargs:
-            kwargs["attribute_id"] = None
-
-        return func(ent, *args, **kwargs)
-
-    return _require_attribute_id
-
-
 class Attribute(OrderedEntity[AttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
@@ -214,29 +201,23 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
     _note = WriteOnceDescriptor("_note_")
     _note_: note.Note | None = None
 
-    @require_session
-    @require_model
-    @require_attribute_id
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_, **kwargs):
         return super().__new__(
             cls,
-            entity_id=kwargs["attribute_id"],
-            session=kwargs["session"],
-            model_backing=kwargs["model_backing"],
+            entity_id=kwargs.get("attribute_id"),
+            session=kwargs.get("session"),
+            model_backing=kwargs.get("model_backing"),
         )
 
-    @require_session
-    @require_model
-    @require_attribute_id
-    def __init__(self, name: str, inheritable: bool = False, **kwargs):
-        attribute_id = kwargs.pop("attribute_id")
-        session = kwargs.pop("session")
-        model_backing = kwargs.pop("model_backing")
-        owning_note = kwargs.pop("owning_note", None)
-
-        if kwargs:
-            logging.warning(f"Unexpected kwargs: {kwargs}")
-
+    def __init__(
+        self,
+        name: str,
+        inheritable: bool = False,
+        session: Session | None = None,
+        attribute_id: str | None = None,
+        model_backing: AttributeModel | None = None,
+        owning_note: note.Note | None = None,
+    ):
         super().__init__(
             entity_id=attribute_id,
             session=session,
@@ -256,9 +237,8 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
             self.inheritable = inheritable
 
     @classmethod
-    @require_session
     def _from_id(
-        cls, attribute_id: str, session: Session = None
+        cls, attribute_id: str, session: Session | None = None
     ) -> trilium_alchemy.Label | trilium_alchemy.Relation:
         """
         Get instance of appropriate concrete class given an `attributeId`.
@@ -266,6 +246,8 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
 
         # need to know type in order to create appropriate subclass,
         # so get model from id first
+
+        session = normalize_session(session)
 
         model: EtapiAttributeModel = session.api.get_attribute_by_id(
             attribute_id

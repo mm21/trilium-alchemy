@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
 
 from ..exceptions import *
-from ..session import Session, SessionContainer, require_session
+from ..session import Session, SessionContainer, normalize_session
 
 # isort: off
 from .model import (
@@ -69,12 +69,11 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
     # type used to create _model
     _model_cls: Type[ModelT] = None
 
-    @require_session
     def __new__(
         cls,
         # entity id, or None to create new one
         entity_id: str | None = None,
-        # session, or None to use default session (populated by require_session)
+        # session, or None to use default session
         session: Session | None = None,
         # backing model, if already loaded
         model_backing: ModelT | None = None,
@@ -82,6 +81,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         # entity_id provided)
         create: bool | None = None,
     ):
+        session = normalize_session(session)
         # check if this object is already cached
         if entity_id is not None and entity_id in session._cache.entity_map:
             entity = session._cache.entity_map[entity_id]
@@ -103,20 +103,22 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
         # proceed with creation of new object
         return super().__new__(cls)
 
-    @require_session
     def __init__(
         self,
+        *,
         entity_id: str | None = None,
         session: Session | None = None,
         model_backing: ModelT | None = None,
         create: bool | None = None,
     ):
+        session = normalize_session(session)
+
         # skip init if already done, but update model if needed
         if self._init_done:
             assert self._entity_id == entity_id
             assert (
                 self._session is session
-            ), "Attempt to associate new session {session} with entity having existing session {self._session}"
+            ), f"Attempt to associate new session {session} with entity having existing session {self._session}"
 
             self._model.setup_check_init(model_backing)
             return

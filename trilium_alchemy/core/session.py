@@ -636,24 +636,17 @@ class SessionContainer:
         self._session = session
 
 
-def require_session(func):
+def normalize_session(session: Session | None) -> Session:
     """
-    Decorator to use default Session if none provided.
+    Interface to get default Session if none provided.
     """
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        # validate session
-        if "session" not in kwargs or kwargs["session"] is None:
-            # get from default
-            global default_session
+    if session is not None:
+        return session
 
-            assert (
-                default_session is not None
-            ), "No session provided and no default set"
+    # get default
+    global default_session
 
-            kwargs["session"] = default_session
+    assert default_session is not None, "No session provided and no default set"
 
-        return func(*args, **kwargs)
-
-    return wrapper
+    return default_session

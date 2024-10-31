@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import overload, TypeVar, Generic, Type, Hashable
 
 from ..exceptions import *
-from ..session import Session, require_session
+from ..session import Session
 from .. import note
 
-from ..entity.model import FieldDescriptor, require_model
+from ..entity.model import FieldDescriptor
 
 from .attribute import Attribute
 
@@ -28,14 +28,12 @@ class Label(Attribute):
 
     attribute_type: str = "label"
 
-    @require_session
-    @require_model
     def __init__(
         self,
         name: str,
         value: str = "",
         inheritable: bool = False,
-        session: Session = None,
+        session: Session | None = None,
         **kwargs,
     ):
         """
@@ -43,9 +41,10 @@ class Label(Attribute):
         :param value: Label value, or empty string
         :param inheritable: Whether attribute is inherited to children
         :param session: Session, or `None`{l=python} to use default
+        :param kwargs: Internal only
         """
 
-        model_backing = kwargs["model_backing"]
+        model_backing = kwargs.get("model_backing")
 
         super().__init__(
             name,

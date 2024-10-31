@@ -16,17 +16,6 @@ from . import entity as entity_abc
 from .types import State
 
 
-def require_model(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if "model_backing" not in kwargs:
-            kwargs["model_backing"] = None
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 class Driver(ABC):
     """
     Implements interface to backing note storage, either to Trilium itself

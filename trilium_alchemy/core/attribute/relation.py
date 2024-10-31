@@ -5,11 +5,11 @@ from typing import overload, TypeVar, Generic, Type, Hashable
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 from ..exceptions import _assert_validate
-from ..session import Session, require_session
+from ..session import Session
 from .. import note
 
 from ..entity import Entity
-from ..entity.model import WriteThroughDescriptor, require_model
+from ..entity.model import WriteThroughDescriptor
 
 from .attribute import Attribute
 
@@ -36,8 +36,6 @@ class Relation(Attribute):
 
     _target: note.Note = None
 
-    @require_session
-    @require_model
     def __init__(
         self,
         name: str,
@@ -51,9 +49,10 @@ class Relation(Attribute):
         :param target: Target note
         :param inheritable: Whether attribute is inherited to children
         :param session: Session, or `None`{l=python} to use default
+        :param kwargs: Internal only
         """
 
-        model_backing = kwargs["model_backing"]
+        model_backing = kwargs.get("model_backing")
 
         super().__init__(
             name,

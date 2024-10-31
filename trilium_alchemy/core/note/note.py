@@ -21,17 +21,15 @@ from ..entity.entity import Entity, EntityIdDescriptor, normalize_entities
 
 # isort: off
 from ..entity.model import (
-    Model,
     FieldDescriptor,
     ReadOnlyFieldDescriptor,
     ExtensionDescriptor,
-    require_model,
 )
 
 # isort: on
 
 from ..exceptions import _assert_validate
-from ..session import Session, SessionContainer, require_session
+from ..session import Session, SessionContainer
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
 from .content import Content, ContentDescriptor
@@ -93,31 +91,6 @@ def is_string(note_type: str, mime: str) -> bool:
         or mime.startswith("text/")
         or mime in STRING_MIME_TYPES
     )
-
-
-def require_note_id(func):
-    # ent: may be cls or self
-    @wraps(func)
-    def _declarative_note_id(ent, *args, **kwargs):
-        if "note_id" not in kwargs:
-            kwargs["note_id"] = None
-
-        # get declarative note id
-        if kwargs["note_id"] is None:
-            decl_id: tuple[str, str | None] | None = get_cls(ent)._get_decl_id()
-
-            note_id: str | None = None
-            note_id_seed_final: str | None = None
-
-            if decl_id is not None:
-                note_id, note_id_seed_final = decl_id
-
-            kwargs["note_id"] = note_id
-            kwargs["note_id_seed_final"] = note_id_seed_final
-
-        return func(ent, *args, **kwargs)
-
-    return _declarative_note_id
 
 
 def patch_init(init, doc: str | None = None):
@@ -780,20 +753,15 @@ class Note(
     _children: Children
     _content: Content
 
-    @require_session
-    @require_model
-    @require_note_id
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_, **kwargs):
+        note_id, _ = cls._get_note_id(kwargs.get("note_id"))
         return super().__new__(
             cls,
-            entity_id=kwargs["note_id"],
-            session=kwargs["session"],
-            model_backing=kwargs["model_backing"],
+            entity_id=note_id,
+            session=kwargs.get("session"),
+            model_backing=kwargs.get("model_backing"),
         )
 
-    @require_session
-    @require_model
-    @require_note_id
     def __init__(
         self,
         title: str = "new note",
@@ -819,11 +787,16 @@ class Note(
         :param note_id: `noteId` to use, will create if it doesn't exist
         :param template: Note to set as target of `~template` relation
         :param session: Session, or `None`{l=python} to use default
+        :param kwargs: Internal only
         """
 
+        note_id, note_id_seed_final = get_cls(self)._get_note_id(note_id)
+
         # TODO: prefix internal-only kwargs with "_"
-        model_backing = kwargs.pop("model_backing")
-        note_id_seed_final = kwargs.pop("note_id_seed_final", None)
+        note_id_seed_final = (
+            kwargs.pop("note_id_seed_final", None) or note_id_seed_final
+        )
+        model_backing = kwargs.pop("model_backing", None)
         force_leaf = kwargs.pop("force_leaf", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
@@ -1187,6 +1160,19 @@ class Note(
         self._parents = Parents(self)
         self._children = Children(self)
         self._content = Content(self)
+
+    @classmethod
+    def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
+        note_id_seed_final: str | None = None
+
+        if note_id is None:
+            # try to get declarative note id
+            decl_id: tuple[str, str | None] | None = cls._get_decl_id()
+
+            if decl_id is not None:
+                note_id, note_id_seed_final = decl_id
+
+        return note_id, note_id_seed_final
 
     def _invoke_init_decl(self, fields_update: dict[str, Any]):
         """

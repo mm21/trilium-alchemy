@@ -13,8 +13,8 @@ from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.exceptions import ServiceException, NotFoundException
 
 from ..exceptions import _assert_validate
-from ..session import Session, require_session
-from ..entity.entity import Entity, EntityIdDescriptor, OrderedEntity
+from ..session import Session
+from ..entity.entity import EntityIdDescriptor, OrderedEntity
 from ..entity.model import (
     Driver,
     Model,
@@ -51,9 +51,6 @@ def require_create(func):
     """
     Require create flag to avoid clobbering prefix/expanded when loading branch
     by id.
-
-    Basically functions same as @require_model, but unlike attributes, branches
-    are not returned by server when a note is loaded.
     """
 
     # ent: may be cls or self
@@ -218,18 +215,16 @@ class Branch(OrderedEntity[BranchModel]):
     _child: note.Note = None
     _position: int = FieldDescriptor("note_position")
 
-    @require_session
     @require_create
     @require_branch_id
-    def __new__(cls, *args, **kwargs) -> Branch:
+    def __new__(cls, *_, **kwargs) -> Branch:
         return super().__new__(
             cls,
             entity_id=kwargs["branch_id"],
-            session=kwargs["session"],
+            session=kwargs.get("session"),
             create=kwargs["create"],
         )
 
-    @require_session
     @require_create
     @require_branch_id
     def __init__(
@@ -246,6 +241,7 @@ class Branch(OrderedEntity[BranchModel]):
         :param child: Child note
         :param prefix: Branch specific title prefix for child note
         :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
+        :param kwargs: Internal only
         """
 
         branch_id = kwargs.pop("branch_id")
