@@ -6,11 +6,8 @@
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import shutil
 import sys
-
-import sphinx
-import autodoc2
-import trilium_alchemy
 
 sys.path.append(".")
 import util
@@ -21,8 +18,9 @@ author = "mm21"
 release = "0.1.0"
 
 package = "trilium_alchemy"
-
 env = util.Env(package)
+
+PLANTUML_JAR = "plantuml-mit-1.2024.7.jar"
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -86,8 +84,13 @@ intersphinx_mapping = {
 templates_path = ["_templates"]
 exclude_patterns = []
 
-plantuml_output_format = "svg_img"
+plantuml_jar = shutil.which(PLANTUML_JAR)
+graphvizdot = shutil.which("dot")
+assert plantuml_jar is not None
+assert graphvizdot is not None
 
+plantuml = f'java -jar "{plantuml_jar}" -graphvizdot "{graphvizdot}"'
+plantuml_output_format = "svg_img"
 
 # -- Options for HTML output ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
