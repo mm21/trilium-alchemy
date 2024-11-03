@@ -18,7 +18,10 @@ Unless specified, "canonical" is assumed to mean "virtually canonical".
 from __future__ import annotations
 
 import enum
+import importlib
 import inspect
+import logging
+from types import ModuleType
 from typing import Any
 
 import docutils
@@ -66,7 +69,7 @@ class Symbol:
         self.virt_path = path
 
         # TODO: handle error
-        self.py_obj = eval(path)
+        self.py_obj = _import_obj(path)
 
         try:
             self.phys_path = f"{self.py_obj.__module__}.{self.py_obj.__name__}"
@@ -108,7 +111,9 @@ class Symbol:
         """
         Set this symbol as a canonical symbol.
         """
-        assert self.py_obj not in self.symbol_map.obj_map
+        assert (
+            self.py_obj not in self.symbol_map.obj_map
+        ), f"Symbol already set as canonical: {self.py_obj}"
 
         self.is_canonical = True
         self.aliases = []
@@ -985,3 +990,36 @@ class Env:
 
             text = literal.children[0]
             literal.replace(text, docutils.nodes.Text(mod_full))
+
+
+def _import_obj(fqcn: str) -> Any:
+    module: ModuleType | None = None
+    obj: Any = None
+    import_excep: ImportError | AttributeError | None = None
+
+    try:
+        # attempt to import module
+        module = importlib.import_module(fqcn)
+    except ImportError as e:
+        import_excep = e
+    else:
+        obj = module
+
+    if obj is None and "." in fqcn:
+        # attempt to import object from module
+        module_path, obj_name = fqcn.rsplit(".", 1)
+
+        try:
+            module = importlib.import_module(module_path)
+            obj = getattr(module, obj_name)
+        except (ImportError, AttributeError) as e:
+            import_excep = e
+        else:
+            # clear exception as we successfully imported the object
+            import_excep = None
+
+    if import_excep is not None:
+        logging.error(f"Failed to import object: {fqcn}")
+        raise import_excep
+
+    return obj
