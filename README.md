@@ -203,7 +203,7 @@ The basic technique is to subclass `BaseDeclarativeNote`:
 
 ```python
 class MyNote(BaseDeclarativeNote):
-    title = "My note"
+    decl_title = "My note"
 ```
 
 ### Mixin subclasses
@@ -260,7 +260,7 @@ class Person(WorkspaceTemplate):
 
 ## Setting fields
 
-You can set the following fields on `Note` by setting attribute values:
+You can set the corresponding fields on `Note` by setting attribute values:
 
 - `decl_title`
 - `decl_note_type`
