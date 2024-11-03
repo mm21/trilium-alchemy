@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from graphlib import TopologicalSorter
+from typing import TYPE_CHECKING, Generator
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.create_note_def import CreateNoteDef
@@ -7,10 +10,13 @@ from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..entity.model import BaseDriver, BaseEntityModel
 
+if TYPE_CHECKING:
+    from .note import Note
+
 
 class NoteDriver(BaseDriver):
     @property
-    def note(self):
+    def note(self) -> Note:
         return self.entity
 
 
@@ -25,7 +31,9 @@ class EtapiDriver(NoteDriver):
 
         return model
 
-    def flush_create(self, sorter: TopologicalSorter) -> EtapiNoteModel:
+    def flush_create(
+        self, sorter: TopologicalSorter
+    ) -> Generator[EtapiNoteModel, None, None]:
         # pick first parent branch according to serialization provided by
         # ParentBranches
         parent_branch = self.note.branches.parents[0]
@@ -42,7 +50,7 @@ class EtapiDriver(NoteDriver):
         # content extension set content later (handling text/bin)
         model_dict["content"] = ""
 
-        if self.note.note_id is not None:
+        if self.note.note_id != "":
             model_dict["note_id"] = self.note.note_id
 
         # assign writeable fields from branch

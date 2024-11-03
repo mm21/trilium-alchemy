@@ -285,7 +285,7 @@ class Branches(NoteExtension, BranchLookup):
         return list(self)[key]
 
 
-class Parents(NoteExtension, MutableSet):
+class Parents(NoteExtension, MutableSet[Branch]):
     """
     Interface to a note's parent notes. When adding a parent,
     is an alias of `Note.branches.parents`.
@@ -344,7 +344,7 @@ class Parents(NoteExtension, MutableSet):
         return self._note.branches.parents[key].parent
 
 
-class Children(NoteExtension, MutableSequence):
+class Children(NoteExtension, MutableSequence[Branch]):
     """
     Interface to a note's child notes. For adding a child,
     is an alias of `Note.branches.children`.

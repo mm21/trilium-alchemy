@@ -30,7 +30,7 @@ __all__ = [
 
 class BranchDriver(BaseDriver):
     @property
-    def branch(self):
+    def branch(self) -> Branch:
         return self.entity
 
 
@@ -54,7 +54,7 @@ class EtapiDriver(BranchDriver):
         return model
 
     def flush_create(self, sorter: TopologicalSorter):
-        assert self.branch.child.note_id is not None
+        assert self.branch.child.note_id != ""
 
         model = EtapiBranchModel(
             note_id=self.branch.child.note_id,
@@ -273,8 +273,8 @@ class Branch(OrderedEntity[BranchModel]):
         assert isinstance(parent, Note)
         assert isinstance(child, Note)
 
-        assert parent.note_id is not None
-        assert child.note_id is not None
+        assert parent.note_id != ""
+        assert child.note_id != ""
 
         return f"{parent.note_id}_{child.note_id}"
 

@@ -31,7 +31,7 @@ __all__ = [
 
 class AttributeDriver(BaseDriver):
     @property
-    def attribute(self):
+    def attribute(self) -> BaseAttribute:
         return self.entity
 
 
@@ -50,7 +50,7 @@ class EtapiDriver(AttributeDriver):
 
     def flush_create(self, sorter: TopologicalSorter):
         assert self.attribute._note is not None
-        assert self.attribute._note.note_id is not None
+        assert self.attribute._note.note_id != ""
 
         model = EtapiAttributeModel(
             note_id=self.attribute._note.note_id,
@@ -292,7 +292,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         return attr
 
     def _setup(self, model: EtapiAttributeModel):
-        assert model.note_id is not None and model.note_id != ""
+        assert model.note_id
 
         from ..note.note import Note
 

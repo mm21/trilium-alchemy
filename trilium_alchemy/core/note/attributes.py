@@ -112,6 +112,8 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
             # populate attributes
             if model is not None:
                 for attr_model in model.attributes:
+                    assert attr_model.note_id
+
                     # only consider owned attributes
                     if attr_model.note_id == self._note.note_id:
                         # create attribute object from model
@@ -225,6 +227,8 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
             inherited_list = []
 
             for attr_model in model.attributes:
+                assert attr_model.note_id
+
                 # only consider inherited attributes
                 if attr_model.note_id != self._note._entity_id:
                     owning_note = note.Note._from_id(

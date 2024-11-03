@@ -20,7 +20,7 @@ def test_create(session: Session, note: Note):
     title = f"Test title {now}"
 
     note = Note(title=title, session=session, parents={parent})
-    assert note.note_id is None
+    assert note.note_id == ""
 
     assert note.title == title
     assert note._model._exists is False
@@ -31,7 +31,7 @@ def test_create(session: Session, note: Note):
 
     note.flush()
 
-    assert note.note_id is not None
+    assert note.note_id != ""
 
     assert note._model._exists is True
     assert note.date_created is not None

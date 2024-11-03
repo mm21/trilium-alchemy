@@ -11,7 +11,7 @@ from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
-from ..entity.entity import BaseEntity, EntityIdDescriptor, normalize_entities
+from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import (
     ExtensionDescriptor,
     FieldDescriptor,
@@ -127,12 +127,6 @@ class Note(
 
     For a detailed walkthrough of how to use this class, see
     {ref}`Working with notes <working-with-notes-notes>`.
-    """
-
-    note_id: str | None = EntityIdDescriptor()  # type: ignore
-    """
-    Read-only access to `noteId`. Will be `None`{l=python} if
-    newly created with no `note_id` specified and not yet flushed.
     """
 
     title: str = FieldDescriptor("title")  # type: ignore
@@ -470,6 +464,14 @@ class Note(
         return True
 
     @property
+    def note_id(self) -> str:
+        """
+        Accessor for `noteId`, returning an empty string if newly created
+        and none has been set yet.
+        """
+        return self._entity_id or ""
+
+    @property
     def is_string(self) -> bool:
         """
         `True`{l=python} if note as it's currently configured has text content.
@@ -648,7 +650,8 @@ class Note(
 
     @property
     def _str_short(self):
-        return f"Note(title={self.title}, note_id={self.note_id})"
+        note_id = None if self.note_id == "" else self.note_id
+        return f"Note(title={self.title}, note_id={note_id})"
 
     @property
     def _str_safe(self):
@@ -684,7 +687,7 @@ class Note(
                 f"Child not set for parent branch {branch}",
             )
 
-            if self.note_id != "root":
+            if self.note_id != "" and self.note_id != "root":
                 _assert_validate(
                     branch.parent is not None,
                     f"Parent not set for branch: {branch}",

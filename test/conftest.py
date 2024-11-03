@@ -645,6 +645,6 @@ def branch_exists(api: DefaultApi, branch_id: str) -> bool:
 
 def check_read_only(entity: BaseEntity, fields: list[str]):
     for field in fields:
-        with raises(ReadOnlyError):
+        with raises((ReadOnlyError, AttributeError)):
             # set dummy value of None; exception should be raised
             setattr(entity, field, None)
