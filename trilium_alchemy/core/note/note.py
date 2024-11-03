@@ -278,31 +278,25 @@ class Note(
             assert self.note_id == note_id
             return
 
-        all_attributes: list[BaseAttribute] | None = None
-        all_children: list[Note] | None = None
+        def combine_lists[T](*lists: list[T] | None) -> list[T] | None:
+            result: list[T] | None = None
 
-        if attributes is not None:
-            all_attributes = attributes
+            for lst in lists:
+                if lst is not None:
+                    if result is None:
+                        result = []
 
-        if children is not None:
-            all_children = children
+                    result += lst
+
+            return result
 
         # get container from any subclass
         init_container = self._init_hook(
             note_id, note_id_seed_final, force_leaf
         )
 
-        if init_container.attributes is not None:
-            if all_attributes is None:
-                all_attributes = init_container.attributes
-            else:
-                all_attributes += init_container.attributes
-
-        if init_container.children is not None:
-            if all_children is None:
-                all_children = init_container.children
-            else:
-                all_children += init_container.children
+        all_attributes = combine_lists(attributes, init_container.attributes)
+        all_children = combine_lists(children, init_container.children)
 
         # assign template if provided
         if template is not None:
