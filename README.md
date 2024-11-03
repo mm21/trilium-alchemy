@@ -203,7 +203,7 @@ The basic technique is to subclass `BaseDeclarativeNote`:
 
 ```python
 class MyNote(BaseDeclarativeNote):
-    decl_title = "My note"
+    title_ = "My note"
 ```
 
 ### Mixin subclasses
@@ -262,17 +262,17 @@ class Person(WorkspaceTemplate):
 
 You can set the corresponding fields on `Note` by setting attribute values:
 
-- `decl_title`
-- `decl_note_type`
-- `decl_mime`
-- `decl_content`
+- `title_`
+- `note_type_`
+- `mime_`
+- `content_`
 
 ```python
 class MyNote(BaseDeclarativeNote):
-    decl_title = "My title"
-    decl_note_type = "text"
-    decl_mime = "text/html"
-    decl_content = "<p>Hello, world!</p>"
+    title_ = "My title"
+    note_type_ = "text"
+    mime_ = "text/html"
+    content_ = "<p>Hello, world!</p>"
 ```
 
 ## Setting content from file

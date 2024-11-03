@@ -38,9 +38,9 @@ def singleton_setup(request):
 @label("child1")
 class TemplateChild1(BaseDeclarativeNote):
     singleton = True
-    decl_title = "Child 1"
-    decl_note_type = "book"
-    decl_mime = "text/plain"
+    title_ = "Child 1"
+    note_type_ = "book"
+    mime_ = "text/plain"
 
 
 class IdempotentTest1(BaseDeclarativeNote):
@@ -229,7 +229,7 @@ def check_subclass(branch: Branch):
 @label("mapType", "link", inheritable=True)
 @children(TemplateTest, TemplateSubclass)
 class SingletonRoot(BaseDeclarativeNote):
-    decl_note_id = "testSingletonRoot"
+    note_id_ = "testSingletonRoot"
 
 
 def check_inherited_attributes(note: Note):

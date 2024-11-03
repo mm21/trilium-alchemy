@@ -6,14 +6,14 @@ from ..conftest import note_cleanup
 
 
 class ChildNote(BaseDeclarativeNote):
-    decl_title = "Child note"
+    title_ = "Child note"
 
 
 @label("sorted")
 @children(ChildNote)
 class MyNote(BaseDeclarativeNote):
-    decl_title = "My note"
-    decl_content = "<p>Hello, world!</p>"
+    title_ = "My note"
+    content_ = "<p>Hello, world!</p>"
 
 
 @mark.default_session

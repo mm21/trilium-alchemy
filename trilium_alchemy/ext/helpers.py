@@ -412,7 +412,7 @@ class BaseRootNote(BaseDeclarativeNote):
     Base class for a hierarchy root note.
     """
 
-    decl_title = "root"
+    title_ = "root"
     system: Type[BaseRootSystemNote] | None = BaseRootSystemNote
 
     def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):

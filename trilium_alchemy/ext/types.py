@@ -19,7 +19,7 @@ class CodeNote(BaseDeclarativeNote):
     Defines a `code` note.
     """
 
-    decl_note_type = "code"
+    note_type_ = "code"
     icon = "bx bx-code"
 
 
@@ -28,7 +28,7 @@ class JsFrontendNote(CodeNote):
     Defines a frontend script.
     """
 
-    decl_mime = "application/javascript;env=frontend"
+    mime_ = "application/javascript;env=frontend"
     icon = "bx bxl-javascript"
 
 
@@ -37,7 +37,7 @@ class JsBackendNote(CodeNote):
     Defines a backend script.
     """
 
-    decl_mime = "application/javascript;env=backend"
+    mime_ = "application/javascript;env=backend"
     icon = "bx bxl-javascript"
 
 
@@ -46,7 +46,7 @@ class CssNote(CodeNote):
     Defines a CSS note.
     """
 
-    decl_mime = "text/css"
+    mime_ = "text/css"
     icon = "bx bxs-file-css"
 
 
@@ -55,7 +55,7 @@ class HtmlNote(CodeNote):
     Defines a HTML note.
     """
 
-    decl_mime = "text/html"
+    mime_ = "text/html"
     icon = "bx bxs-file-html"
 
 
@@ -64,5 +64,5 @@ class TextNote(CodeNote):
     Defines a text note.
     """
 
-    decl_mime = "text/plain"
+    mime_ = "text/plain"
     icon = "bx bx-text"

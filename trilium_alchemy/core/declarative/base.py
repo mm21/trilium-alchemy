@@ -357,6 +357,12 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     automatically sync with the corresponding note if it already exists
     in Trilium.
 
+    ```{note}
+    Subclassing this class means the note will replace any existing fields
+    (title, type, mime, content) as well as attributes and children.
+    Set `leaf = True` to preserve children.
+    ```
+
     ```{todo}
     Add `auto_mime=True`{l=python} to also set `mime` using `magic` package
     (or do so automatically if {obj}`Note.content_file` set, but
@@ -364,27 +370,27 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     ```
     """
 
-    decl_note_id: str | None = None
+    note_id_: str | None = None
     """
     `note_id` to explicitly assign.
     """
 
-    decl_title: str | None = None
+    title_: str | None = None
     """
     Title to set, or `None` to use class name.
     """
 
-    decl_note_type: str | None = None
+    note_type_: str | None = None
     """
     Note type to set.
     """
 
-    decl_mime: str | None = None
+    mime_: str | None = None
     """
     MIME type to set.
     """
 
-    decl_content: str | bytes | IO | None = None
+    content_: str | bytes | IO | None = None
     """
     Content to set.
     """
@@ -512,9 +518,9 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         container = InitContainer()
 
         # set fields from subclass
-        container.note_type = self.decl_note_type or "text"
-        container.mime = self.decl_mime or "text/html"
-        container.content = self.decl_content
+        container.note_type = self.note_type_ or "text"
+        container.mime = self.mime_ or "text/html"
+        container.content = self.content_
 
         # invoke init chain defined on mixin
         attributes, children = self._init_mixin()
@@ -530,8 +536,8 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         # check if content is set by file
         if self.content_file is not None:
             assert (
-                self.decl_content is None
-            ), f"Attempt to set content from both file {self.content_file} and decl_content attribute"
+                self.content_ is None
+            ), f"Attempt to set content from both file {self.content_file} and content_ attribute"
 
             # add originalFilename label if content set from file
             attributes += [
@@ -550,9 +556,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                     "."
                 )[0]
 
-        container.title = (
-            container.title or self.decl_title or type(self).__name__
-        )
+        container.title = container.title or self.title_ or type(self).__name__
 
         # add #cssClass for internal (non-leaf) singleton declarative
         # notes which aren't templates. this enables hiding
@@ -584,8 +588,8 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         module: ModuleType | None = inspect.getmodule(cls)
         assert module is not None
 
-        if cls.decl_note_id is not None:
-            return (cls.decl_note_id, None)
+        if cls.note_id_ is not None:
+            return (cls.note_id_, None)
 
         # get fully qualified class name
         fqcn = f"{module.__name__}.{cls.__name__}"
