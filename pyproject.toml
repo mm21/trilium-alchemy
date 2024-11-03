@@ -26,10 +26,12 @@ requests = "^2.31.0"
 trilium-client = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
+autoflake = "^2.3.1"
 black = "^23.3.0"
 doit = "^0.36.0"
 furo = "^2023.5.20"
 genbadge = {extras = ["all"], version = "^1.1.0"}
+isort = "^5.13.2"
 mypy = {extras = ["reports"], version = "^1.5.1"}
 myst-parser = "^2.0.0"
 pyright = "^1.1.329"
@@ -53,8 +55,11 @@ data_file = "__out__/test/.coverage"
 source = ["trilium_alchemy"]
 
 [tool.black]
-include = '\.pyi?$|SConstruct$'
 line-length = 80
+
+[tool.isort]
+line_length = 80
+profile = "black"
 
 [tool.tomlsort]
 no_sort_tables = true

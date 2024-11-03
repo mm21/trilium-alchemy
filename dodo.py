@@ -2,12 +2,11 @@
 Doit file to wrap development workflow commands.
 """
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from doit.task import Task
 from doit.tools import create_folder
-
 
 PACKAGE = "trilium_alchemy"
 
@@ -141,6 +140,20 @@ def task_format() -> Task:
     Run formatters.
     """
 
+    autoflake_args = [
+        "autoflake",
+        "--remove-all-unused-imports",
+        "--remove-unused-variables",
+        "-i",
+        "-r",
+        ".",
+    ]
+
+    isort_args = [
+        "isort",
+        ".",
+    ]
+
     black_args = [
         "black",
         ".",
@@ -155,6 +168,8 @@ def task_format() -> Task:
     return Task(
         "format",
         actions=[
+            " ".join(autoflake_args),
+            " ".join(isort_args),
             " ".join(black_args),
             " ".join(toml_sort_args),
         ],
