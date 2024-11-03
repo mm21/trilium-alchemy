@@ -5,10 +5,10 @@ from trilium_client.models.create_note_def import CreateNoteDef
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
 
-from ..entity.model import Driver, Model
+from ..entity.model import BaseDriver, BaseEntityModel
 
 
-class NoteDriver(Driver):
+class NoteDriver(BaseDriver):
     @property
     def note(self):
         return self.entity
@@ -110,7 +110,7 @@ class FileDriver(NoteDriver):
     pass
 
 
-class NoteModel(Model):
+class NoteModel(BaseEntityModel):
     etapi_model = EtapiNoteModel
 
     etapi_driver_cls = EtapiDriver

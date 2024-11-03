@@ -4,28 +4,23 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Any, Generator, Generic, Type, TypeVar, cast, overload
+from typing import Any, Generator, Type, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
 
 from ..exceptions import *
 from ..session import Session, SessionContainer, normalize_session
-
-# isort: off
 from .model import (
-    Model,
-    ModelContainer,
-    FieldDescriptor,
-    ReadOnlyFieldDescriptor,
-    ReadOnlyDescriptor,
-    WriteThroughDescriptor,
-    WriteOnceDescriptor,
+    BaseEntityModel,
     ExtensionDescriptor,
+    FieldDescriptor,
+    ModelContainer,
+    ReadOnlyDescriptor,
+    ReadOnlyFieldDescriptor,
+    WriteOnceDescriptor,
+    WriteThroughDescriptor,
 )
-
-# isort: on
-
 from .types import State
 
 __all__ = [
@@ -45,10 +40,10 @@ __rollup__ = [
     "State",
 ]
 
-ModelT = TypeVar("ModelT", bound=Model)
 
-
-class BaseEntity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
+class BaseEntity[ModelT: BaseEntityModel](
+    ABC, SessionContainer, ModelContainer
+):
     """
     Base class for Trilium entities.
 
@@ -465,7 +460,7 @@ class PositionMixin:
 # TODO: this is better suited as an intersection type, not yet supported
 # - https://github.com/python/typing/issues/213
 # - https://github.com/CarliJoy/intersection_examples/issues/8
-class OrderedEntity(BaseEntity[ModelT], PositionMixin):
+class OrderedEntity[ModelT: BaseEntityModel](BaseEntity[ModelT], PositionMixin):
     pass
 
 

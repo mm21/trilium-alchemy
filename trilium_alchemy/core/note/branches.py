@@ -10,7 +10,7 @@ import trilium_alchemy
 from .. import branch, note
 from ..entity.entity import normalize_entities
 from ..entity.model import ExtensionDescriptor
-from .extension import List, NoteExtension, Set
+from .extension import BaseEntityList, BaseEntitySet, NoteExtension
 
 __all__ = [
     "Branches",
@@ -52,7 +52,7 @@ class BranchLookup:
                 return branch
 
 
-class ParentBranches(Set[branch.Branch], BranchLookup):
+class ParentBranches(BaseEntitySet[branch.Branch], BranchLookup):
     """
     Interface to a note's parent branches. Modeled as a {obj}`set`
     as parent branches are not inherently ordered, but serialized by
@@ -139,7 +139,7 @@ class ParentBranches(Set[branch.Branch], BranchLookup):
         return sorted(self._entity_set, key=lambda branch: id(branch))[key]
 
 
-class ChildBranches(List[branch.Branch], BranchLookup):
+class ChildBranches(BaseEntityList[branch.Branch], BranchLookup):
     """
     Interface to a note's child branches. Modeled as a {obj}`list`.
 

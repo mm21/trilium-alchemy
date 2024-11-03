@@ -4,13 +4,10 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, MutableSet
 from functools import wraps
 from pprint import pformat
-from typing import Any, Generic, Iterable, Type, TypeVar, overload
+from typing import Any, Iterable, Type, overload
 
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
-
-T = TypeVar("T", bound=BaseEntity)
-U = TypeVar("U", bound=OrderedEntity)
 
 
 class NoteExtension(Extension):
@@ -27,7 +24,7 @@ class NoteStatefulExtension(StatefulExtension, NoteExtension):
     pass
 
 
-class Collection(Generic[T], NoteStatefulExtension, ABC):
+class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
     """
     Used for all entity collection types defined for Note extensions:
     - Owned attributes
@@ -38,14 +35,14 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
     """
 
     # class of element of this collection
-    _child_cls: Type[T]
+    _child_cls: Type[EntityT]
 
     # name of attribute to associate with owner of collection
     # should be 'note_id' (attrs) or 'parent_note_id' (child branches)
     _owner_field: str
 
     @abstractmethod
-    def _contains(self, entity: T) -> bool:
+    def _contains(self, entity: EntityT) -> bool:
         """
         Returns True if provided entity is present in this collection.
         """
@@ -58,7 +55,7 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
         """
         ...
 
-    def _bind_entity(self, entity: T):
+    def _bind_entity(self, entity: EntityT):
         """
         Associate provided entity with this note.
         """
@@ -80,7 +77,7 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
         if note is None:
             setattr(entity, self._owner_field, self._note)
 
-    def _unbind_entity(self, entity: T):
+    def _unbind_entity(self, entity: EntityT):
         """
         Remove provided entity from note.
         """
@@ -91,7 +88,7 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
         if not entity._is_delete:
             entity.delete()
 
-    def _resolve_changes(self, old: set[T], new: set[T]):
+    def _resolve_changes(self, old: set[EntityT], new: set[EntityT]):
         """
         Compare entity collections and ensure changed entities are in
         correct state.
@@ -109,7 +106,7 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
         for entity in deleted:
             self._unbind_entity(entity)
 
-    def _invoke_normalize(self, value: Any) -> T:
+    def _invoke_normalize(self, value: Any) -> EntityT:
         if not isinstance(value, self._child_cls):
             value = self._normalize(value)
             assert isinstance(
@@ -117,7 +114,7 @@ class Collection(Generic[T], NoteStatefulExtension, ABC):
             ), f"{value} is not an instance of {self._child_cls}"
         return value
 
-    def _normalize(self, value: Any) -> T:
+    def _normalize(self, value: Any) -> EntityT:
         """
         Default normalizer to be overridden if necessary. Invoked if
         an entity whose class doesn't match self._child_cls is bound.
@@ -143,13 +140,15 @@ def check_bailout(func):
     return wrapper
 
 
-class List(Collection[U], MutableSequence[U]):
+class BaseEntityList[EntityT: OrderedEntity](
+    BaseEntityCollection[EntityT], MutableSequence[EntityT]
+):
     """
     Maintain list of entities bound to a note. Used for OwnedAttributes and
     ChildBranches.
     """
 
-    _entity_list: list[U] | None = None
+    _entity_list: list[EntityT] | None = None
     """
     Working list of entity objects, or None if not currently setup.
     """
@@ -162,14 +161,14 @@ class List(Collection[U], MutableSequence[U]):
         return len(self._entity_list)
 
     @overload
-    def __getitem__(self, i: int) -> U:
+    def __getitem__(self, i: int) -> EntityT:
         ...
 
     @overload
-    def __getitem__(self, i: slice) -> MutableSequence[U]:
+    def __getitem__(self, i: slice) -> MutableSequence[EntityT]:
         ...
 
-    def __getitem__(self, i: int | slice) -> U | MutableSequence[U]:
+    def __getitem__(self, i: int | slice) -> EntityT | MutableSequence[EntityT]:
         assert self._entity_list is not None
         return self._entity_list[i]
 
@@ -185,7 +184,7 @@ class List(Collection[U], MutableSequence[U]):
         assert self._entity_list is not None
 
         s: slice
-        v: Iterable[U]
+        v: Iterable[EntityT]
 
         if isinstance(i, slice):
             s = i
@@ -195,7 +194,7 @@ class List(Collection[U], MutableSequence[U]):
             v = [self._invoke_normalize(value)]
 
         # get previous entities at slice and set new ones
-        entities_del: Iterable[U] = self._entity_list[s]
+        entities_del: Iterable[EntityT] = self._entity_list[s]
         self._entity_list[s] = v
 
         self._resolve_changes(set(entities_del), set(v))
@@ -225,14 +224,14 @@ class List(Collection[U], MutableSequence[U]):
     def insert(self, i: int, value: Any):
         assert self._entity_list is not None
 
-        entity: U = self._invoke_normalize(value)
+        entity: EntityT = self._invoke_normalize(value)
         self._entity_list.insert(i, entity)
 
         self._bind_entity(entity)
         self._reorder(i)
         self._validate()
 
-    def _contains(self, entity: U) -> bool:
+    def _contains(self, entity: EntityT) -> bool:
         assert self._entity_list is not None
         return entity in self._entity_list
 
@@ -243,8 +242,8 @@ class List(Collection[U], MutableSequence[U]):
 
         assert self._entity_list is not None
 
-        entity_set: set[U] = set()
-        entity: U
+        entity_set: set[EntityT] = set()
+        entity: EntityT
         position_prev: int = -1
         for i, entity in enumerate(self._entity_list):
             # ensure entity hasn't been seen before
@@ -268,7 +267,7 @@ class List(Collection[U], MutableSequence[U]):
         assert self._entity_list is not None
 
         # normalize list
-        normalized_list: list[U] = [
+        normalized_list: list[EntityT] = [
             self._invoke_normalize(entity) for entity in new_list
         ]
 
@@ -306,7 +305,9 @@ class List(Collection[U], MutableSequence[U]):
             self._entity_list[i]._position = self._get_position(i)
 
 
-class Set(Collection[T], MutableSet[T]):
+class BaseEntitySet[EntityT: BaseEntity](
+    BaseEntityCollection[EntityT], MutableSet[EntityT]
+):
     """
     Maintain set of entities bound to a note. Used for ParentBranches.
 
@@ -314,7 +315,7 @@ class Set(Collection[T], MutableSet[T]):
     position values to maintain.
     """
 
-    _entity_set: set[T] | None = None
+    _entity_set: set[EntityT] | None = None
     """
     Working set of entity objects, or None if not currently setup.
     """
@@ -326,7 +327,7 @@ class Set(Collection[T], MutableSet[T]):
         assert self._entity_set is not None
         return entity in self._entity_set
 
-    def __iter__(self) -> Iterable[T]:
+    def __iter__(self) -> Iterable[EntityT]:
         assert self._entity_set is not None
         yield from self._entity_set
 
@@ -337,18 +338,18 @@ class Set(Collection[T], MutableSet[T]):
     def add(self, value: Any):
         assert self._entity_set is not None
 
-        entity: T = self._invoke_normalize(value)
+        entity: EntityT = self._invoke_normalize(value)
         self._entity_set.add(entity)
         self._bind_entity(entity)
 
     def discard(self, value: Any):
         assert self._entity_set is not None
 
-        entity: T = self._invoke_normalize(value)
+        entity: EntityT = self._invoke_normalize(value)
         self._entity_set.discard(entity)
         self._unbind_entity(entity)
 
-    def _contains(self, entity: T) -> bool:
+    def _contains(self, entity: EntityT) -> bool:
         assert self._entity_set is not None
         return entity in self._entity_set
 
@@ -365,7 +366,7 @@ class Set(Collection[T], MutableSet[T]):
         assert self._entity_set is not None
 
         # normalize set
-        normalized_set: set[T] = {
+        normalized_set: set[EntityT] = {
             self._invoke_normalize(entity) for entity in new_set
         }
 

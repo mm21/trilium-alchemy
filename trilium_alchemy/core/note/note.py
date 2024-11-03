@@ -16,16 +16,11 @@ from trilium_client.models.note import Note as EtapiNoteModel
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
 from ..entity.entity import BaseEntity, EntityIdDescriptor, normalize_entities
-
-# isort: off
 from ..entity.model import (
+    ExtensionDescriptor,
     FieldDescriptor,
     ReadOnlyFieldDescriptor,
-    ExtensionDescriptor,
 )
-
-# isort: on
-
 from ..exceptions import _assert_validate
 from ..session import Session, SessionContainer
 from .attributes import Attributes, ValueSpec

@@ -11,9 +11,9 @@ import trilium_alchemy
 
 from ..entity.entity import BaseEntity, EntityIdDescriptor, OrderedEntity, State
 from ..entity.model import (
-    Driver,
+    BaseDriver,
+    BaseEntityModel,
     FieldDescriptor,
-    Model,
     ReadOnlyDescriptor,
     ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class AttributeDriver(Driver):
+class AttributeDriver(BaseDriver):
     @property
     def attribute(self):
         return self.entity
@@ -101,7 +101,7 @@ class FileDriver(AttributeDriver):
     pass
 
 
-class AttributeModel(Model):
+class AttributeModel(BaseEntityModel):
     etapi_model = EtapiAttributeModel
 
     etapi_driver_cls = EtapiDriver

@@ -14,7 +14,7 @@ from . import entity as entity_abc
 from .types import State
 
 
-class Driver(ABC):
+class BaseDriver(ABC):
     """
     Implements interface to backing note storage, either to Trilium itself
     (through ETAPI) or a filesystem.
@@ -57,7 +57,7 @@ class Driver(ABC):
         ...
 
 
-class Model(ABC):
+class BaseEntityModel(ABC):
     """
     Abstraction of data model which is stored as a record in Trilium's
     database, encapsulating both locally modified data and data as received
@@ -68,10 +68,10 @@ class Model(ABC):
     etapi_model: type[BaseModel] = None
 
     # class to interface with ETAPI
-    etapi_driver_cls: type[Driver] = None
+    etapi_driver_cls: type[BaseDriver] = None
 
     # class to interface with filesystem
-    file_driver_cls: type[Driver] = None
+    file_driver_cls: type[BaseDriver] = None
 
     # mapping of alias to field name
     fields_alias: dict[str, str] = None
@@ -102,7 +102,7 @@ class Model(ABC):
 
     # driver to interface with backing storage, or None
     # if in-memory only (for VirtualSession)
-    _driver: Driver | None = None
+    _driver: BaseDriver | None = None
 
     def __init__(self, entity: entity_abc.BaseEntity):
         self.entity = entity
@@ -464,9 +464,9 @@ class ModelContainer:
     """
 
     # instance of Model
-    _model: Model = None
+    _model: BaseEntityModel = None
 
-    def __init__(self, model: Model):
+    def __init__(self, model: BaseEntityModel):
         self._model = model
 
 

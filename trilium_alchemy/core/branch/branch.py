@@ -9,9 +9,9 @@ from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from ..entity.entity import EntityIdDescriptor, OrderedEntity
 from ..entity.model import (
-    Driver,
+    BaseDriver,
+    BaseEntityModel,
     FieldDescriptor,
-    Model,
     ReadOnlyDescriptor,
     ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-class BranchDriver(Driver):
+class BranchDriver(BaseDriver):
     @property
     def branch(self):
         return self.entity
@@ -94,7 +94,7 @@ class FileDriver(BranchDriver):
     pass
 
 
-class BranchModel(Model):
+class BranchModel(BaseEntityModel):
     etapi_model = EtapiBranchModel
 
     etapi_driver_cls = EtapiDriver

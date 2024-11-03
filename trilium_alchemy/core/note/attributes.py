@@ -11,7 +11,7 @@ from ..attribute.attribute import BaseAttribute
 from ..entity.model import ExtensionDescriptor
 from ..exceptions import *
 from . import note
-from .extension import List, NoteExtension, NoteStatefulExtension
+from .extension import BaseEntityList, NoteExtension, NoteStatefulExtension
 
 __all__ = [
     "Attributes",
@@ -83,7 +83,7 @@ class NameMap:
         return super().__contains__(key)
 
 
-class OwnedAttributes(NameMap, List[attribute.BaseAttribute]):
+class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
     """
     Interface to a note's owned attributes. Implements same
     interface as {obj}`Attributes` but accessed as
