@@ -57,6 +57,9 @@ source = ["trilium_alchemy"]
 [tool.black]
 line-length = 80
 
+[tool.doit]
+verbosity = 2
+
 [tool.isort]
 line_length = 80
 profile = "black"
