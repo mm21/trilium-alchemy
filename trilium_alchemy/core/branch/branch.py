@@ -182,9 +182,9 @@ class Branch(OrderedEntity[BranchModel]):
     def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
             cls,
-            entity_id=kwargs.get("branch_id"),
             session=kwargs.get("session"),
-            create=kwargs.get("create"),
+            entity_id=kwargs.get("_branch_id"),
+            create=kwargs.get("_create"),
         )
 
     def __init__(
@@ -204,8 +204,8 @@ class Branch(OrderedEntity[BranchModel]):
         :param kwargs: Internal only
         """
 
-        branch_id = kwargs.pop("branch_id", None)
-        create = kwargs.pop("create", None)
+        branch_id = kwargs.pop("_branch_id", None)
+        create = kwargs.pop("_create", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
@@ -255,9 +255,9 @@ class Branch(OrderedEntity[BranchModel]):
         # however, are returned by id only.
 
         return Branch(
-            branch_id=branch_id,
             session=session,
-            create=False,
+            _branch_id=branch_id,
+            _create=False,
         )
 
     # TODO: only use case for this right now is test code, so not

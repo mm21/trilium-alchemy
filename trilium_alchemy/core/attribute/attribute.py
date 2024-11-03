@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Self
 
@@ -198,24 +198,25 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
             cls,
-            entity_id=kwargs.get("attribute_id"),
             session=kwargs.get("session"),
-            model_backing=kwargs.get("model_backing"),
+            entity_id=kwargs.get("_attribute_id"),
+            model_backing=kwargs.get("_model_backing"),
         )
 
+    @abstractmethod
     def __init__(
         self,
         name: str,
         inheritable: bool = False,
         session: Session | None = None,
-        attribute_id: str | None = None,
-        model_backing: AttributeModel | None = None,
-        owning_note: Note | None = None,
+        _attribute_id: str | None = None,
+        _owning_note: Note | None = None,
+        _model_backing: AttributeModel | None = None,
     ):
         super().__init__(
-            entity_id=attribute_id,
+            entity_id=_attribute_id,
             session=session,
-            model_backing=model_backing,
+            model_backing=_model_backing,
         )
 
         assert type(name) is str
@@ -223,11 +224,11 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
 
         # set owning note if we know it already (generally just for declarative
         # usage to generate deterministic id)
-        if owning_note is not None:
-            self._note = owning_note
+        if _owning_note is not None:
+            self._note = _owning_note
 
         # set fields if not getting from database
-        if model_backing is None:
+        if _model_backing is None:
             self.inheritable = inheritable
 
     @classmethod
@@ -269,20 +270,20 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         if model.type == "label":
             attr = Label(
                 model.name,
-                attribute_id=model.attribute_id,
-                model_backing=model,
                 session=session,
-                owning_note=owning_note,
+                _attribute_id=model.attribute_id,
+                _model_backing=model,
+                _owning_note=owning_note,
             )
 
         elif model.type == "relation":
             attr = Relation(
                 model.name,
                 Note(note_id=model.value, session=session),
-                attribute_id=model.attribute_id,
-                model_backing=model,
                 session=session,
-                owning_note=owning_note,
+                _attribute_id=model.attribute_id,
+                _model_backing=model,
+                _owning_note=owning_note,
             )
 
         else:
@@ -300,7 +301,6 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         else:
             assert self._note_.note_id == model.note_id
 
-    # override to handle deleting from note's list
     def _delete(self):
         super()._delete()
 

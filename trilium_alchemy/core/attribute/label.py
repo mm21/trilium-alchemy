@@ -38,7 +38,7 @@ class Label(BaseAttribute):
         :param kwargs: Internal only
         """
 
-        model_backing = kwargs.get("model_backing")
+        model_backing = kwargs.get("_model_backing")
 
         super().__init__(
             name,

@@ -214,9 +214,9 @@ class Note(
         note_id, _ = cls._get_note_id(kwargs.get("note_id"))
         return super().__new__(
             cls,
-            entity_id=note_id,
             session=kwargs.get("session"),
-            model_backing=kwargs.get("model_backing"),
+            entity_id=note_id,
+            model_backing=kwargs.get("_model_backing"),
         )
 
     def __init__(
@@ -249,12 +249,11 @@ class Note(
 
         note_id, note_id_seed_final = get_cls(self)._get_note_id(note_id)
 
-        # TODO: prefix internal-only kwargs with "_"
         note_id_seed_final = (
-            kwargs.pop("note_id_seed_final", None) or note_id_seed_final
+            kwargs.pop("_note_id_seed_final", None) or note_id_seed_final
         )
-        model_backing = kwargs.pop("model_backing", None)
-        force_leaf = kwargs.pop("force_leaf", None)
+        model_backing = kwargs.pop("_model_backing", None)
+        force_leaf = kwargs.pop("_force_leaf", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
@@ -669,7 +668,9 @@ class Note(
 
     @classmethod
     def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
-        return Note(note_id=model.note_id, session=session, model_backing=model)
+        return Note(
+            note_id=model.note_id, session=session, _model_backing=model
+        )
 
     def _flush_check(self):
         if not self._is_delete:

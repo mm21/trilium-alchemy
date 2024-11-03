@@ -13,7 +13,7 @@ from __future__ import annotations
 from functools import wraps
 from typing import Any, Iterable, Literal, cast
 
-from ..attribute import BaseAttribute, Relation
+from ..attribute import BaseAttribute
 from ..note.note import BranchSpecT, Note
 from .base import BaseDeclarativeMixin, BaseDeclarativeNote
 
@@ -75,11 +75,11 @@ def label(
         attributes: list[BaseAttribute],
         children: list[BranchSpecT],
     ):
-        attributes += [
+        attributes.append(
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable
             )
-        ]
+        )
 
     if value == "":
         label_doc = f"{name}"
@@ -124,7 +124,9 @@ def relation(
 
     @check_name(name, accumulate=accumulate)
     def init(
-        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+        self: BaseDeclarativeMixin,
+        attributes: list[BaseAttribute],
+        children: list[BranchSpecT],
     ):
         assert (
             target_cls._is_singleton()
@@ -133,15 +135,9 @@ def relation(
         # instantiate target first
         target: Note = target_cls(session=self._session)
 
-        attribute_id = self._derive_id(Relation, name)
         attributes.append(
-            Relation(
-                name,
-                target,
-                inheritable=inheritable,
-                session=self._session,
-                attribute_id=attribute_id,
-                owning_note=self,
+            self.create_declarative_relation(
+                name, target, inheritable=inheritable
             )
         )
 

@@ -124,8 +124,8 @@ class BaseDeclarativeMixin(
             value=value,
             inheritable=inheritable,
             session=self._session,
-            attribute_id=attribute_id,
-            owning_note=self,
+            _attribute_id=attribute_id,
+            _owning_note=self,
         )
 
     def create_declarative_relation(
@@ -146,8 +146,8 @@ class BaseDeclarativeMixin(
             target,
             inheritable=inheritable,
             session=self._session,
-            attribute_id=attribute_id,
-            owning_note=self,
+            _attribute_id=attribute_id,
+            _owning_note=self,
         )
 
     def create_declarative_child(
@@ -166,6 +166,9 @@ class BaseDeclarativeMixin(
         If the parent note's note_id is not set, the child note's may not be.
         If the child's note_id is not set, a new note will be created upon
         every instantiation. This is the case for non-singleton subclasses.
+
+        :param child_cls: Class of child to instantiate
+        :param kwargs: Additional note args passed to {obj}`Note`
         """
         child_decl_id: tuple[str, str | None] | None = child_cls._get_decl_id(
             self._note
@@ -180,8 +183,8 @@ class BaseDeclarativeMixin(
         child: Note = child_cls(
             note_id=child_note_id,
             session=self._session,
-            force_leaf=self._force_leaf,
-            note_id_seed_final=child_note_id_seed_final,
+            _force_leaf=self._force_leaf,
+            _note_id_seed_final=child_note_id_seed_final,
             **kwargs,
         )
 
@@ -293,8 +296,8 @@ class BaseDeclarativeMixin(
             return Branch(
                 parent=self._note,
                 child=child,
-                branch_id=branch_id,
                 session=self._session,
+                _branch_id=branch_id,
             )
         else:
             # ensure we have a Branch
