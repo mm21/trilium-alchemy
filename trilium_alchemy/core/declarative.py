@@ -16,7 +16,7 @@ import os
 from abc import ABC, ABCMeta
 from functools import wraps
 from types import ModuleType
-from typing import IO, Any, Iterable, Literal, cast
+from typing import IO, Any, Iterable, Literal, Self, cast
 
 from .attribute import BaseAttribute, Label, Relation
 from .branch import Branch
@@ -43,7 +43,7 @@ class DeclarativeMeta(ABCMeta):
     initialize the list of descriptions for decorators added to it.
     """
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs) -> Self:
         attrs["_decorator_doc"] = []
 
         # add decorators from bases first
@@ -61,7 +61,7 @@ class BaseDeclarativeMixin(
 ):
     """
     Reusable collection of attributes and children which can be inherited by a
-    {obj}`Note`.
+    {obj}`BaseDeclarativeNote`.
     """
 
     icon: str | None = None
@@ -74,6 +74,8 @@ class BaseDeclarativeMixin(
     State to keep track of sequence numbers for deterministic attribute/
     child ids.
     """
+
+    _note: BaseDeclarativeNote
 
     _note_id: str | None = None
     """
@@ -95,21 +97,6 @@ class BaseDeclarativeMixin(
     a leaf note for the purpose of checking whether to add the cssClass,
     even though we still want to maintain the template itself declaratively.
     """
-
-    def __init__(
-        self,
-        note_id: str | None,
-        note_id_seed_final: str | None,
-        force_leaf: bool,
-    ):
-        self._note_id = note_id
-        self._note_id_seed_final = note_id_seed_final
-
-        # get from parent if True
-        if force_leaf is True:
-            self._force_leaf = force_leaf
-
-        self._sequence_map = {}
 
     def init(
         self,
@@ -143,8 +130,9 @@ class BaseDeclarativeMixin(
         """
         Create and return a {obj}`Label` with deterministic `attribute_id`
         based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`Note.init` or {obj}`BaseDeclarativeMixin.init` to generate
-        the same `attribute_id` upon every instantiation.
+        subclassed {obj}`BaseDeclarativeNote.init` or
+        {obj}`BaseDeclarativeMixin.init` to generate the same `attribute_id`
+        upon every instantiation.
 
         Multiple attributes of the same name are supported.
         """
@@ -164,8 +152,9 @@ class BaseDeclarativeMixin(
         """
         Create and return a {obj}`Relation` with deterministic `attribute_id`
         based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`Note.init` or {obj}`BaseDeclarativeMixin.init` to generate
-        the same `attribute_id` upon every instantiation.
+        subclassed {obj}`BaseDeclarativeNote.init` or
+        {obj}`BaseDeclarativeMixin.init` to generate the same `attribute_id`
+        upon every instantiation.
 
         Multiple attributes of the same name are supported.
         """
@@ -197,7 +186,7 @@ class BaseDeclarativeMixin(
         every instantiation. This is the case for non-singleton subclasses.
         """
         child_decl_id: tuple[str, str | None] | None = child_cls._get_decl_id(
-            self
+            self._note
         )
 
         child_note_id: str | None = None
@@ -215,6 +204,23 @@ class BaseDeclarativeMixin(
         )
 
         return self._normalize_child(child)
+
+    def _init_decl_mixin(
+        self,
+        note: BaseDeclarativeNote,
+        note_id: str | None,
+        note_id_seed_final: str | None,
+        force_leaf: bool,
+    ):
+        self._note = note
+        self._note_id = note_id
+        self._note_id_seed_final = note_id_seed_final
+
+        # get from parent if True
+        if force_leaf is True:
+            self._force_leaf = force_leaf
+
+        self._sequence_map = {}
 
     def _get_sequence(self, cls: type[BaseEntity], base: str):
         """
@@ -303,7 +309,7 @@ class BaseDeclarativeMixin(
                 branch_id = None
 
             return Branch(
-                parent=cast(Note, self),
+                parent=self._note,
                 child=child,
                 branch_id=branch_id,
                 session=self._session,
@@ -323,21 +329,23 @@ class BaseDeclarativeMixin(
 
         # extract branch args if provided
         if isinstance(branch_spec, tuple):
-            # child, branch_kwargs = cast(
-            #    tuple[Note | type[Note] | Branch, dict[str, Any]], branch_spec
-            # )
             child_spec, branch_kwargs = branch_spec
         else:
-            child_spec = cast(Note | type[Note] | Branch, branch_spec)
+            child_spec = branch_spec
             branch_kwargs = dict()
 
         if issubclass(type(child_spec), DeclarativeMeta):
             # have Note class
-            child_cls = cast(type[BaseDeclarativeNote], child_spec)
+            child_cls: type[BaseDeclarativeNote] = cast(
+                type[BaseDeclarativeNote], child_spec
+            )
             branch = self.create_declarative_child(child_cls)
         else:
             # have Note or Branch
-            branch = self._normalize_child(cast(Note | Branch, child_spec))
+            assert isinstance(child_spec, Note) or isinstance(
+                child_spec, Branch
+            )
+            branch = self._normalize_child(child_spec)
 
         # set branch kwargs
         for key, value in branch_kwargs.items():
@@ -517,13 +525,9 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         note_id_seed_final: str | None,
         force_leaf: bool | None,
     ) -> InitContainer:
-        BaseDeclarativeMixin.__init__(
-            self, note_id, note_id_seed_final, force_leaf
-        )
+        super()._init_decl_mixin(self, note_id, note_id_seed_final, force_leaf)
 
         container = InitContainer()
-
-        self._note_id_seed_final = note_id_seed_final
 
         # set fields from subclass
         container.note_type = self.decl_note_type or "text"
@@ -588,7 +592,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     @classmethod
     def _get_decl_id(
-        cls, parent: BaseDeclarativeMixin | None = None
+        cls, parent: BaseDeclarativeNote | None = None
     ) -> tuple[str, str | None] | None:
         """
         Try to get a note_id. If one is returned, this note has a deterministic
@@ -615,7 +619,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     @classmethod
     def _get_note_id_seed(
-        cls, fqcn: str, parent: BaseDeclarativeMixin | None
+        cls, fqcn: str, parent: BaseDeclarativeNote | None
     ) -> str | None:
         """
         Get the seed used to generate `note_id` for this subclass.
@@ -642,7 +646,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                 # base is segment if provided, else fully-qualified class name
                 base = cls.note_id_segment or fqcn
 
-            return parent._derive_id_seed(Note, base)
+            return parent._derive_id_seed(BaseDeclarativeNote, base)
 
         return None
 
@@ -740,7 +744,7 @@ def label(
     :param name: Label name
     :param value: Label value, or empty string
     :param inheritable: Whether label should be inherited to children
-    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseDeclarativeMixin`
+    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
 
     @check_name(name, accumulate=accumulate)
@@ -793,7 +797,7 @@ def relation(
     :param name: Relation name
     :param target_cls: Class of relation target, will be instantiated when this note is instantiated (so it must have {obj}`BaseDeclarativeMixin.singleton`, {obj}`BaseDeclarativeMixin.note_id`, or {obj}`BaseDeclarativeMixin.note_id_seed` set)
     :param inheritable: Whether relation should be inherited to children
-    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseDeclarativeMixin`
+    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
 
     @check_name(name, accumulate=accumulate)
@@ -855,7 +859,7 @@ def label_def(
     :param multi: Allow multiple labels with this name in UI
     :param value_type: Type of label value
     :param inheritable: Whether label should be inherited to children
-    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseDeclarativeMixin`
+    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
 
     name = f"label:{name}"
@@ -903,7 +907,7 @@ def relation_def(
     :param multi: Allow multiple relations with this name in UI
     :param inverse: Inverse relation, e.g. if `name = "isParentOf"`{l=python} this could be `"isChildOf"`{l=python}
     :param inheritable: Whether relation should be inherited to children
-    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseDeclarativeMixin`
+    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
 
     name = f"relation:{name}"

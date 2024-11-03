@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from trilium_client.exceptions import NotFoundException, ServiceException
 from trilium_client.models.branch import Branch as EtapiBranchModel
@@ -179,7 +179,7 @@ class Branch(OrderedEntity[BranchModel]):
     _child: Note = None
     _position: int = FieldDescriptor("note_position")
 
-    def __new__(cls, *_, **kwargs) -> Branch:
+    def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
             cls,
             entity_id=kwargs.get("branch_id"),

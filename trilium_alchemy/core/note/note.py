@@ -5,7 +5,7 @@ import hashlib
 from abc import ABCMeta
 from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass
-from typing import IO, Any, Iterator, Literal, cast
+from typing import IO, Any, Iterator, Literal, Self, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -210,7 +210,7 @@ class Note(
     _children: Children
     _content: Content
 
-    def __new__(cls, *_, **kwargs):
+    def __new__(cls, *_, **kwargs) -> Self:
         note_id, _ = cls._get_note_id(kwargs.get("note_id"))
         return super().__new__(
             cls,

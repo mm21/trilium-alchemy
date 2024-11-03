@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -195,7 +195,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     _note = WriteOnceDescriptor("_note_")
     _note_: Note | None = None
 
-    def __new__(cls, *_, **kwargs):
+    def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
             cls,
             entity_id=kwargs.get("attribute_id"),

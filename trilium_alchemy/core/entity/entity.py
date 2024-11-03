@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Any, Generator, Type, cast, overload
+from typing import Any, Generator, Self, Type, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
@@ -75,7 +75,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         # whether entity is being created (otherwise inferred from whether
         # entity_id provided)
         create: bool | None = None,
-    ):
+    ) -> Self:
         session = normalize_session(session)
         # check if this object is already cached
         if entity_id is not None and entity_id in session._cache.entity_map:
