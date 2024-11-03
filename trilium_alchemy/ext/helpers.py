@@ -34,20 +34,13 @@ class MyRoot(BaseRoot):
 ```
 """
 from __future__ import annotations
+
 import os
 from typing import Type, cast
-from ..core import (
-    Note,
-    BaseNoteMixin,
-    BaseAttribute,
-    label,
-)
+
+from ..core import BaseAttribute, BaseNoteMixin, Note, label
 from ..core.note.note import BranchSpecT, is_inherited
-from .types import (
-    CssNote,
-    JsFrontendNote,
-    JsBackendNote,
-)
+from .types import CssNote, JsBackendNote, JsFrontendNote
 
 __all__ = [
     "Template",

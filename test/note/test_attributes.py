@@ -1,6 +1,5 @@
 from pytest import mark, raises
 
-
 from trilium_alchemy import *
 
 """

@@ -17,25 +17,21 @@ Unless specified, "canonical" is assumed to mean "virtually canonical".
 
 from __future__ import annotations
 
-# TODO: move out to separate package for reuse
-
-from typing import Any
-import dataclasses as dc
-import inspect
 import enum
+import inspect
+from typing import Any
 
 import docutils
 import sphinx
-import myst_parser
-
 from autodoc2.db import Database
 from autodoc2.utils import ItemData
 
+# TODO: move out to separate package for reuse
+
+
 # eventually require user to import and provide
-import trilium_alchemy
 
 # only needed until module imported by root package
-import trilium_alchemy.sync
 
 
 class Symbol:
@@ -632,7 +628,6 @@ class Env:
             return
 
         full_name = item["full_name"]
-        type_ = item["type"]
 
         # set target
         pending_xref["reftarget"] = full_name
@@ -939,7 +934,6 @@ class Env:
 
         # traverse desc objects
         for desc in doctree.traverse(condition=sphinx.addnodes.desc):
-            domain = desc["domain"]
             obj_type = desc["objtype"]
 
             signature = desc.children[0]

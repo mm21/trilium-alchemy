@@ -25,21 +25,14 @@ with Session(HOST, token=TOKEN) as session:
 
 from pyrollup import rollup
 
-from .session import *
-from .note import *
-from .attribute import *
-from .branch import *
-from .declarative import *
-from .exceptions import *
-from .entity import *
-
-from . import session
-from . import note
-from . import attribute
-from . import branch
-from . import declarative
-from . import entity
-from . import exceptions
+from . import attribute, branch, declarative, entity, exceptions, note, session
+from .attribute import *  # noqa
+from .branch import *  # noqa
+from .declarative import *  # noqa
+from .entity import *  # noqa
+from .exceptions import *  # noqa
+from .note import *  # noqa
+from .session import *  # noqa
 
 __all__ = rollup(
     session,

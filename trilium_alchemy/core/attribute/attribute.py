@@ -1,34 +1,28 @@
 from __future__ import annotations
 
 from abc import ABC
-from functools import wraps
 from graphlib import TopologicalSorter
-import logging
+from typing import TYPE_CHECKING
 
-from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.exceptions import NotFoundException
+from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 import trilium_alchemy
+
+from ..entity.entity import BaseEntity, EntityIdDescriptor, OrderedEntity, State
+from ..entity.model import (
+    Driver,
+    FieldDescriptor,
+    Model,
+    ReadOnlyDescriptor,
+    ReadOnlyFieldDescriptor,
+    WriteOnceDescriptor,
+)
 from ..exceptions import _assert_validate
 from ..session import Session, normalize_session
 
-from ..entity.entity import (
-    BaseEntity,
-    EntityIdDescriptor,
-    OrderedEntity,
-    State,
-)
-
-from ..entity.model import (
-    Driver,
-    Model,
-    FieldDescriptor,
-    ReadOnlyFieldDescriptor,
-    ReadOnlyDescriptor,
-    WriteOnceDescriptor,
-)
-
-from .. import note
+if TYPE_CHECKING:
+    from ..note.note import Note
 
 __all__ = [
     "BaseAttribute",
@@ -168,7 +162,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
     """
 
-    note: note.Note = ReadOnlyDescriptor("_note", allow_none=True)
+    note: Note = ReadOnlyDescriptor("_note", allow_none=True)
     """
     Read-only access to note which owns this attribute.
     """
@@ -199,7 +193,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     # note which owns this attribute, ensuring only one note is assigned
     # may be None if not yet assigned to a note
     _note = WriteOnceDescriptor("_note_")
-    _note_: note.Note | None = None
+    _note_: Note | None = None
 
     def __new__(cls, *_, **kwargs):
         return super().__new__(
@@ -216,7 +210,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         session: Session | None = None,
         attribute_id: str | None = None,
         model_backing: AttributeModel | None = None,
-        owning_note: note.Note | None = None,
+        owning_note: Note | None = None,
     ):
         super().__init__(
             entity_id=attribute_id,
@@ -261,17 +255,19 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         cls,
         model: EtapiAttributeModel,
         session: Session = None,
-        owning_note: note.Note = None,
+        owning_note: Note = None,
     ) -> BaseAttribute:
         # localize import so as to not introduce circular dependency.
         # this is a rare case of an abstract class knowing about its
         # concrete classes
-        from . import label, relation
+        from ..note.note import Note
+        from .label import Label
+        from .relation import Relation
 
         attr: BaseAttribute
 
         if model.type == "label":
-            attr = label.Label(
+            attr = Label(
                 model.name,
                 attribute_id=model.attribute_id,
                 model_backing=model,
@@ -280,9 +276,9 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             )
 
         elif model.type == "relation":
-            attr = relation.Relation(
+            attr = Relation(
                 model.name,
-                note.Note(note_id=model.value, session=session),
+                Note(note_id=model.value, session=session),
                 attribute_id=model.attribute_id,
                 model_backing=model,
                 session=session,
@@ -297,8 +293,10 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     def _setup(self, model: EtapiAttributeModel):
         assert model.note_id is not None and model.note_id != ""
 
+        from ..note.note import Note
+
         if self._note_ is None:
-            self._note = note.Note(note_id=model.note_id, session=self._session)
+            self._note = Note(note_id=model.note_id, session=self._session)
         else:
             assert self._note_.note_id == model.note_id
 

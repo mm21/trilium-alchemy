@@ -1,6 +1,5 @@
-from .entity import *
 from . import entity
-from . import types
+from .entity import *  # noqa
 
 __all__ = entity.__all__
 __canonical_syms__ = __all__

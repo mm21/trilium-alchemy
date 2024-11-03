@@ -1,15 +1,15 @@
 from trilium_alchemy import (
-    Note,
-    WorkspaceTemplate,
-    Workspace,
     BaseSystem,
     FrontendScript,
+    Note,
     Relation,
-    label,
+    Workspace,
+    WorkspaceTemplate,
     children,
+    label,
     label_def,
-    relation_def,
     relation,
+    relation_def,
 )
 
 

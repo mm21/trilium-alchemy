@@ -1,12 +1,9 @@
 from pyrollup import rollup
 
-from .attribute import *
-from .label import *
-from .relation import *
-
-from . import attribute
-from . import label
-from . import relation
+from . import attribute, label, relation
+from .attribute import *  # noqa
+from .label import *  # noqa
+from .relation import *  # noqa
 
 __all__ = rollup(
     attribute,

@@ -1,4 +1,5 @@
 from abc import ABCMeta
+
 import trilium_alchemy
 
 

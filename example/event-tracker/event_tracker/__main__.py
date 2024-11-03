@@ -4,39 +4,24 @@ it with example notes imperatively.
 """
 
 import argparse
-import sys
+import logging
 import os
 import pathlib
-import logging
+import sys
 
-from trilium_alchemy import (
-    Session,
-    Note,
-    Label,
-    Relation,
-)
+from trilium_alchemy import Label, Note, Relation, Session
 
-from .root import Root
-from .people import (
-    Person,
-    Group,
-    Groups,
-)
-from .places import (
-    Land,
-    City,
-    PointOfInterest,
-    Residence,
-    Lands,
-)
 from .events import (
-    Birthdays,
-    Meetings,
+    BattleInstance,
     Battles,
     BirthdayInstance,
+    Birthdays,
     MeetingInstance,
-    BattleInstance,
+    Meetings,
 )
+from .people import Group, Groups, Person
+from .places import City, Land, Lands, PointOfInterest, Residence
+from .root import Root
 
 logging.basicConfig(level=logging.INFO)
 

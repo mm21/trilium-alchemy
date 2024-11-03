@@ -4,12 +4,10 @@ TriliumAlchemy: an SDK and CLI toolkit for Trilium Notes.
 
 from pyrollup import rollup
 
-from .core import *
-from .ext import *
-from .sync import *
-
-from . import core
-from . import sync
+from . import core, sync
+from .core import *  # noqa
+from .ext import *  # noqa
+from .sync import *  # noqa
 
 __all__ = rollup(core, ext, sync)
 

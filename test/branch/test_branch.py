@@ -1,6 +1,8 @@
-from trilium_alchemy import *
-from ..conftest import check_read_only, branch_exists
 from pytest import raises
+
+from trilium_alchemy import *
+
+from ..conftest import branch_exists, check_read_only
 
 """
 Test basic CRUD capability of branches.

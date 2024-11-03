@@ -1,5 +1,7 @@
-from trilium_alchemy import *
 from pytest import mark
+
+from trilium_alchemy import *
+
 from ..conftest import note_cleanup
 
 

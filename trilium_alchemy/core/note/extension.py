@@ -1,23 +1,13 @@
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Generic,
-    Iterable,
-    Type,
-    TypeVar,
-    overload,
-)
+from abc import ABC, abstractmethod
+from collections.abc import MutableSequence, MutableSet
 from functools import wraps
 from pprint import pformat
+from typing import Any, Generic, Iterable, Type, TypeVar, overload
 
-from collections.abc import MutableSequence, MutableSet
-from abc import ABC, abstractmethod
-
-from ..exceptions import *
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
-
 
 T = TypeVar("T", bound=BaseEntity)
 U = TypeVar("U", bound=OrderedEntity)
@@ -366,7 +356,6 @@ class Set(Collection[T], MutableSet[T]):
         """
         Ensure set is in a valid state.
         """
-        pass
 
     @check_bailout
     def _setattr(self, new_set: set[Any]):

@@ -2,7 +2,7 @@ from pytest import mark
 
 from trilium_alchemy import *
 
-from ..conftest import check_read_only, attribute_exists
+from ..conftest import attribute_exists, check_read_only
 
 """
 Test basic CRUD capability of owned attributes.

@@ -1,28 +1,26 @@
-from typing import Generator
-import os
 import datetime
 import logging
+import os
 import sys
-
-from pytest import Config, Parser, fixture, raises
-
-from trilium_alchemy import (
-    Session,
-    Note,
-    BaseAttribute,
-    Branch,
-    BaseEntity,
-    ReadOnlyError,
-)
-
-from trilium_client import DefaultApi
-from trilium_client.models.create_note_def import CreateNoteDef
-from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.attribute import Attribute as EtapiAttributeModel
-from trilium_client.models.branch import Branch as EtapiBranchModel
-from trilium_client.exceptions import NotFoundException
+from typing import Generator
 
 from dotenv import load_dotenv
+from pytest import Config, Parser, fixture, raises
+from trilium_client import DefaultApi
+from trilium_client.exceptions import NotFoundException
+from trilium_client.models.attribute import Attribute as EtapiAttributeModel
+from trilium_client.models.branch import Branch as EtapiBranchModel
+from trilium_client.models.create_note_def import CreateNoteDef
+from trilium_client.models.note import Note as EtapiNoteModel
+
+from trilium_alchemy import (
+    BaseAttribute,
+    BaseEntity,
+    Branch,
+    Note,
+    ReadOnlyError,
+    Session,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -410,10 +408,8 @@ def create_note_fixture(request, session: Session, fixture_name: str):
 
         # get index of this attribute (nth attribute with this name)
         if name in name_dict:
-            index = name_dict[name]
             name_dict[name] += 1
         else:
-            index = 0
             name_dict[name] = 1
 
         # create attribute

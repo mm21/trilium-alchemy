@@ -1,5 +1,5 @@
-from .note import *
 from . import note
+from .note import *  # noqa
 
 __all__ = note.__all__
 __canonical_syms__ = __all__

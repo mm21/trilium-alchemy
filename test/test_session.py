@@ -1,17 +1,19 @@
+import datetime
 import os
 import zipfile
-import datetime
+
 from pytest import mark
+
 from trilium_alchemy import *
+
 from .conftest import (
-    HOST,
-    TOKEN,
-    PASSWORD,
     DATA_DIR,
-    create_note,
-    teardown_note,
+    HOST,
+    PASSWORD,
+    TOKEN,
     clean_note,
     create_attribute,
+    create_note,
 )
 
 
@@ -199,7 +201,7 @@ def test_dirty_set(session: Session, note: Note):
 def test_calendar(session: Session):
     date = datetime.date(2023, 6, 15)
 
-    today_note = session.get_today_note()
+    session.get_today_note()
     day_note = session.get_day_note(date)
     week_note = session.get_week_note(date)
     month_note = session.get_month_note("2023-06")

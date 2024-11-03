@@ -1,20 +1,16 @@
 from trilium_alchemy import (
-    Note,
-    WorkspaceTemplate,
-    Workspace,
     BaseSystem,
+    Note,
     Widget,
+    Workspace,
+    WorkspaceTemplate,
     children,
     label,
-    relation,
     label_def,
     relation_def,
 )
 
-from ..events import (
-    GetEventsByPerson,
-    FormatEvents,
-)
+from ..events import FormatEvents, GetEventsByPerson
 
 
 @children(

@@ -1,1 +1,1 @@
-from .events import *
+from .events import *  # noqa

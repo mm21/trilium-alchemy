@@ -10,13 +10,11 @@ as children of {obj}`Note` subclasses force setting {obj}`Branch.expanded`.
 
 from __future__ import annotations
 
-import os
-from typing import Iterable, Literal, Any, cast
-from functools import wraps, partial
+from functools import wraps
+from typing import Any, Iterable, Literal, cast
 
-from .note.note import Note, BaseNoteMixin, BranchSpecT, patch_init
-from .branch import Branch
-from .attribute import BaseAttribute, Label, Relation
+from .attribute import BaseAttribute, Relation
+from .note.note import BranchSpecT, Note, patch_init
 
 __all__ = [
     "label",

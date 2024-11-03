@@ -5,11 +5,9 @@ development.
 
 from pyrollup import rollup
 
-from .types import *
-from .helpers import *
-
-from . import types
-from . import helpers
+from . import helpers, types
+from .helpers import *  # noqa
+from .types import *  # noqa
 
 __all__ = rollup(
     types,

@@ -1,30 +1,27 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable, Any
-
-from pprint import pformat
-from functools import wraps
-from graphlib import TopologicalSorter
 import logging
+from graphlib import TopologicalSorter
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
-
+from trilium_client.exceptions import NotFoundException, ServiceException
 from trilium_client.models.branch import Branch as EtapiBranchModel
-from trilium_client.exceptions import ServiceException, NotFoundException
 
-from ..exceptions import _assert_validate
-from ..session import Session
 from ..entity.entity import EntityIdDescriptor, OrderedEntity
 from ..entity.model import (
     Driver,
-    Model,
     FieldDescriptor,
-    ReadOnlyFieldDescriptor,
+    Model,
     ReadOnlyDescriptor,
+    ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..entity.types import State
-from .. import note
+from ..exceptions import _assert_validate
+from ..session import Session
+
+if TYPE_CHECKING:
+    from ..note.note import Note
 
 __all__ = [
     "Branch",
@@ -141,12 +138,12 @@ class Branch(OrderedEntity[BranchModel]):
     Read-only access to `branchId`.
     """
 
-    parent: note.Note = WriteOnceDescriptor("_parent", validator="_validate")
+    parent: Note = WriteOnceDescriptor("_parent", validator="_validate")
     """
     Parent note.
     """
 
-    child: note.Note = WriteOnceDescriptor("_child", validator="_validate")
+    child: Note = WriteOnceDescriptor("_child", validator="_validate")
     """
     Child note.
     """
@@ -178,8 +175,8 @@ class Branch(OrderedEntity[BranchModel]):
 
     _model_cls = BranchModel
 
-    _parent: note.Note = None
-    _child: note.Note = None
+    _parent: Note = None
+    _child: Note = None
     _position: int = FieldDescriptor("note_position")
 
     def __new__(cls, *_, **kwargs) -> Branch:
@@ -192,8 +189,8 @@ class Branch(OrderedEntity[BranchModel]):
 
     def __init__(
         self,
-        parent: note.Note = None,
-        child: note.Note = None,
+        parent: Note = None,
+        child: Note = None,
         prefix: str = "",
         expanded: bool = False,
         session: Session = None,
@@ -270,9 +267,11 @@ class Branch(OrderedEntity[BranchModel]):
         ...
 
     @classmethod
-    def _gen_branch_id(cls, parent: note.Note, child: note.Note) -> str:
-        assert isinstance(parent, note.Note)
-        assert isinstance(child, note.Note)
+    def _gen_branch_id(cls, parent: Note, child: Note) -> str:
+        from ..note.note import Note
+
+        assert isinstance(parent, Note)
+        assert isinstance(child, Note)
 
         assert parent.note_id is not None
         assert child.note_id is not None
@@ -280,17 +279,19 @@ class Branch(OrderedEntity[BranchModel]):
         return f"{parent.note_id}_{child.note_id}"
 
     def _setup(self, model: EtapiBranchModel):
+        from ..note.note import Note
+
         # in Trilium, root note has a parent branch to a
         # non-existent note with id 'none'; handle this case here
         if model.parent_note_id == "none":
             assert self._parent is None
             assert model.note_id == "root"
         else:
-            self.parent = note.Note(
+            self.parent = Note(
                 note_id=model.parent_note_id, session=self._session
             )
 
-        self.child = note.Note(note_id=model.note_id, session=self._session)
+        self.child = Note(note_id=model.note_id, session=self._session)
 
     def _flush_check(self):
         _assert_validate(self.child is not None, "No child set")

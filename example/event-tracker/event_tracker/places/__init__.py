@@ -1,1 +1,1 @@
-from .places import *
+from .places import *  # noqa

@@ -6,10 +6,8 @@ import typing as t
 
 from autodoc2.render.base import RendererBase
 from autodoc2.utils import ItemData
-
 from conf import package
-from util import Symbol, Module
-
+from util import Module, Symbol
 
 _RE_DELIMS = re.compile(r"(\s*[\[\]\(\),]\s*)")
 

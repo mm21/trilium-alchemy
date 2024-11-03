@@ -1,14 +1,9 @@
-from trilium_alchemy import (
-    BaseRoot,
-    BaseRootSystem,
-    label,
-    children,
-)
+from trilium_alchemy import BaseRoot, BaseRootSystem, children, label
 
-from .people import People
-from .places import Places
 from .events import Events
 from .extensions.themes.vscode_dark import VSCodeDark
+from .people import People
+from .places import Places
 
 
 class System(BaseRootSystem):

@@ -1,5 +1,3 @@
-from pytest import mark, fixture
-
 from trilium_alchemy import *
 
 

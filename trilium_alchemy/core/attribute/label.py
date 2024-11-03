@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable
-
-from ..exceptions import *
-from ..session import Session
-from .. import note
-
 from ..entity.model import FieldDescriptor
-
+from ..session import Session
 from .attribute import BaseAttribute
 
 __all__ = [

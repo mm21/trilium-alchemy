@@ -1,27 +1,17 @@
 from __future__ import annotations
 
-from functools import wraps
-from typing import IO, Any
-from io import IOBase
-import hashlib
 import base64
+import hashlib
 import logging
+from io import IOBase
+from typing import IO, Any
 
 import requests
-
-from collections.abc import MutableSequence, MutableSet, MutableMapping
-from abc import ABC, abstractmethod
-
 from trilium_client.models.note import Note as EtapiNoteModel
 
-from .extension import NoteStatefulExtension
-from ..exceptions import *
 from ..entity import BaseEntity
-from ..entity.model import (
-    ExtensionDescriptor,
-    ModelContainer,
-    require_setup,
-)
+from ..entity.model import ExtensionDescriptor, ModelContainer
+from .extension import NoteStatefulExtension
 
 __all__ = [
     "Content",

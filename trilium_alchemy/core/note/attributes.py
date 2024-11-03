@@ -1,27 +1,16 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable, Any
-
-from pprint import pformat
-
 from collections import OrderedDict
-from collections.abc import (
-    MutableSequence,
-    Sequence,
-    MutableSet,
-    MutableMapping,
-)
-from abc import ABC, abstractmethod
+from collections.abc import MutableSequence, Sequence
+from typing import Any, Type, TypeVar
 
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
-from . import note
-from ..exceptions import *
-from ..entity import BaseEntity
-from ..entity.model import Extension, StatefulExtension, ExtensionDescriptor
 from ..attribute import attribute, label, relation
 from ..attribute.attribute import BaseAttribute
+from ..entity.model import ExtensionDescriptor
+from ..exceptions import *
+from . import note
 from .extension import List, NoteExtension, NoteStatefulExtension
 
 __all__ = [

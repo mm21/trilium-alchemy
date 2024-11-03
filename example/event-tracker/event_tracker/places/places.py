@@ -1,22 +1,18 @@
 from trilium_alchemy import (
-    Note,
-    BaseNoteMixin,
-    WorkspaceTemplate,
-    Workspace,
-    BaseSystem,
     BackendScript,
+    BaseNoteMixin,
+    BaseSystem,
+    Note,
     Widget,
-    label,
-    relation,
-    label_def,
-    relation_def,
+    Workspace,
+    WorkspaceTemplate,
     children,
+    label,
+    label_def,
+    relation,
 )
 
-from ..events import (
-    GetEventsByPlace,
-    FormatEvents,
-)
+from ..events import FormatEvents, GetEventsByPlace
 
 
 # reusable mixin to capture promoted address attributes

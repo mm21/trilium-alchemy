@@ -1,10 +1,12 @@
-from pytest import mark, fixture
+from typing import cast
+
+from pytest import fixture, mark
+
 from trilium_alchemy import *
 from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash
-from typing import cast
 
-from ..conftest import create_session, note_exists, clean_note, delete_note
+from ..conftest import create_session, delete_note, note_exists
 
 """
 TODO:

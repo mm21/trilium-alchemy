@@ -2,13 +2,13 @@
 Test basic CRUD capability of notes.
 """
 
+import datetime
+
 from pytest import mark
 
 from trilium_alchemy import *
 
 from ..conftest import check_read_only, note_exists
-
-import datetime
 
 
 # Create new note as a child of provided note
@@ -208,14 +208,14 @@ def test_lazy(session: Session, note1: Note, note2: Note, branch: Branch):
     assert not branch._model._setup_done
 
     # read title to fetch model
-    title = note1.title
+    note1.title
     assert note1._model._setup_done
     assert branch._model._setup_done
 
     # shouldn't have fetched note2 since it wasn't accessed
     assert not note2._model._setup_done
 
-    title = branch.child.title
+    branch.child.title
     assert note2._model._setup_done
 
 

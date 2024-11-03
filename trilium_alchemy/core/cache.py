@@ -4,13 +4,14 @@ Implements a cache of Trilium entities.
 
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Any, Iterable
 import graphlib
 import logging
+from typing import Iterable
 
 import trilium_alchemy
-from .exceptions import ValidationError, _ValidationError
+
 from . import session
+from .exceptions import ValidationError, _ValidationError
 
 
 class Cache:

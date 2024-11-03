@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import base64
-import copy
 import hashlib
 import importlib.resources
 import inspect
-import logging
 import os
 from abc import ABC, ABCMeta
 from collections.abc import Iterable, MutableMapping
 from functools import wraps
 from types import ModuleType
-from typing import IO, Any, Generic, Iterator, Literal, TypeVar, Union, cast
+from typing import IO, Any, Iterator, Literal, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 

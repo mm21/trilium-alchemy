@@ -8,28 +8,27 @@ Eventually will be generalized to accommodate different types of sessions:
 
 from __future__ import annotations
 
+import datetime
+import json
+import logging
+from collections.abc import Iterable
 from enum import Enum, auto
 from typing import Callable, Literal, cast
-from collections.abc import Iterable
-from functools import wraps
-import requests
-import json
-import datetime
-import logging
 
-from trilium_client import DefaultApi, ApiClient, Configuration
-from trilium_client.models.login_request import LoginRequest
-from trilium_client.models.login201_response import Login201Response
+import requests
+from trilium_client import ApiClient, Configuration, DefaultApi
+from trilium_client.exceptions import ApiException
 from trilium_client.models.app_info import AppInfo
+from trilium_client.models.branch import Branch as EtapiBranchModel
+from trilium_client.models.login201_response import Login201Response
+from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
-from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.models.search_response import SearchResponse
-from trilium_client.exceptions import ApiException
 
 import trilium_alchemy
+
 from .cache import Cache
-from .exceptions import *
 
 __all__ = ["Session"]
 

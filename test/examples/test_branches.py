@@ -1,5 +1,6 @@
-from trilium_alchemy import *
 from pytest import mark
+
+from trilium_alchemy import *
 
 
 @mark.default_session

@@ -1,21 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import MutableSequence, MutableSet
 from typing import Any, Iterable
-
-from pprint import pformat
-
-from collections.abc import MutableSequence, MutableSet, MutableMapping
-from abc import ABC, abstractmethod
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
-from ..exceptions import *
-from ..entity.entity import BaseEntity, normalize_entities
-from ..entity.model import Extension, ExtensionDescriptor
-from .. import branch
-from .. import note
-from .extension import NoteExtension, Set, List
 import trilium_alchemy
+
+from .. import branch, note
+from ..entity.entity import normalize_entities
+from ..entity.model import ExtensionDescriptor
+from .extension import List, NoteExtension, Set
 
 __all__ = [
     "Branches",

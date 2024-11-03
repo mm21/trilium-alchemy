@@ -2,8 +2,8 @@ from graphlib import TopologicalSorter
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.create_note_def import CreateNoteDef
-from trilium_client.models.note_with_branch import NoteWithBranch
 from trilium_client.models.note import Note as EtapiNoteModel
+from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..entity.model import Driver, Model
 

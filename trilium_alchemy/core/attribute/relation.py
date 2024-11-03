@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import overload, TypeVar, Generic, Type, Hashable
+from typing import TYPE_CHECKING
 
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
+from ..entity.entity import BaseEntity
+from ..entity.model import WriteThroughDescriptor
 from ..exceptions import _assert_validate
 from ..session import Session
-from .. import note
-
-from ..entity import BaseEntity
-from ..entity.model import WriteThroughDescriptor
-
 from .attribute import BaseAttribute
+
+if TYPE_CHECKING:
+    from ..note.note import Note
 
 __all__ = [
     "Relation",
@@ -27,19 +27,19 @@ class Relation(BaseAttribute):
     """
 
     # set _target, then populate model's value with the target's note_id
-    target: note.Note = WriteThroughDescriptor("_target", "note_id", "value")
+    target: Note = WriteThroughDescriptor("_target", "note_id", "value")
     """
     Target note of this relation.
     """
 
     attribute_type: str = "relation"
 
-    _target: note.Note = None
+    _target: Note = None
 
     def __init__(
         self,
         name: str,
-        target: note.Note,
+        target: Note,
         inheritable: bool = False,
         session: Session | None = None,
         **kwargs,
@@ -79,11 +79,15 @@ class Relation(BaseAttribute):
         assert model.value is not None
         assert model.value != ""
 
+        from ..note.note import Note
+
         # setup target
-        self._target = note.Note(note_id=model.value, session=self._session)
+        self._target = Note(note_id=model.value, session=self._session)
 
     def _flush_check(self):
-        _assert_validate(isinstance(self._target, note.Note))
+        from ..note.note import Note
+
+        _assert_validate(isinstance(self._target, Note))
 
     def _flush_prep(self):
         """
