@@ -4,12 +4,12 @@ from trilium_alchemy import *
 
 @label("labelm1", "value1")
 @label("labelm1-2")
-class Mixin1(Mixin):
+class Mixin1(BaseNoteMixin):
     title = "Mixin1Title"
 
 
 @label("labelm3")
-class Mixin3(Mixin):
+class Mixin3(BaseNoteMixin):
     pass
 
 

@@ -1,13 +1,13 @@
-@startuml
+@startuml entity-classes
 
 package trilium_alchemy.core <<Frame>> {
-  class Entity {
+  class BaseEntity {
   }
 
   class Note {
   }
 
-  class Attribute {
+  class BaseAttribute {
   }
 
   class Label {
@@ -19,9 +19,9 @@ package trilium_alchemy.core <<Frame>> {
   class Branch {
   }
 
-  Entity <|-- Note
-  Entity <|-- Attribute
-  Entity <|-- Branch
-  Attribute <|-- Label
-  Attribute <|-- Relation
+  BaseEntity <|-- Note
+  BaseEntity <|-- BaseAttribute
+  BaseEntity <|-- Branch
+  BaseAttribute <|-- Label
+  BaseAttribute <|-- Relation
 }

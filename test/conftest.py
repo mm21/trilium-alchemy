@@ -9,9 +9,9 @@ from pytest import Config, Parser, fixture, raises
 from trilium_alchemy import (
     Session,
     Note,
-    Attribute,
+    BaseAttribute,
     Branch,
-    Entity,
+    BaseEntity,
     ReadOnlyError,
 )
 
@@ -216,7 +216,7 @@ def label(request, session: Session, note: Note):
 
     model = create_label(session.api, note, name, value)
 
-    yield Attribute._from_model(model, session=session, owning_note=note)
+    yield BaseAttribute._from_model(model, session=session, owning_note=note)
 
 
 @fixture
@@ -234,7 +234,7 @@ def relation(request, session: Session, note: Note):
 
     model = create_relation(session.api, note, name, value, request.node.name)
 
-    yield Attribute._from_model(model, session=session, owning_note=note)
+    yield BaseAttribute._from_model(model, session=session, owning_note=note)
 
 
 @fixture
@@ -648,7 +648,7 @@ def branch_exists(api: DefaultApi, branch_id: str) -> bool:
     return get_branch(api, branch_id) is not None
 
 
-def check_read_only(entity: Entity, fields: list[str]):
+def check_read_only(entity: BaseEntity, fields: list[str]):
     for field in fields:
         with raises(ReadOnlyError):
             # set dummy value of None; exception should be raised

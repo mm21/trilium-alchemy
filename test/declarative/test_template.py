@@ -5,7 +5,7 @@ from trilium_alchemy import *
 @label_def("city")
 @label_def("state")
 @label_def("zip")
-class AddressMixin(Mixin):
+class AddressMixin(BaseNoteMixin):
     pass
 
 

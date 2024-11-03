@@ -16,7 +16,7 @@ from trilium_client.models.note import Note as EtapiNoteModel
 
 from .extension import NoteStatefulExtension
 from ..exceptions import *
-from ..entity import Entity
+from ..entity import BaseEntity
 from ..entity.model import (
     ExtensionDescriptor,
     ModelContainer,
@@ -102,7 +102,7 @@ class Content(NoteStatefulExtension):
     _backing: BlobState = None
     _working: BlobState = None
 
-    def __init__(self, entity: Entity):
+    def __init__(self, entity: BaseEntity):
         super().__init__(entity)
 
         self._backing = BlobState()

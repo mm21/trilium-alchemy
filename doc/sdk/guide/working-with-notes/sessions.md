@@ -6,14 +6,14 @@ In TriliumAlchemy, the {obj}`Session` is the fundamental interface to interact w
 As you make changes to Trilium objects, their state is maintained in a {obj}`Session`. When you're done making changes and invoke {obj}`Session.flush`, the unit of work dependency solver determines the order in which to commit changes to Trilium and commits them. For example, new notes need to be created before their attributes.
 
 ```{note}
-In Trilium, there are 3 kinds of objects:
+In Trilium there are 3 kinds of objects, represented in this project as:
 
 - {obj}`Note`
-- {obj}`Attribute`, divided into {obj}`Label` and {obj}`Relation`
+- {obj}`BaseAttribute`, with concrete classes {obj}`Label` and {obj}`Relation`
 - {obj}`Branch`
 
 These are collectively referred to as "entities", both in 
-Trilium's implementation and this project (see {obj}`Entity`).
+Trilium's implementation and this project (see {obj}`BaseEntity`).
 ```
 
 By default, creating a {obj}`Session` registers it as the default (`default=True`{l=python}). Unless a default is registered, it's required to pass a {obj}`Session` when creating an entity.

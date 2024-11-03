@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..exceptions import *
-from ..entity.entity import Entity, normalize_entities
+from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import Extension, ExtensionDescriptor
 from .. import branch
 from .. import note

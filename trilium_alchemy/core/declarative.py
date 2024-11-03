@@ -14,9 +14,9 @@ import os
 from typing import Iterable, Literal, Any, cast
 from functools import wraps, partial
 
-from .note.note import Note, Mixin, BranchSpecT, patch_init
+from .note.note import Note, BaseNoteMixin, BranchSpecT, patch_init
 from .branch import Branch
-from .attribute import Attribute, Label, Relation
+from .attribute import BaseAttribute, Label, Relation
 
 __all__ = [
     "label",
@@ -38,7 +38,7 @@ def check_name(name: str, accumulate=False):
     def _check_name(func):
         @wraps(func)
         def wrapper(
-            self, attributes: list[Attribute], children: list[BranchSpecT]
+            self, attributes: list[BaseAttribute], children: list[BranchSpecT]
         ):
             if accumulate is False and any(name == a.name for a in attributes):
                 return
@@ -56,7 +56,7 @@ def label(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Label` to a {obj}`Note` or {obj}`Mixin` subclass.
+    Adds a {obj}`Label` to a {obj}`Note` or {obj}`BaseNoteMixin` subclass.
 
     Example:
 
@@ -68,12 +68,12 @@ def label(
     :param name: Label name
     :param value: Label value, or empty string
     :param inheritable: Whether label should be inherited to children
-    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
+    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseNoteMixin`
     """
 
     @check_name(name, accumulate=accumulate)
     def init(
-        self: Note, attributes: list[Attribute], children: list[BranchSpecT]
+        self: Note, attributes: list[BaseAttribute], children: list[BranchSpecT]
     ):
         attributes += [
             self.create_declarative_label(
@@ -96,7 +96,7 @@ def relation(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Relation` to a {obj}`Note` or {obj}`Mixin` subclass.
+    Adds a {obj}`Relation` to a {obj}`Note` or {obj}`BaseNoteMixin` subclass.
 
     Example:
 
@@ -117,13 +117,15 @@ def relation(
     assert task["template"]["iconClass"] == "bx bx-task"
     ```
     :param name: Relation name
-    :param target_cls: Class of relation target, will be instantiated when this note is instantiated (so it must have {obj}`Mixin.singleton`, {obj}`Mixin.note_id`, or {obj}`Mixin.note_id_seed` set)
+    :param target_cls: Class of relation target, will be instantiated when this note is instantiated (so it must have {obj}`BaseNoteMixin.singleton`, {obj}`BaseNoteMixin.note_id`, or {obj}`BaseNoteMixin.note_id_seed` set)
     :param inheritable: Whether relation should be inherited to children
-    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
+    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseNoteMixin`
     """
 
     @check_name(name, accumulate=accumulate)
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+    def init(
+        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+    ):
         assert (
             target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -159,7 +161,7 @@ def label_def(
 ):
     """
     Adds a {obj}`Label` definition (promoted label) to a {obj}`Note` or
-    {obj}`Mixin` subclass.
+    {obj}`BaseNoteMixin` subclass.
 
     Example:
 
@@ -179,7 +181,7 @@ def label_def(
     :param multi: Allow multiple labels with this name in UI
     :param value_type: Type of label value
     :param inheritable: Whether label should be inherited to children
-    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
+    :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseNoteMixin`
     """
 
     name = f"label:{name}"
@@ -210,7 +212,7 @@ def relation_def(
 ):
     """
     Adds a {obj}`Relation` definition (promoted relation) to a {obj}`Note` or
-    {obj}`Mixin` subclass.
+    {obj}`BaseNoteMixin` subclass.
 
     Example:
 
@@ -227,7 +229,7 @@ def relation_def(
     :param multi: Allow multiple relations with this name in UI
     :param inverse: Inverse relation, e.g. if `name = "isParentOf"`{l=python} this could be `"isChildOf"`{l=python}
     :param inheritable: Whether relation should be inherited to children
-    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`Mixin`
+    :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`Note` or {obj}`BaseNoteMixin`
     """
 
     name = f"relation:{name}"
@@ -270,7 +272,9 @@ def children(*children: type[Note] | tuple[type[Note], dict[str, Any]]):
     :param children: Tuple of `type[Note]`{l=python} or `(type[Note], dict)`{l=python}
     """
 
-    def init(self, attributes: list[Attribute], children_: list[BranchSpecT]):
+    def init(
+        self, attributes: list[BaseAttribute], children_: list[BranchSpecT]
+    ):
         children_ += list(cast(Iterable[BranchSpecT], children))
 
     return patch_init(init)
@@ -295,7 +299,9 @@ def child(child: type[Note], prefix: str = "", expanded: bool = False):
     :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
     """
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+    def init(
+        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+    ):
         children.append(
             cast(
                 BranchSpecT,

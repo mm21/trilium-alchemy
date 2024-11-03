@@ -29,7 +29,7 @@ from .model import (
 from .types import State
 
 __all__ = [
-    "Entity",
+    "BaseEntity",
     "State",
     "EntityIdDescriptor",
     "FieldDescriptor",
@@ -41,14 +41,14 @@ __all__ = [
 ]
 
 __rollup__ = [
-    "Entity",
+    "BaseEntity",
     "State",
 ]
 
 ModelT = TypeVar("ModelT", bound=Model)
 
 
-class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
+class BaseEntity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
     """
     Base class for Trilium entities.
 
@@ -447,7 +447,7 @@ class Entity(ABC, SessionContainer, ModelContainer, Generic[ModelT]):
 
     @property
     @abstractmethod
-    def _dependencies(self) -> set[Entity]:
+    def _dependencies(self) -> set[BaseEntity]:
         """
         Return entities this entity depends on.
         """
@@ -465,7 +465,7 @@ class PositionMixin:
 # TODO: this is better suited as an intersection type, not yet supported
 # - https://github.com/python/typing/issues/213
 # - https://github.com/CarliJoy/intersection_examples/issues/8
-class OrderedEntity(Entity[ModelT], PositionMixin):
+class OrderedEntity(BaseEntity[ModelT], PositionMixin):
     pass
 
 
@@ -481,26 +481,26 @@ class EntityIdDescriptor:
         ...
 
     @overload
-    def __get__(self, ent: Entity, objtype: type[Entity]) -> str:
+    def __get__(self, ent: BaseEntity, objtype: type[BaseEntity]) -> str:
         ...
 
     def __get__(
         self,
-        ent: Entity | None,
-        objtype: type[Entity] | None = None,
+        ent: BaseEntity | None,
+        objtype: type[BaseEntity] | None = None,
     ) -> EntityIdDescriptor | str:
         if ent is None:
             return self
         return cast(str, ent._entity_id)
 
-    def __set__(self, ent: Entity, val: Any):
+    def __set__(self, ent: BaseEntity, val: Any):
         raise ReadOnlyError("_entity_id", ent)
 
 
 def normalize_entities(
-    entities: Entity | tuple | Iterable[Entity | tuple],
+    entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
     collection_cls: Type[Iterable] = list,
-) -> Iterable[Entity]:
+) -> Iterable[BaseEntity]:
     """
     Take an entity or iterable of entities and return an iterable.
     Also supports tuples, e.g. (child, "prefix")
@@ -509,7 +509,7 @@ def normalize_entities(
     if (
         isinstance(entities, Iterable)
         and not isinstance(entities, tuple)
-        and not isinstance(entities, Entity)
+        and not isinstance(entities, BaseEntity)
     ):
         # have iterable
         return entities

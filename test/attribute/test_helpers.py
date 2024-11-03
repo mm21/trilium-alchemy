@@ -106,17 +106,17 @@ def test_index_inherited(
     assert len(note1.attributes) == 1
     for i in range(len(note1.attributes)):
         attr = note1.attributes[i]
-        assert isinstance(attr, Attribute)
+        assert isinstance(attr, BaseAttribute)
 
     assert len(note1.attributes.owned) == 1
     for i in range(len(note1.attributes.owned)):
         attr = note1.attributes[i]
-        assert isinstance(attr, Attribute)
+        assert isinstance(attr, BaseAttribute)
 
     assert len(note2.attributes.inherited) == 1
     for i in range(len(note1.attributes.inherited)):
         attr = note1.attributes[i]
-        assert isinstance(attr, Attribute)
+        assert isinstance(attr, BaseAttribute)
 
     # no-op, no changes made
     assert len(session.dirty_set) == 0
@@ -282,6 +282,6 @@ def test_slice(session: Session, note: Note):
 @mark.label("label1", "value1")
 def test_from_id(session: Session, label: Label):
     label.invalidate()
-    label_new = Attribute._from_id(label.attribute_id, session=session)
+    label_new = BaseAttribute._from_id(label.attribute_id, session=session)
 
     assert label is label_new

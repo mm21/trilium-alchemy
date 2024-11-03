@@ -19,10 +19,10 @@ class Cache:
     and synchronizes with Trilium upon flush.
     """
 
-    entity_map: dict[str, trilium_alchemy.core.entity.Entity]
+    entity_map: dict[str, trilium_alchemy.core.entity.BaseEntity]
     """Mapping of entity id to entity object"""
 
-    dirty_set: set[trilium_alchemy.core.entity.Entity]
+    dirty_set: set[trilium_alchemy.core.entity.BaseEntity]
     """Set of objects which need to be synchronized with Trilium"""
 
     _session: session.Session
@@ -39,14 +39,15 @@ class Cache:
 
     def flush(
         self,
-        entities: Iterable[trilium_alchemy.core.entity.Entity] | None = None,
+        entities: Iterable[trilium_alchemy.core.entity.BaseEntity]
+        | None = None,
     ):
         """
         Flushes provided entities and all dependencies, or all dirty entities
         if entities not provided.
         """
 
-        entities_iter: Iterable[trilium_alchemy.core.entity.Entity]
+        entities_iter: Iterable[trilium_alchemy.core.entity.BaseEntity]
 
         entities_iter = self.dirty_set if entities is None else entities
 
@@ -120,7 +121,7 @@ class Cache:
         for note in refresh_set:
             self._session.refresh_note_ordering(note)
 
-    def add(self, entity: trilium_alchemy.core.entity.Entity) -> None:
+    def add(self, entity: trilium_alchemy.core.entity.BaseEntity) -> None:
         """
         Add provided entity to cache. Should be invoked as soon as entity_id
         is set.
@@ -134,7 +135,9 @@ class Cache:
                 f"Added to cache: entity_id={entity._entity_id}, type={type(entity)}"
             )
 
-    def _validate(self, entity_set: set[trilium_alchemy.core.entity.Entity]):
+    def _validate(
+        self, entity_set: set[trilium_alchemy.core.entity.BaseEntity]
+    ):
         """
         Check all provided entities and if errors encountered, raise an
         exception with a list of errors.
@@ -152,8 +155,8 @@ class Cache:
 
     def _flush_gather(
         self,
-        entity: trilium_alchemy.core.entity.Entity,
-        dirty_set: set[trilium_alchemy.core.entity.Entity],
+        entity: trilium_alchemy.core.entity.BaseEntity,
+        dirty_set: set[trilium_alchemy.core.entity.BaseEntity],
     ):
         """
         Recursively add entity's dependencies to set if they're dirty.
@@ -164,7 +167,7 @@ class Cache:
                 self._flush_gather(dep, dirty_set)
 
     def _check_refresh(
-        self, dirty_set: set[trilium_alchemy.core.entity.Entity]
+        self, dirty_set: set[trilium_alchemy.core.entity.BaseEntity]
     ):
         """
         Return set of notes with changed child branch positions. These need
@@ -180,7 +183,7 @@ class Cache:
         return refresh_set
 
     def _summary(
-        self, dirty_set: set[trilium_alchemy.core.entity.Entity]
+        self, dirty_set: set[trilium_alchemy.core.entity.BaseEntity]
     ) -> str:
         """
         Return a brief summary of how many entities are in each state.
@@ -195,14 +198,14 @@ class Cache:
 
         index = {
             trilium_alchemy.core.note.Note: state_map(),
-            trilium_alchemy.core.attribute.Attribute: state_map(),
+            trilium_alchemy.core.attribute.BaseAttribute: state_map(),
             trilium_alchemy.core.branch.Branch: state_map(),
         }
 
-        def get_cls(entity: trilium_alchemy.core.entity.Entity):
+        def get_cls(entity: trilium_alchemy.core.entity.BaseEntity):
             classes = [
                 trilium_alchemy.core.note.Note,
-                trilium_alchemy.core.attribute.Attribute,
+                trilium_alchemy.core.attribute.BaseAttribute,
                 trilium_alchemy.core.branch.Branch,
             ]
 
@@ -217,7 +220,7 @@ class Cache:
             index[cls][entity._state] += 1
 
         notes = index[trilium_alchemy.core.note.Note]
-        attributes = index[trilium_alchemy.core.attribute.Attribute]
+        attributes = index[trilium_alchemy.core.attribute.BaseAttribute]
         branches = index[trilium_alchemy.core.branch.Branch]
 
         # return (create/update/delete) counts

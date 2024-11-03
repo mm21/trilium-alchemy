@@ -188,7 +188,8 @@ class Session:
 
     def flush(
         self,
-        entities: Iterable[trilium_alchemy.core.entity.Entity] | None = None,
+        entities: Iterable[trilium_alchemy.core.entity.BaseEntity]
+        | None = None,
     ):
         """
         Commits pending changes to Trilium via ETAPI.
@@ -200,7 +201,7 @@ class Session:
 
         ```{note}
         You may equivalently invoke {obj}`Entity.flush` to flush an
-        {obj}`Entity` along with its dependencies.
+        {obj}`BaseEntity` along with its dependencies.
         ```
 
         :param entities: Entities for which to commit changes, internally processed as a {obj}`set` and sorted according to dependencies
@@ -522,14 +523,14 @@ class Session:
     @property
     def dirty_count(self) -> int:
         """
-        Number of dirty {obj}`Entity` objects.
+        Number of dirty {obj}`BaseEntity` objects.
         """
         return len(self.dirty_set)
 
     @property
-    def dirty_set(self) -> set[trilium_alchemy.core.entity.Entity]:
+    def dirty_set(self) -> set[trilium_alchemy.core.entity.BaseEntity]:
         """
-        All dirty {obj}`Entity` objects.
+        All dirty {obj}`BaseEntity` objects.
         """
         return {e for e in self._cache.dirty_set}
 
@@ -538,10 +539,10 @@ class Session:
         self,
     ) -> dict[
         trilium_alchemy.core.entity.types.State,
-        set[trilium_alchemy.core.entity.Entity],
+        set[trilium_alchemy.core.entity.BaseEntity],
     ]:
         """
-        Mapping of state to dirty {obj}`Entity` objects
+        Mapping of state to dirty {obj}`BaseEntity` objects
         in that state.
 
         Example usage:
@@ -552,7 +553,7 @@ class Session:
 
         index: dict[
             trilium_alchemy.core.entity.types.State,
-            set[trilium_alchemy.core.entity.Entity],
+            set[trilium_alchemy.core.entity.BaseEntity],
         ] = {
             trilium_alchemy.core.entity.types.State.CREATE: set(),
             trilium_alchemy.core.entity.types.State.UPDATE: set(),

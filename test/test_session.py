@@ -244,7 +244,7 @@ def test_default():
     assert label1.attribute_id is not None
     label1.invalidate()
 
-    label1 = Attribute._from_id(label1.attribute_id)
+    label1 = BaseAttribute._from_id(label1.attribute_id)
     assert label1.name == "label1"
 
     note.delete()

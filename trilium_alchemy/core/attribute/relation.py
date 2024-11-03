@@ -8,17 +8,17 @@ from ..exceptions import _assert_validate
 from ..session import Session
 from .. import note
 
-from ..entity import Entity
+from ..entity import BaseEntity
 from ..entity.model import WriteThroughDescriptor
 
-from .attribute import Attribute
+from .attribute import BaseAttribute
 
 __all__ = [
     "Relation",
 ]
 
 
-class Relation(Attribute):
+class Relation(BaseAttribute):
     """
     Encapsulates a relation.
 
@@ -102,7 +102,7 @@ class Relation(Attribute):
             assert self._model.get_field("value") == self._target.note_id
 
     @property
-    def _dependencies(self) -> set[Entity]:
+    def _dependencies(self) -> set[BaseEntity]:
         """
         Relation also depends on target note.
         """

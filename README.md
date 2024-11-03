@@ -67,7 +67,7 @@ See the full documentation here: <https://mm21.github.io/trilium-alchemy/sdk/gui
 There are 3 kinds of objects in Trilium, represented in TriliumAlchemy as the following classes:
 
 - `Note`
-- `Attribute` base class, with concrete classes `Label` and `Relation`
+- `BaseAttribute` base class, with concrete classes `Label` and `Relation`
 - `Branch`, linking a parent and child note
 
 Once you have a `Session`, you can begin to interact with Trilium. The first `Session` created is registered as the default for any subsequent Trilium objects created.
@@ -202,58 +202,30 @@ For a fully-featured example of a note hierarchy designed using this approach, s
 The basic technique is to subclass `Note`:
 
 ```python
-class MyNote(Note): pass
+class MyNote(Note):
+    title = "My note"
 ```
 
 ### Mixin subclasses
 
-Sometimes you want to logically group attributes or children together in a reusable way, but don't need a fully-featured `Note`. In those cases you can use a `Mixin`.
+Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured `Note`. In those cases you can use a `BaseNoteMixin`.
 
-The basic technique is to subclass `Mixin`:
-
-```python
-class MyMixin(Mixin): pass
-```
-
-`Note` inherits from `Mixin`, so the following semantics can be applied to `Note` subclasses and `Mixin` subclasses equally.
-
-### Setting fields
-
-You can set the following fields by setting attribute values:
-
-- `Note.title` or `Mixin.title`
-- `Note.note_type` or `Mixin.note_type`
-- `Note.mime` or `Mixin.mime`
-- `Note.content`
+The basic technique is to subclass {obj}`BaseNoteMixin`:
 
 ```python
-class MyNote(Note):
-    title = "My title"
-    note_type = "text"
-    mime = "text/html"
-    content = "<p>Hello, world!</p>"
+class MyMixin(BaseNoteMixin): pass
 ```
 
-### Setting content from file
+`Note` inherits from `BaseNoteMixin`, so the following semantics can be applied to `Note` subclasses and `BaseNoteMixin` subclasses equally.
 
-Set note content from a file by setting `Note.content_file` or `Mixin.content_file`:
-
-```python
-class MyFrontendScript(Note):
-    note_type = "code"
-    mime = "application/javascript;env=frontend"
-    content_file = "assets/myFrontendScript.js"
-```
-
-The filename is relative to the package or subpackage the class is defined in. Currently accessing parent paths (`".."`) is not supported.
 
 ### Adding labels
 
-Use the decorator `label` to add a label to a `Note` or `Mixin` subclass:
+Use the decorator `label` to add a label to a `Note` or `BaseNoteMixin` subclass:
 
 ```python
 @label("sorted")
-class SortedMixin(Mixin): pass
+class SortedMixin(BaseNoteMixin): pass
 ```
 
 Now you can simply inherit from this mixin if you want a note's children to be sorted:
@@ -271,3 +243,47 @@ The above is equivalent to the following imperative approach:
 contacts = Note(title="Contacts")
 contacts += [Label("iconClass", "bx bx-group"), Label("sorted")]
 ```
+
+### Promoted attributes
+
+A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
+
+```python
+@label("person")
+@label_def("altName", multi=True)
+@label_def("birthday", value_type="date")
+@relation_def("livesAt")
+@relation_def("livedAt", multi=True)
+class Person(WorkspaceTemplate):
+    icon = "bx bxs-user-circle"
+```
+
+## Setting fields
+
+You can set the following fields on `Note` by setting attribute values:
+
+- `title`
+- `note_type`
+- `mime`
+- `content`
+
+```python
+class MyNote(Note):
+    title = "My title"
+    note_type = "text"
+    mime = "text/html"
+    content = "<p>Hello, world!</p>"
+```
+
+## Setting content from file
+
+Set note content from a file by setting `Note.content_file`:
+
+```python
+class MyFrontendScript(Note):
+    note_type = "code"
+    mime = "application/javascript;env=frontend"
+    content_file = "assets/myFrontendScript.js"
+```
+
+The filename is relative to the package or subpackage the class is defined in. Currently accessing parent paths (`".."`) is not supported.

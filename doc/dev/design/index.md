@@ -2,7 +2,7 @@
 
 ## Entities
 
-{obj}`Entity` is the base class representing notes, attributes, and branches. It essentially maps to a record in Trilium's database.
+{obj}`BaseEntity` is the base class representing notes, attributes, and branches. It essentially maps to a record in Trilium's database.
 
 ```{uml} entity.plantuml
 ```

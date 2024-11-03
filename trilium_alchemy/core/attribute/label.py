@@ -8,14 +8,14 @@ from .. import note
 
 from ..entity.model import FieldDescriptor
 
-from .attribute import Attribute
+from .attribute import BaseAttribute
 
 __all__ = [
     "Label",
 ]
 
 
-class Label(Attribute):
+class Label(BaseAttribute):
     """
     Encapsulates a label.
 

@@ -18,10 +18,10 @@ from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 from . import note
 from ..exceptions import *
-from ..entity import Entity
+from ..entity import BaseEntity
 from ..entity.model import Extension, StatefulExtension, ExtensionDescriptor
 from ..attribute import attribute, label, relation
-from ..attribute.attribute import Attribute
+from ..attribute.attribute import BaseAttribute
 from .extension import List, NoteExtension, NoteStatefulExtension
 
 __all__ = [
@@ -53,7 +53,7 @@ class NameMap:
     # TODO: could return a dict of generators instead of dict of lists
     # (sometimes we only care about the first result)
     @property
-    def _name_map(self) -> dict[str, list[attribute.Attribute]]:
+    def _name_map(self) -> dict[str, list[attribute.BaseAttribute]]:
         attrs = dict()
         for attr in list(self):
             if attr.name in attrs:
@@ -83,7 +83,7 @@ class NameMap:
         else:
             return list(self)[key]
 
-    def __contains__(self, key: str | attribute.Attribute) -> bool:
+    def __contains__(self, key: str | attribute.BaseAttribute) -> bool:
         """
         This can be invoked by name or by object.
         """
@@ -94,14 +94,14 @@ class NameMap:
         return super().__contains__(key)
 
 
-class OwnedAttributes(NameMap, List[attribute.Attribute]):
+class OwnedAttributes(NameMap, List[attribute.BaseAttribute]):
     """
     Interface to a note's owned attributes. Implements same
     interface as {obj}`Attributes` but accessed as
     `Note.attributes.owned`.
     """
 
-    _child_cls = attribute.Attribute
+    _child_cls = attribute.BaseAttribute
     _owner_field = "_note"
 
     def __str__(self):
@@ -126,8 +126,8 @@ class OwnedAttributes(NameMap, List[attribute.Attribute]):
                     # only consider owned attributes
                     if attr_model.note_id == self._note.note_id:
                         # create attribute object from model
-                        attr: attribute.Attribute = (
-                            attribute.Attribute._from_model(
+                        attr: attribute.BaseAttribute = (
+                            attribute.BaseAttribute._from_model(
                                 attr_model,
                                 session=self._note._session,
                                 owning_note=self._note,
@@ -219,7 +219,7 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     Raises {obj}`ReadOnlyError` upon attempt to modify.
     """
 
-    _list: list[Attribute] = None
+    _list: list[BaseAttribute] = None
 
     def _setattr(self, value: Any):
         raise ReadOnlyError(
@@ -243,10 +243,12 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
                     )
 
                     # create attribute object from model
-                    attr: attribute.Attribute = attribute.Attribute._from_model(
-                        attr_model,
-                        session=self._note._session,
-                        owning_note=owning_note,
+                    attr: attribute.BaseAttribute = (
+                        attribute.BaseAttribute._from_model(
+                            attr_model,
+                            session=self._note._session,
+                            owning_note=owning_note,
+                        )
                     )
 
                     inherited_list.append(attr)
@@ -394,12 +396,12 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
         self._owned = OwnedAttributes(note)
         self._inherited = InheritedAttributes(note)
 
-    def _setattr(self, val: list[Attribute]):
+    def _setattr(self, val: list[BaseAttribute]):
         # invoke _setattr of owned
         self.owned = val
 
     @property
-    def _combined(self) -> list[Attribute]:
+    def _combined(self) -> list[BaseAttribute]:
         """
         Get a combined list of owned and inherited attributes.
         """

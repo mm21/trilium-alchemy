@@ -22,7 +22,7 @@ class Driver(ABC):
     (through ETAPI) or a filesystem.
     """
 
-    entity: entity_abc.Entity = None
+    entity: entity_abc.BaseEntity = None
 
     session: Session = None
 
@@ -85,7 +85,7 @@ class Model(ABC):
     fields_default: dict[str, str] = None
 
     # entity owning this object
-    entity: entity_abc.Entity = None
+    entity: entity_abc.BaseEntity = None
 
     # cached data fetched from backing storage
     _backing: dict[str, str | int | bool] = None
@@ -106,7 +106,7 @@ class Model(ABC):
     # if in-memory only (for VirtualSession)
     _driver: Driver | None = None
 
-    def __init__(self, entity: entity_abc.Entity):
+    def __init__(self, entity: entity_abc.BaseEntity):
         self.entity = entity
         self._extensions = list()
 
@@ -478,9 +478,9 @@ class Extension(ABC, ModelContainer):
     and routes setattr() via ExtensionDescriptor.
     """
 
-    _entity: entity_abc.Entity = None
+    _entity: entity_abc.BaseEntity = None
 
-    def __init__(self, entity: entity_abc.Entity):
+    def __init__(self, entity: entity_abc.BaseEntity):
         ModelContainer.__init__(self, entity._model)
         self._entity = entity
 
@@ -501,7 +501,7 @@ class StatefulExtension(Extension):
 
     # TODO: driver to handle fetch, flush
 
-    def __init__(self, entity: entity_abc.Entity):
+    def __init__(self, entity: entity_abc.BaseEntity):
         super().__init__(entity)
         entity._model.register_extension(self)
 
@@ -539,7 +539,7 @@ class StatefulExtension(Extension):
 
 def require_setup(func):
     @wraps(func)
-    def _require_setup(self, ent: entity_abc.Entity, objtype=None):
+    def _require_setup(self, ent: entity_abc.BaseEntity, objtype=None):
         ent._model.setup_check()
         return func(self, ent, objtype)
 
@@ -603,7 +603,7 @@ class ReadOnlyDescriptor:
         self._allow_none = allow_none
 
     @require_setup
-    def __get__(self, ent: entity_abc.Entity, objtype=None):
+    def __get__(self, ent: entity_abc.BaseEntity, objtype=None):
         # access value
         val = getattr(ent, self._attr)
 
@@ -619,7 +619,7 @@ class ReadOnlyDescriptor:
 
         return val
 
-    def __set__(self, ent: entity_abc.Entity, val):
+    def __set__(self, ent: entity_abc.BaseEntity, val):
         raise ReadOnlyError(self._attr, ent)
 
 
@@ -644,10 +644,10 @@ class WriteThroughDescriptor:
         self._field = field
 
     @require_setup
-    def __get__(self, ent: entity_abc.Entity, objtype=None) -> Any:
+    def __get__(self, ent: entity_abc.BaseEntity, objtype=None) -> Any:
         return getattr(ent, self._attr)
 
-    def __set__(self, ent: entity_abc.Entity, value: Any):
+    def __set__(self, ent: entity_abc.BaseEntity, value: Any):
         assert value is not None
 
         # set attr of entity
@@ -677,10 +677,10 @@ class WriteOnceDescriptor:
         self._validator = validator
 
     @require_setup
-    def __get__(self, ent: entity_abc.Entity, objtype=None) -> Any:
+    def __get__(self, ent: entity_abc.BaseEntity, objtype=None) -> Any:
         return getattr(ent, self._attr)
 
-    def __set__(self, ent: entity_abc.Entity, value: Any):
+    def __set__(self, ent: entity_abc.BaseEntity, value: Any):
         assert value is not None
 
         value_current = getattr(ent, self._attr)
@@ -704,7 +704,7 @@ class ExtensionDescriptor:
     A model extension performs additional processing on the model and provides
     an interface to update other entities associated with this entity.
     For example, {obj}`Note` uses an extension to process the list of
-    attributes from the note model and create {obj}`Attribute` instances.
+    attributes from the note model and create {obj}`BaseAttribute` instances.
     """
 
     _attr: str

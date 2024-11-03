@@ -7,7 +7,7 @@ scripts, etc. This module provides automation of such a system, with a
 
 The root system {obj}`BaseRootSystem` additionally holds themes and a
 built-in stylesheet which hides the "Create child note" button in the UI
-for subclass-managed notes ({obj}`Mixin.leaf` is `False`{l=python}).
+for subclass-managed notes ({obj}`BaseNoteMixin.leaf` is `False`{l=python}).
 
 If a note hierarchy is defined under a {obj}`BaseRoot` subclass,
 a {obj}`BaseRootSystem` is automatically added.
@@ -38,8 +38,8 @@ import os
 from typing import Type, cast
 from ..core import (
     Note,
-    Mixin,
-    Attribute,
+    BaseNoteMixin,
+    BaseAttribute,
     label,
 )
 from ..core.note.note import BranchSpecT, is_inherited
@@ -121,7 +121,9 @@ class Workspace(Note):
 
     system: BaseSystem = None
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+    def init(
+        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+    ):
         # add system note, if provided
         if self.system:
             children.append(self.create_declarative_child(self.system))
@@ -155,7 +157,9 @@ class Theme(CssNote):
     Name of theme, or `None`{l=python} to use class name
     """
 
-    def init(self, attributes: list[Attribute], children: list[BranchSpecT]):
+    def init(
+        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+    ):
         # default to class name if name not provided
         if self.theme_name is None:
             self.theme_name = type(self).__name__
@@ -174,7 +178,7 @@ class Widget(JsFrontendNote):
     singleton = True
 
 
-class ScriptMixin(Mixin):
+class ScriptMixin(BaseNoteMixin):
     """
     Mixin which sets note title from script's filename. This allows
     reuse of functions by adding them as children of other scripts.
@@ -299,7 +303,7 @@ class BaseSystem(Note):
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
 
-    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         children.append(
             self.create_declarative_child(
                 Templates, children=self._collect_attribute("templates")
@@ -372,7 +376,7 @@ class BaseWorkspaceRoot(Note):
 
     system: type[BaseSystem] | None = None
 
-    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))
 
@@ -411,7 +415,7 @@ class BaseRootSystem(BaseSystem):
     List of {obj}`Theme` subclasses
     """
 
-    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         # add built-in system note
         children.append(self.create_declarative_child(TriliumAlchemySystem))
 
@@ -431,6 +435,6 @@ class BaseRoot(Note):
     title = "root"
     system: Type[BaseRootSystem] | None = BaseRootSystem
 
-    def init(self, _: list[Attribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))

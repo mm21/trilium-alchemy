@@ -161,7 +161,7 @@ note = MyNote()
 assert note.content == "<p>Hello, world!</p>"
 ```
 
-Use {obj}`Note.content_file` or {obj}`Mixin.content_file` to set the name of a file relative to this package's location.
+Use {obj}`Note.content_file` or {obj}`BaseNoteMixin.content_file` to set the name of a file relative to this package's location.
 
 ```{note}
 If you use [Poetry](https://python-poetry.org/) and want to publish a Python note hierarchy with content from a file, no additional steps are needed to package these files if they reside in your project. If you use setuptools, you'll need to use `package_data` or `data_files` to include them (however using setuptools for this is currently untested).

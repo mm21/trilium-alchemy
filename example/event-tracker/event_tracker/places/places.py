@@ -1,6 +1,6 @@
 from trilium_alchemy import (
     Note,
-    Mixin,
+    BaseNoteMixin,
     WorkspaceTemplate,
     Workspace,
     BaseSystem,
@@ -22,14 +22,14 @@ from ..events import (
 # reusable mixin to capture promoted address attributes
 @label_def("streetAddress")
 @label_def("zip")
-class AddressMixin(Mixin):
+class AddressMixin(BaseNoteMixin):
     pass
 
 
 # reusable mixin to capture promoted coordinate attributes
 @label_def("latitude", value_type="number")
 @label_def("longitude", value_type="number")
-class CoordinateMixin(Mixin):
+class CoordinateMixin(BaseNoteMixin):
     pass
 
 

@@ -15,11 +15,11 @@ from collections.abc import MutableSequence, MutableSet
 from abc import ABC, abstractmethod
 
 from ..exceptions import *
-from ..entity.entity import Entity, OrderedEntity
+from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
 
 
-T = TypeVar("T", bound=Entity)
+T = TypeVar("T", bound=BaseEntity)
 U = TypeVar("U", bound=OrderedEntity)
 
 

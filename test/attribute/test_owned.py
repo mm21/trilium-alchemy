@@ -339,7 +339,7 @@ def test_list_delete(session: Session, note: Note):
 
 # Common routine to check update of position and read-only fields of
 # label/relation.
-def attribute_update(attr: Attribute):
+def attribute_update(attr: BaseAttribute):
     assert attr._is_clean
 
     attr._position = 20
@@ -374,7 +374,7 @@ tests for it.
 """
 
 
-def _test_attribute_update_inheritable(attr: Attribute):
+def _test_attribute_update_inheritable(attr: BaseAttribute):
     assert attr._is_clean
 
     attr.inheritable = True

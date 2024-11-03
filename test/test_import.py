@@ -9,8 +9,8 @@ def test_import():
     assert isinstance(trilium_alchemy.core.branch.Branch, ABCMeta)
     assert isinstance(trilium_alchemy.core.attribute.Label, type)
     assert isinstance(trilium_alchemy.core.attribute.Relation, type)
-    assert isinstance(trilium_alchemy.core.attribute.Attribute, ABCMeta)
-    assert isinstance(trilium_alchemy.core.entity.Entity, ABCMeta)
+    assert isinstance(trilium_alchemy.core.attribute.BaseAttribute, ABCMeta)
+    assert isinstance(trilium_alchemy.core.entity.BaseEntity, ABCMeta)
 
     # ensure no internal symbols accidentally exported
     assert all([not sym.startswith("_") for sym in trilium_alchemy.__all__])

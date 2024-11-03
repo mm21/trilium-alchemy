@@ -15,9 +15,9 @@ from typing import IO, Any, Generic, Iterator, Literal, TypeVar, Union, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
-from ..attribute import Attribute, Label, Relation
+from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
-from ..entity.entity import Entity, EntityIdDescriptor, normalize_entities
+from ..entity.entity import BaseEntity, EntityIdDescriptor, normalize_entities
 
 # isort: off
 from ..entity.model import (
@@ -37,7 +37,7 @@ from .model import NoteModel
 
 __all__ = [
     "Note",
-    "Mixin",
+    "BaseNoteMixin",
 ]
 
 
@@ -105,7 +105,7 @@ def patch_init(init, doc: str | None = None):
         def _init_decl(
             self,
             cls_decl,
-            attributes: list[Attribute],
+            attributes: list[BaseAttribute],
             children: list[BranchSpecT],
         ):
             if cls is cls_decl:
@@ -163,7 +163,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     return cast(type[Note], type(ent))
 
 
-def is_inherited(cls: type[Mixin], attr: str) -> bool:
+def is_inherited(cls: type[BaseNoteMixin], attr: str) -> bool:
     """
     Check if given attribute is inherited from superclass (True) or defined on this
     class (False).
@@ -196,7 +196,7 @@ class BaseMeta(ABCMeta):
             if hasattr(base, "_decorator_doc"):
                 attrs["_decorator_doc"] += base._decorator_doc
 
-        if bases[0] not in {Entity, ABC}:
+        if bases[0] not in {BaseEntity, ABC}:
             # subclass of Note or Mixin
 
             # check if any model fields are defined on class
@@ -234,26 +234,20 @@ class NoteMeta(BaseMeta):
         return note_cls
 
 
-class Mixin(
+class BaseNoteMixin(
     ABC,
     SessionContainer,
     metaclass=BaseMeta,
 ):
     """
-    Reusable collection of attributes, children, and fields
-    (`note_id`, `title`, `type`, `mime`) which can be inherited by a
+    Reusable collection of attributes and children which can be inherited by a
     {obj}`Note`.
 
-    ```{note}
-    Since {obj}`Note` inherits from {obj}`Mixin`, any {obj}`Note`
-    subclass is also a valid {obj}`Mixin` and can use the same semantics
-    to set attributes/children/fields.
-    ```
-
+    # TODO: move to BaseDeclarativeNote
     ```{todo}
     Add `auto_mime=True`{l=python} to also set `mime` using `magic` package
-    (or do so automatically if {obj}`Mixin.content_file` set, but
-    {obj}`Mixin.mime` not set)
+    (or do so automatically if {obj}`Note.content_file` set, but
+    {obj}`Note.mime` not set)
     ```
     """
 
@@ -269,10 +263,10 @@ class Mixin(
     Generated as base64-encoded hash of seed.
 
     If you want to fix the id of a subclassed note, it's recommended
-    to use {obj}`Mixin.singleton`, which internally generates
-    {obj}`Mixin.note_id_seed` from the class name. However if you
+    to use {obj}`BaseNoteMixin.singleton`, which internally generates
+    {obj}`BaseNoteMixin.note_id_seed` from the class name. However if you
     want `note_id` to be invariant of where the class is located in
-    its package, you may prefer to use {obj}`Mixin.note_id_seed`
+    its package, you may prefer to use {obj}`BaseNoteMixin.note_id_seed`
     directly.
     """
 
@@ -323,7 +317,7 @@ class Mixin(
     """
     If set on a {obj}`Note` subclass, sets segment name to class name
     for the purpose of `note_id` calculation. 
-    An explicitly provided {obj}`Mixin.note_id_segment` takes precedence.
+    An explicitly provided {obj}`BaseNoteMixin.note_id_segment` takes precedence.
     """
 
     leaf: bool = False
@@ -401,16 +395,16 @@ class Mixin(
 
     def init(
         self,
-        attributes: list[Attribute],
+        attributes: list[BaseAttribute],
         children: list[Note | type[Note] | Branch],
     ) -> dict[str, Any] | None:
         """
-        Optionally provided by {obj}`Note` or {obj}`Mixin` subclass
+        Optionally provided by {obj}`Note` or {obj}`BaseNoteMixin` subclass
         to add attributes and/or children during instantiation. Use the
         following to create attribute/child with deterministic id:
-        - {obj}`Mixin.create_declarative_label`
-        - {obj}`Mixin.create_declarative_relation`
-        - {obj}`Mixin.create_declarative_child`
+        - {obj}`BaseNoteMixin.create_declarative_label`
+        - {obj}`BaseNoteMixin.create_declarative_relation`
+        - {obj}`BaseNoteMixin.create_declarative_child`
 
         Can return a `dict` of other fields to update, e.g. `title`.
 
@@ -418,7 +412,7 @@ class Mixin(
         User should **not** invoke `super().init()`{l=python}.
         To add attributes and children in an intuitive order,
         TriliumAlchemy manually traverses a {obj}`Note` subclass's MRO and invokes
-        decorator-patched inits followed by {obj}`Mixin.init`.
+        decorator-patched inits followed by {obj}`BaseNoteMixin.init`.
         ```
         """
         if self.icon and all(a.name != "iconClass" for a in attributes):
@@ -432,7 +426,7 @@ class Mixin(
         """
         Create and return a {obj}`Label` with deterministic `attribute_id`
         based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`Note.init` or {obj}`Mixin.init` to generate
+        subclassed {obj}`Note.init` or {obj}`BaseNoteMixin.init` to generate
         the same `attribute_id` upon every instantiation.
 
         Multiple attributes of the same name are supported.
@@ -453,7 +447,7 @@ class Mixin(
         """
         Create and return a {obj}`Relation` with deterministic `attribute_id`
         based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`Note.init` or {obj}`Mixin.init` to generate
+        subclassed {obj}`Note.init` or {obj}`BaseNoteMixin.init` to generate
         the same `attribute_id` upon every instantiation.
 
         Multiple attributes of the same name are supported.
@@ -474,7 +468,7 @@ class Mixin(
         """
         Create a child {obj}`Note` with deterministic `note_id` and return a
         {obj}`Branch`. Should be used in subclassed
-        {obj}`Note.init` or {obj}`Mixin.init` to generate
+        {obj}`Note.init` or {obj}`BaseNoteMixin.init` to generate
         the same child `note_id` upon every instantiation.
 
         Instantiate provided class as a declarative child of the current
@@ -571,8 +565,8 @@ class Mixin(
     # Invoke declarative init and return tuple of attributes, children
     def _init_mixin(
         self, fields_update: dict[str, Any]
-    ) -> tuple[list[Attribute], list[BranchSpecT]]:
-        attributes: list[Attribute] = list()
+    ) -> tuple[list[BaseAttribute], list[BranchSpecT]]:
+        attributes: list[BaseAttribute] = list()
         children: list[BranchSpecT] = list()
 
         # traverse MRO to add attributes and children in an intuitive order.
@@ -582,7 +576,7 @@ class Mixin(
         # a nice side effect of this is the user doesn't have to invoke
         # super().init()
         for cls in type(self).mro():
-            if issubclass(cls, Mixin):
+            if issubclass(cls, BaseNoteMixin):
                 # invoke init chain added by decorators
                 cls._init_decl(self, cls, attributes, children)
 
@@ -602,8 +596,8 @@ class Mixin(
     # Base declarative init method which can be patched by decorators
     def _init_decl(
         self,
-        cls_decl: type[Mixin],
-        attributes: list[Attribute],
+        cls_decl: type[BaseNoteMixin],
+        attributes: list[BaseAttribute],
         children: list[BranchSpecT],
     ):
         pass
@@ -611,10 +605,10 @@ class Mixin(
     # Return class which specified content_file
     def _get_content_cls(self):
         for cls in type(self).mro():
-            if issubclass(cls, Mixin) and cls.content_file:
+            if issubclass(cls, BaseNoteMixin) and cls.content_file:
                 return cls
 
-    def _derive_id_seed(self, cls: type[Entity], base: str) -> str | None:
+    def _derive_id_seed(self, cls: type[BaseEntity], base: str) -> str | None:
         """
         Attempt to derive id seed for the provided entity based on this note.
         """
@@ -631,7 +625,7 @@ class Mixin(
 
         return None
 
-    def _derive_id(self, cls: type[Entity], base: str) -> str | None:
+    def _derive_id(self, cls: type[BaseEntity], base: str) -> str | None:
         """
         Generate a declarative entity id unique to this note with namespace
         per entity type.
@@ -642,7 +636,7 @@ class Mixin(
         id_seed: str | None = self._derive_id_seed(cls, base)
         return id_hash(id_seed) if id_seed is not None else None
 
-    def _get_sequence(self, cls: type[Entity], base: str):
+    def _get_sequence(self, cls: type[BaseEntity], base: str):
         """
         Get entity id sequence number given entity type and a base name,
         e.g. note id seed or attribute name.
@@ -660,8 +654,8 @@ class Mixin(
 
 
 class Note(
-    Entity[NoteModel],
-    Mixin,
+    BaseEntity[NoteModel],
+    BaseNoteMixin,
     MutableMapping,
     metaclass=NoteMeta,
 ):
@@ -769,7 +763,7 @@ class Note(
         mime: str = "text/html",
         parents: Iterable[Note | Branch] | Note | Branch | None = None,
         children: Iterable[Note | Branch] | None = None,
-        attributes: Iterable[Attribute] | None = None,
+        attributes: Iterable[BaseAttribute] | None = None,
         content: str | bytes | IO | None = None,
         note_id: str | None = None,
         template: Note | type[Note] | None = None,
@@ -822,7 +816,7 @@ class Note(
             return
 
         # invoke Mixin init
-        Mixin.__init__(self, note_id_seed_final)
+        BaseNoteMixin.__init__(self, note_id_seed_final)
 
         # get from parent, if True
         if force_leaf:
@@ -883,8 +877,8 @@ class Note(
         entity: Note
         | tuple[Note, str]
         | Branch
-        | Attribute
-        | Iterable[Note | tuple[Note, str] | Branch | Attribute],
+        | BaseAttribute
+        | Iterable[Note | tuple[Note, str] | Branch | BaseAttribute],
     ) -> Note:
         """
         Implement entity bind operator:
@@ -901,7 +895,7 @@ class Note(
         entities = normalize_entities(entity)
 
         for ent in entities:
-            if isinstance(ent, Attribute):
+            if isinstance(ent, BaseAttribute):
                 self.attributes.owned.append(ent)
             elif isinstance(ent, Note) or type(ent) is tuple:
                 # add child note
@@ -1186,7 +1180,7 @@ class Note(
                 self._get_decl_field(fields_update, field)
 
             # invoke init chain defined on mixin
-            attributes: list[Attribute]
+            attributes: list[BaseAttribute]
             children: list[BranchSpecT]
             attributes, children = self._init_mixin(fields_update)
 
@@ -1252,7 +1246,7 @@ class Note(
 
     @classmethod
     def _get_decl_id(
-        cls, parent: Mixin | None = None
+        cls, parent: BaseNoteMixin | None = None
     ) -> tuple[str, str | None] | None:
         """
         Try to get a note_id. If one is returned, this note has a deterministic
@@ -1279,7 +1273,9 @@ class Note(
         return None
 
     @classmethod
-    def _get_note_id_seed(cls, fqcn: str, parent: Mixin | None) -> str | None:
+    def _get_note_id_seed(
+        cls, fqcn: str, parent: BaseNoteMixin | None
+    ) -> str | None:
         """
         Get the seed used to generate `note_id` for this subclass.
         """

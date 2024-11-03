@@ -13,7 +13,7 @@ from ..exceptions import _assert_validate
 from ..session import Session, normalize_session
 
 from ..entity.entity import (
-    Entity,
+    BaseEntity,
     EntityIdDescriptor,
     OrderedEntity,
     State,
@@ -31,7 +31,7 @@ from ..entity.model import (
 from .. import note
 
 __all__ = [
-    "Attribute",
+    "BaseAttribute",
 ]
 
 
@@ -129,7 +129,7 @@ class AttributeModel(Model):
     }
 
 
-class Attribute(OrderedEntity[AttributeModel], ABC):
+class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
 
@@ -262,13 +262,13 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
         model: EtapiAttributeModel,
         session: Session = None,
         owning_note: note.Note = None,
-    ) -> Attribute:
+    ) -> BaseAttribute:
         # localize import so as to not introduce circular dependency.
         # this is a rare case of an abstract class knowing about its
         # concrete classes
         from . import label, relation
 
-        attr: Attribute
+        attr: BaseAttribute
 
         if model.type == "label":
             attr = label.Label(
@@ -316,7 +316,7 @@ class Attribute(OrderedEntity[AttributeModel], ABC):
         )
 
     @property
-    def _dependencies(self) -> set[Entity]:
+    def _dependencies(self) -> set[BaseEntity]:
         """
         Attribute depends on note which owns it.
         """
