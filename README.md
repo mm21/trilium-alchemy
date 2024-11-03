@@ -199,40 +199,40 @@ For a fully-featured example of a note hierarchy designed using this approach, s
 
 ### Note subclasses
 
-The basic technique is to subclass `Note`:
+The basic technique is to subclass `BaseDeclarativeNote`:
 
 ```python
-class MyNote(Note):
+class MyNote(BaseDeclarativeNote):
     title = "My note"
 ```
 
 ### Mixin subclasses
 
-Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured `Note`. In those cases you can use a `BaseNoteMixin`.
+Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured `Note`. In those cases you can use a `BaseDeclarativeMixin`.
 
-The basic technique is to subclass {obj}`BaseNoteMixin`:
+The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
 
 ```python
-class MyMixin(BaseNoteMixin): pass
+class MyMixin(BaseDeclarativeMixin): pass
 ```
 
-`Note` inherits from `BaseNoteMixin`, so the following semantics can be applied to `Note` subclasses and `BaseNoteMixin` subclasses equally.
+`Note` inherits from `BaseDeclarativeMixin`, so the following semantics can be applied to `Note` subclasses and `BaseDeclarativeMixin` subclasses equally.
 
 
 ### Adding labels
 
-Use the decorator `label` to add a label to a `Note` or `BaseNoteMixin` subclass:
+Use the decorator `label` to add a label to a `Note` or `BaseDeclarativeMixin` subclass:
 
 ```python
 @label("sorted")
-class SortedMixin(BaseNoteMixin): pass
+class SortedMixin(BaseDeclarativeMixin): pass
 ```
 
 Now you can simply inherit from this mixin if you want a note's children to be sorted:
 
 ```python
 @label("iconClass", "bx bx-group")
-class Contacts(Note, SortedMixin): pass
+class Contacts(BaseDeclarativeNote, SortedMixin): pass
 ```
 
 This approach enables reuse of groups of related attributes.
@@ -262,17 +262,17 @@ class Person(WorkspaceTemplate):
 
 You can set the following fields on `Note` by setting attribute values:
 
-- `title`
-- `note_type`
-- `mime`
-- `content`
+- `decl_title`
+- `decl_note_type`
+- `decl_mime`
+- `decl_content`
 
 ```python
-class MyNote(Note):
-    title = "My title"
-    note_type = "text"
-    mime = "text/html"
-    content = "<p>Hello, world!</p>"
+class MyNote(BaseDeclarativeNote):
+    decl_title = "My title"
+    decl_note_type = "text"
+    decl_mime = "text/html"
+    decl_content = "<p>Hello, world!</p>"
 ```
 
 ## Setting content from file

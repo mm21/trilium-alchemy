@@ -1,8 +1,9 @@
-from typing import cast
+from typing import Iterable, cast
 
 from pytest import fixture, mark
 
 from trilium_alchemy import *
+from trilium_alchemy.core.declarative import BaseDeclarativeNote
 from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash
 
@@ -35,28 +36,28 @@ def singleton_setup(request):
 
 
 @label("child1")
-class TemplateChild1(Note):
+class TemplateChild1(BaseDeclarativeNote):
     singleton = True
-    title = "Child 1"
-    note_type = "book"
-    mime = "text/plain"
+    decl_title = "Child 1"
+    decl_note_type = "book"
+    decl_mime = "text/plain"
 
 
-class IdempotentTest1(Note):
+class IdempotentTest1(BaseDeclarativeNote):
     idempotent = True
 
 
-class SegmentTestChild2(Note):
+class SegmentTestChild2(BaseDeclarativeNote):
     idempotent_segment = True
 
 
 @children(SegmentTestChild2)
-class SegmentTestChild1(Note):
+class SegmentTestChild1(BaseDeclarativeNote):
     note_id_segment = "Child1"
 
 
 @children(SegmentTestChild1)
-class SegmentTestParent(Note):
+class SegmentTestParent(BaseDeclarativeNote):
     note_id_seed = "Parent"
 
 
@@ -65,6 +66,8 @@ def check_child1(branch: Branch):
     assert branch.expanded is False
 
     note = branch.child
+
+    assert isinstance(note, TemplateChild1)
 
     assert note.singleton
     assert not note.leaf
@@ -87,7 +90,7 @@ def check_child1(branch: Branch):
 
 
 @relation("child1", TemplateChild1)
-class TemplateChild2(Note):
+class TemplateChild2(BaseDeclarativeNote):
     singleton = True
     leaf = True
 
@@ -97,6 +100,7 @@ def check_child2(branch: Branch):
     assert branch.expanded is False
 
     note = branch.child
+    assert isinstance(note, TemplateChild2)
 
     assert note.singleton
     assert note.leaf
@@ -119,11 +123,11 @@ def check_child2(branch: Branch):
 @label_def("label1")
 @relation_def("relation1", multi=True, inverse="relation1inverse")
 @children(TemplateChild1, TemplateChild2)
-class TemplateTest(Template):
+class TemplateTest(BaseTemplateNote):
     pass
 
 
-def check_template_attributes(attributes):
+def check_template_attributes(attributes: Iterable[BaseAttribute]):
     assert len(attributes) == 3
 
     label1, relation1, template = attributes
@@ -157,11 +161,11 @@ def check_template(branch: Branch):
     check_child2(note.branches.children[1])
 
 
-class TemplateChild3(Note):
+class TemplateChild3(BaseDeclarativeNote):
     singleton = True
 
 
-class TemplateChild3_2(Note):
+class TemplateChild3_2(BaseDeclarativeNote):
     singleton = True
 
 
@@ -224,8 +228,8 @@ def check_subclass(branch: Branch):
 @label("hideChildrenOverview", inheritable=True)
 @label("mapType", "link", inheritable=True)
 @children(TemplateTest, TemplateSubclass)
-class SingletonRoot(Note):
-    note_id = "testSingletonRoot"
+class SingletonRoot(BaseDeclarativeNote):
+    decl_note_id = "testSingletonRoot"
 
 
 def check_inherited_attributes(note: Note):

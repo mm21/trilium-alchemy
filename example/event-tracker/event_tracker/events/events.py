@@ -1,10 +1,10 @@
 from trilium_alchemy import (
-    BaseSystem,
-    FrontendScript,
+    BaseFrontendScriptNote,
+    BaseSystemNote,
+    BaseWorkspaceNote,
+    BaseWorkspaceTemplateNote,
     Note,
     Relation,
-    Workspace,
-    WorkspaceTemplate,
     children,
     label,
     label_def,
@@ -17,7 +17,7 @@ from trilium_alchemy import (
 @relation_def("place")
 @label_def("date", value_type="date")
 @label("event")
-class Event(WorkspaceTemplate):
+class Event(BaseWorkspaceTemplateNote):
     icon = "bx bx-calendar-event"
 
 
@@ -36,19 +36,19 @@ class Battle(Event):
     icon = "bx bxs-shield-alt-2"
 
 
-class GetEventsByPerson(FrontendScript):
+class GetEventsByPerson(BaseFrontendScriptNote):
     content_file = "assets/getEventsByPerson.js"
 
 
-class GetEventsByPlace(FrontendScript):
+class GetEventsByPlace(BaseFrontendScriptNote):
     content_file = "assets/getEventsByPlace.js"
 
 
-class FormatEvents(FrontendScript):
+class FormatEvents(BaseFrontendScriptNote):
     content_file = "assets/formatEvents.js"
 
 
-class System(BaseSystem):
+class System(BaseSystemNote):
     workspace_templates = [
         Event,
         Birthday,
@@ -86,7 +86,7 @@ class Battles(Type):
     Meetings,
     Battles,
 )
-class Events(Workspace):
+class Events(BaseWorkspaceNote):
     system = System
 
 

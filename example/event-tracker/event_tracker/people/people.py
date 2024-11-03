@@ -1,9 +1,9 @@
 from trilium_alchemy import (
-    BaseSystem,
+    BaseSystemNote,
+    BaseWidgetNote,
+    BaseWorkspaceNote,
+    BaseWorkspaceTemplateNote,
     Note,
-    Widget,
-    Workspace,
-    WorkspaceTemplate,
     children,
     label,
     label_def,
@@ -17,7 +17,7 @@ from ..events import FormatEvents, GetEventsByPerson
     GetEventsByPerson,
     FormatEvents,
 )
-class RelatedEventsWidget(Widget):
+class RelatedEventsWidget(BaseWidgetNote):
     content_file = "assets/relatedEventsWidget.js"
 
 
@@ -26,15 +26,15 @@ class RelatedEventsWidget(Widget):
 @label_def("birthday", value_type="date")
 @relation_def("livesAt")
 @relation_def("livedAt", multi=True)
-class Person(WorkspaceTemplate):
+class Person(BaseWorkspaceTemplateNote):
     icon = "bx bxs-user-circle"
 
 
-class Group(WorkspaceTemplate):
+class Group(BaseWorkspaceTemplateNote):
     icon = "bx bx-group"
 
 
-class System(BaseSystem):
+class System(BaseSystemNote):
     workspace_templates = [
         Person,
         Group,
@@ -53,6 +53,6 @@ class Groups(Note):
 @children(
     Groups,
 )
-class People(Workspace):
+class People(BaseWorkspaceNote):
     icon = "bx bxs-user"
     system = System

@@ -18,16 +18,16 @@ class MyNote(Note):
 
 ## Mixin subclasses
 
-Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured {obj}`Note`. In those cases you can use a {obj}`BaseNoteMixin`.
+Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured {obj}`Note`. In those cases you can use a {obj}`BaseDeclarativeMixin`.
 
-The basic technique is to subclass {obj}`BaseNoteMixin`:
+The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
 
 ```python
-class MyMixin(BaseNoteMixin): pass
+class MyMixin(BaseDeclarativeMixin): pass
 ```
 
 ```{note}
-{obj}`Note` inherits from {obj}`BaseNoteMixin`, so the following semantics can be applied to {obj}`Note` subclasses and {obj}`BaseNoteMixin` subclasses equally.
+{obj}`Note` inherits from {obj}`BaseDeclarativeMixin`, so the following semantics can be applied to {obj}`Note` subclasses and {obj}`BaseDeclarativeMixin` subclasses equally.
 ```
 
 ## Adding labels
@@ -36,7 +36,7 @@ Use the decorator {obj}`label` to add a label:
 
 ```python
 @label("sorted")
-class SortedMixin(BaseNoteMixin): pass
+class SortedMixin(BaseDeclarativeMixin): pass
 ```
 
 Now you can simply subclass this mixin if you want a note's children to be sorted:
@@ -102,12 +102,12 @@ The filename is relative to the package the class is defined in. Currently acces
 In some cases it's important to generate the same {obj}`Note.note_id` every time the class is instantiated. Templates, for example, should have only one instance and be automatically updated as changes are made to the code. This behavior can be accomplished in a number of ways.
 
 ```{warning}
-Without setting {obj}`Note.leaf` or {obj}`BaseNoteMixin.leaf`, TriliumAlchemy assumes that you want to explicitly specify the note's children. Therefore it will delete any existing children which aren't declaratively added. See {ref}`leaf-notes` to learn more.
+Without setting {obj}`Note.leaf` or {obj}`BaseDeclarativeMixin.leaf`, TriliumAlchemy assumes that you want to explicitly specify the note's children. Therefore it will delete any existing children which aren't declaratively added. See {ref}`leaf-notes` to learn more.
 ```
 
 ### Setting `singleton`
 
-When {obj}`Note.singleton` or {obj}`BaseNoteMixin.singleton` is set, the note's {obj}`Note.note_id` is generated based on the fully qualified class name, i.e. the class name including its modpath.
+When {obj}`Note.singleton` or {obj}`BaseDeclarativeMixin.singleton` is set, the note's {obj}`Note.note_id` is generated based on the fully qualified class name, i.e. the class name including its modpath.
 
 The following creates a template note for a task:
 
@@ -120,9 +120,9 @@ class Task(Note):
 
 ### Setting `note_id_seed`
 
-When {obj}`Note.note_id_seed` or {obj}`BaseNoteMixin.note_id_seed` is set, the provided value is hashed to generate {obj}`Note.note_id`.
+When {obj}`Note.note_id_seed` or {obj}`BaseDeclarativeMixin.note_id_seed` is set, the provided value is hashed to generate {obj}`Note.note_id`.
 
-It uses the same hash algorithm used by {obj}`BaseNoteMixin.singleton`.
+It uses the same hash algorithm used by {obj}`BaseDeclarativeMixin.singleton`.
 
 ```python
 # now note_id won't change if we move the class to a different module
@@ -133,12 +133,12 @@ class Task(Note):
 ```
 
 ```{todo}
-Add a flag to set {obj}`BaseNoteMixin.note_id_seed` from class name (user guarantees uniqueness of class names)
+Add a flag to set {obj}`BaseDeclarativeMixin.note_id_seed` from class name (user guarantees uniqueness of class names)
 ```
 
 ### Setting `note_id`
 
-When {obj}`Note.note_id` or {obj}`BaseNoteMixin.note_id` is set, the provided value is used as {obj}`Note.note_id` directly.
+When {obj}`Note.note_id` or {obj}`BaseDeclarativeMixin.note_id` is set, the provided value is used as {obj}`Note.note_id` directly.
 
 ```python
 class MyNote(Note):
@@ -184,7 +184,7 @@ class Parent(Note): pass
 
 ## Custom initializer to add attributes, children
 
-Define {obj}`Note.init` or {obj}`BaseNoteMixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
+Define {obj}`Note.init` or {obj}`BaseDeclarativeMixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
 
 - {obj}`Note.create_declarative_label`
 - {obj}`Note.create_declarative_relation`
@@ -195,7 +195,7 @@ These APIs are required for singleton notes to generate a deterministic id for a
 For example, a mixin which provides a convenient way to set an attribute `#myLabel` to a given value:
 
 ```python
-class MyMixin(BaseNoteMixin):
+class MyMixin(BaseDeclarativeMixin):
 
     my_label: str | None = None
     """
@@ -219,7 +219,7 @@ class MyNote(Note, MyMixin):
 (leaf-notes)=
 ## Leaf notes
 
-If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`Note.leaf` or {obj}`BaseNoteMixin.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
+If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`Note.leaf` or {obj}`BaseDeclarativeMixin.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
 
 For example, this would be necessary for a list of contacts:
 

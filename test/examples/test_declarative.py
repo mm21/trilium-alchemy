@@ -4,12 +4,12 @@ from trilium_alchemy import *
 
 
 @mark.default_session
-def test_relation(session: Session, note: Note):
-    class Task(Template):
+def test_relation(session: Session):
+    class Task(BaseTemplateNote):
         icon = "bx bx-task"
 
     @relation("template", Task)
-    class TaskNote(Note):
+    class TaskNote(BaseDeclarativeNote):
         pass
 
     task = TaskNote()

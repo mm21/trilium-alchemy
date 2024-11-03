@@ -1,13 +1,13 @@
 from trilium_alchemy import *
 
 
-class MyTextNote(Note):
+class MyTextNote(BaseDeclarativeNote):
     content_file = "files/test.html"
 
 
-class MyBinNote(Note):
-    note_type = "file"
-    mime = "application/octet-stream"
+class MyBinNote(BaseDeclarativeNote):
+    decl_note_type = "file"
+    decl_mime = "application/octet-stream"
     content_file = "files/test.bin"
 
 
@@ -15,8 +15,8 @@ TEST_CONTENT = "<p>Test</p>"
 
 
 # set content directly without file
-class NoFile(Note):
-    content = TEST_CONTENT
+class NoFile(BaseDeclarativeNote):
+    decl_content = TEST_CONTENT
 
 
 def test_text(session: Session, note: Note):

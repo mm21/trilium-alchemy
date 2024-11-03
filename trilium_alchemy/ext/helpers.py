@@ -5,12 +5,12 @@ A common note structure is to create "system" notes which hold templates,
 scripts, etc. This module provides automation of such a system, with a 
 {obj}`BaseSystem` class to hold various types of notes.
 
-The root system {obj}`BaseRootSystem` additionally holds themes and a
+The root system {obj}`BaseRootSystemNote` additionally holds themes and a
 built-in stylesheet which hides the "Create child note" button in the UI
-for subclass-managed notes ({obj}`BaseNoteMixin.leaf` is `False`{l=python}).
+for subclass-managed notes ({obj}`BaseDeclarativeMixin.leaf` is `False`{l=python}).
 
 If a note hierarchy is defined under a {obj}`BaseRoot` subclass,
-a {obj}`BaseRootSystem` is automatically added.
+a {obj}`BaseRootSystemNote` is automatically added.
 
 For a complete example of a note hierarchy using these classes, see 
 `trilium-alchemy/example/event-tracker` and its documentation at
@@ -24,7 +24,7 @@ class MyWidget(Widget):
     content_file = "assets/myWidget.js"
 
 # define a system note
-class System(BaseRootSystem):
+class System(BaseRootSystemNote):
     widgets = [MyWidget]
 
 # define a root note
@@ -35,30 +35,30 @@ class MyRoot(BaseRoot):
 """
 from __future__ import annotations
 
-import os
 from typing import Type, cast
 
-from ..core import BaseAttribute, BaseNoteMixin, Note, label
-from ..core.note.note import BranchSpecT, is_inherited
+from ..core import BaseAttribute, Note, label
+from ..core.declarative import BaseDeclarativeNote, is_inherited
+from ..core.note.note import BranchSpecT
 from .types import CssNote, JsBackendNote, JsFrontendNote
 
 __all__ = [
-    "Template",
-    "WorkspaceTemplate",
-    "Workspace",
-    "AppCss",
-    "Theme",
-    "Widget",
-    "FrontendScript",
-    "BackendScript",
-    "BaseSystem",
-    "BaseWorkspaceRoot",
-    "BaseRootSystem",
-    "BaseRoot",
+    "BaseTemplateNote",
+    "BaseWorkspaceTemplateNote",
+    "BaseWorkspaceNote",
+    "BaseAppCssNote",
+    "BaseThemeNote",
+    "BaseWidgetNote",
+    "BaseFrontendScriptNote",
+    "BaseBackendScriptNote",
+    "BaseSystemNote",
+    "BaseWorkspaceRootNote",
+    "BaseRootSystemNote",
+    "BaseRootNote",
 ]
 
 
-class BaseTemplate(Note):
+class _BaseTemplateNote(BaseDeclarativeNote):
     # note_id generated from class name
     idempotent = True
 
@@ -89,21 +89,21 @@ class BaseTemplate(Note):
 
 
 @label("template")
-class Template(BaseTemplate):
+class BaseTemplateNote(_BaseTemplateNote):
     """
     Defines a template.
     """
 
 
 @label("workspaceTemplate")
-class WorkspaceTemplate(BaseTemplate):
+class BaseWorkspaceTemplateNote(_BaseTemplateNote):
     """
     Defines a workspace template.
     """
 
 
 @label("workspace")
-class Workspace(Note):
+class BaseWorkspaceNote(BaseDeclarativeNote):
     """
     Defines a workspace.
 
@@ -111,33 +111,30 @@ class Workspace(Note):
     """
 
     singleton = True
+    system: BaseSystemNote = None
 
-    system: BaseSystem = None
-
-    def init(
-        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
-    ):
+    def init(self, _, children: list[BranchSpecT]):
         # add system note, if provided
         if self.system:
             children.append(self.create_declarative_child(self.system))
 
 
 @label("appCss")
-class AppCss(CssNote):
+class BaseAppCssNote(CssNote):
     """
     Defines a CSS note with label `#appCss`.
 
-    Use {obj}`Note.content_file` to set content from file.
+    Use {obj}`BaseDeclarativeNote.content_file` to set content from file.
     """
 
     singleton = True
 
 
-class Theme(CssNote):
+class BaseThemeNote(CssNote):
     """
     Defines a theme.
 
-    Use {obj}`Note.content_file` to set content from file.
+    Use {obj}`BaseDeclarativeNote.content_file` to set content from file.
 
     Adds label: `#appTheme=`{obj}`Theme.theme_name`
     - If `None`{l=python}, defaults to class name
@@ -150,20 +147,18 @@ class Theme(CssNote):
     Name of theme, or `None`{l=python} to use class name
     """
 
-    def init(
-        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
-    ):
+    def init(self, attributes: list[BaseAttribute], _):
         # default to class name if name not provided
         if self.theme_name is None:
             self.theme_name = type(self).__name__
 
-        attributes += [
+        attributes.append(
             self.create_declarative_label("appTheme", self.theme_name)
-        ]
+        )
 
 
 @label("widget")
-class Widget(JsFrontendNote):
+class BaseWidgetNote(JsFrontendNote):
     """
     Defines a widget.
     """
@@ -171,17 +166,7 @@ class Widget(JsFrontendNote):
     singleton = True
 
 
-class ScriptMixin(BaseNoteMixin):
-    """
-    Mixin which sets note title from script's filename. This allows
-    reuse of functions by adding them as children of other scripts.
-    """
-
-    def init(self, attributes, children):
-        return {"title": os.path.basename(self.content_file).split(".")[0]}
-
-
-class FrontendScript(JsFrontendNote, ScriptMixin):
+class BaseFrontendScriptNote(JsFrontendNote):
     """
     Defines a frontend script.
 
@@ -197,11 +182,12 @@ class FrontendScript(JsFrontendNote, ScriptMixin):
     """
 
     singleton = True
+    _stem_title = True
 
 
 # TODO: add validation of known event relation
 # w/warning for unknown events?
-class BackendScript(JsBackendNote, ScriptMixin):
+class BaseBackendScriptNote(JsBackendNote):
     """
     Defines a backend script.
 
@@ -218,51 +204,50 @@ class BackendScript(JsBackendNote, ScriptMixin):
     """
 
     singleton = True
-
-
-class Function(FrontendScript):
-    pass
+    _stem_title = True
 
 
 # categories which hold user-visible notes
 @label("archived")
-class Category(Note):
+class BaseCategoryNote(BaseDeclarativeNote):
     pass
 
 
 # categories which hold archived notes
 @label("archived", inheritable=True)
-class HiddenCategory(Note):
+class BaseHiddenCategoryNote(BaseDeclarativeNote):
     pass
 
 
 # categories under System note
-class Templates(Category):
+
+
+class Templates(BaseCategoryNote):
     pass
 
 
-class WorkspaceTemplates(Category):
+class WorkspaceTemplates(BaseCategoryNote):
     pass
 
 
-class Stylesheets(HiddenCategory):
+class Stylesheets(BaseHiddenCategoryNote):
     pass
 
 
-class Widgets(HiddenCategory):
+class Widgets(BaseHiddenCategoryNote):
     pass
 
 
-class Scripts(HiddenCategory):
+class Scripts(BaseHiddenCategoryNote):
     pass
 
 
 # TODO: long term: automatically create System and populate by
 # checking bases of classes in module?
-# - e.g. add all notes inheriting from Template to "Templates" note
+# - e.g. add all notes inheriting from BaseTemplateNote to "Templates" note
 @label("iconClass", "bx bx-bracket")
 @label("archived")
-class BaseSystem(Note):
+class BaseSystemNote(BaseDeclarativeNote):
     """
     Base class for a "system" note, a collection of various types of
     infrastructure notes.
@@ -271,27 +256,29 @@ class BaseSystem(Note):
     are appended.
     """
 
-    templates: list[Type[Template]] | None = None
+    templates: list[Type[BaseTemplateNote]] | None = None
     """
     List of {obj}`Template` subclasses.
     """
 
-    workspace_templates: list[Type[WorkspaceTemplate]] | None = None
+    workspace_templates: list[Type[BaseWorkspaceTemplateNote]] | None = None
     """
     List of {obj}`WorkspaceTemplate` subclasses.
     """
 
-    stylesheets: list[Type[AppCss]] | None = None
+    stylesheets: list[Type[BaseAppCssNote]] | None = None
     """
     List of {obj}`AppCss` subclasses.
     """
 
-    widgets: list[Type[Widget]] | None = None
+    widgets: list[Type[BaseWidgetNote]] | None = None
     """
     List of {obj}`Widget` subclasses.
     """
 
-    scripts: list[Type[FrontendScript | BackendScript]] | None = None
+    scripts: list[
+        Type[BaseFrontendScriptNote | BaseBackendScriptNote]
+    ] | None = None
     """
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
@@ -299,32 +286,32 @@ class BaseSystem(Note):
     def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         children.append(
             self.create_declarative_child(
-                Templates, children=self._collect_attribute("templates")
+                Templates, children=self._collect_notes("templates")
             )
         )
         children.append(
             self.create_declarative_child(
                 WorkspaceTemplates,
-                children=self._collect_attribute("workspace_templates"),
+                children=self._collect_notes("workspace_templates"),
             )
         )
         children.append(
             self.create_declarative_child(
-                Stylesheets, children=self._collect_attribute("stylesheets")
+                Stylesheets, children=self._collect_notes("stylesheets")
             )
         )
         children.append(
             self.create_declarative_child(
-                Widgets, children=self._collect_attribute("widgets")
+                Widgets, children=self._collect_notes("widgets")
             )
         )
         children.append(
             self.create_declarative_child(
-                Scripts, children=self._collect_attribute("scripts")
+                Scripts, children=self._collect_notes("scripts")
             )
         )
 
-    def _collect_attribute(self, attr: str) -> list[Type[Note]]:
+    def _collect_notes(self, attr: str) -> list[Note]:
         """
         Get the attribute with the given name, appending those of
         base classes.
@@ -333,7 +320,7 @@ class BaseSystem(Note):
         notes: list[Note] = []
 
         for cls in type(self).mro():
-            if issubclass(cls, BaseSystem):
+            if issubclass(cls, BaseSystemNote):
                 # skip if it doesn't have this attribute
                 if not hasattr(cls, attr):
                     continue
@@ -347,19 +334,20 @@ class BaseSystem(Note):
                 if attr_list is not None:
                     # validate
                     assert isinstance(attr_list, list)
-                    for note in attr_list:
+                    for note_cls in attr_list:
                         assert issubclass(
-                            note, Note
-                        ), f"Got unexpected class in note attribute '{attr}': {note} {type(note)}"
+                            note_cls, BaseDeclarativeNote
+                        ), f"Got unexpected class in note attribute '{attr}': {note_cls} {type(note_cls)}"
 
-                    # append notes with this attribute
-                    notes += attr_list
+                        notes.append(note_cls(session=self.session))
+
+                    # notes += attr_list
 
         return notes
 
 
 @label("workspace")
-class BaseWorkspaceRoot(Note):
+class BaseWorkspaceRootNote(BaseDeclarativeNote):
     """
     Base class for a workspace root.
 
@@ -367,7 +355,7 @@ class BaseWorkspaceRoot(Note):
     - Adds {obj}`BaseSystem` child note, if attribute `system` is set
     """
 
-    system: type[BaseSystem] | None = None
+    system: type[BaseSystemNote] | None = None
 
     def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         if self.system is not None:
@@ -375,11 +363,11 @@ class BaseWorkspaceRoot(Note):
 
 
 # themes are global, so only maintain in root System note
-class Themes(Category):
+class ThemesNote(BaseCategoryNote):
     pass
 
 
-class TriliumAlchemyStylesheet(AppCss):
+class TriliumAlchemyStylesheetNote(BaseAppCssNote):
     """
     Custom stylesheet to hide "Create child note" button for
     non-leaf notes. This is to reflect the fact that these
@@ -389,44 +377,43 @@ class TriliumAlchemyStylesheet(AppCss):
     content_file = "assets/system.css"
 
 
-class TriliumAlchemySystem(BaseSystem):
+class TriliumAlchemySystemNote(BaseSystemNote):
     """
     Built-in `System` note to insert custom stylesheet.
     """
 
-    stylesheets = [TriliumAlchemyStylesheet]
+    stylesheets = [TriliumAlchemyStylesheetNote]
 
 
-class BaseRootSystem(BaseSystem):
+class BaseRootSystemNote(BaseSystemNote):
     """
-    Base class for a root "system" note, additionally containing themes
-    and adding a built-in {obj}`BaseSystem` subclass.
+    Base class for a root "system" note, additionally containing themes.
     """
 
-    themes: list[Type[Theme]] | None = None
+    themes: list[Type[BaseThemeNote]] | None = None
     """
     List of {obj}`Theme` subclasses
     """
 
     def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         # add built-in system note
-        children.append(self.create_declarative_child(TriliumAlchemySystem))
+        children.append(self.create_declarative_child(TriliumAlchemySystemNote))
 
         # add themes
         children.append(
             self.create_declarative_child(
-                Themes, children=self._collect_attribute("themes")
+                ThemesNote, children=self._collect_notes("themes")
             )
         )
 
 
-class BaseRoot(Note):
+class BaseRootNote(BaseDeclarativeNote):
     """
     Base class for a hierarchy root note.
     """
 
-    title = "root"
-    system: Type[BaseRootSystem] | None = BaseRootSystem
+    decl_title = "root"
+    system: Type[BaseRootSystemNote] | None = BaseRootSystemNote
 
     def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
         if self.system is not None:

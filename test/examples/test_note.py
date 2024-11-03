@@ -5,23 +5,19 @@ from trilium_alchemy import *
 from ..conftest import note_cleanup
 
 
-class ChildNote(Note):
-    title = "Child note"
+class ChildNote(BaseDeclarativeNote):
+    decl_title = "Child note"
 
 
 @label("sorted")
 @children(ChildNote)
-class MyNote(Note):
-    title = "My note"
-    content = "<p>Hello, world!</p>"
+class MyNote(BaseDeclarativeNote):
+    decl_title = "My note"
+    decl_content = "<p>Hello, world!</p>"
 
 
 @mark.default_session
 def test_imperative(session: Session):
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG)
-
     # create new note under root
     note = Note(
         title="My note", content="<p>Hello, world!</p>", parents=session.root

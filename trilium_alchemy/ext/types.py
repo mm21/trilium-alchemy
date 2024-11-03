@@ -2,7 +2,7 @@
 Defines basic note types used in extensions.
 """
 
-from ..core import Note
+from ..core.declarative import BaseDeclarativeNote
 
 __all__ = [
     "CodeNote",
@@ -14,12 +14,12 @@ __all__ = [
 ]
 
 
-class CodeNote(Note):
+class CodeNote(BaseDeclarativeNote):
     """
     Defines a `code` note.
     """
 
-    note_type = "code"
+    decl_note_type = "code"
     icon = "bx bx-code"
 
 
@@ -28,7 +28,7 @@ class JsFrontendNote(CodeNote):
     Defines a frontend script.
     """
 
-    mime = "application/javascript;env=frontend"
+    decl_mime = "application/javascript;env=frontend"
     icon = "bx bxl-javascript"
 
 
@@ -37,7 +37,7 @@ class JsBackendNote(CodeNote):
     Defines a backend script.
     """
 
-    mime = "application/javascript;env=backend"
+    decl_mime = "application/javascript;env=backend"
     icon = "bx bxl-javascript"
 
 
@@ -46,7 +46,7 @@ class CssNote(CodeNote):
     Defines a CSS note.
     """
 
-    mime = "text/css"
+    decl_mime = "text/css"
     icon = "bx bxs-file-css"
 
 
@@ -55,7 +55,7 @@ class HtmlNote(CodeNote):
     Defines a HTML note.
     """
 
-    mime = "text/html"
+    decl_mime = "text/html"
     icon = "bx bxs-file-html"
 
 
@@ -64,5 +64,5 @@ class TextNote(CodeNote):
     Defines a text note.
     """
 
-    mime = "text/plain"
+    decl_mime = "text/plain"
     icon = "bx bx-text"

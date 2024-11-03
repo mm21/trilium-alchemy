@@ -460,14 +460,16 @@ class Session:
         response: requests.models.Response = requests.post(
             f"{host}/etapi/auth/login",
             headers={"Content-Type": "application/json"},
-            data=request_model.json(),
+            data=request_model.model_dump_json(),
         )
 
         assert (
             response.status_code == 201
         ), f"Login attempt returned status code {response.status_code}"
 
-        response_model = Login201Response.parse_obj(json.loads(response.text))
+        response_model = Login201Response.model_validate(
+            json.loads(response.text)
+        )
 
         assert isinstance(response_model.auth_token, str)
         token: str = cast(str, response_model.auth_token)

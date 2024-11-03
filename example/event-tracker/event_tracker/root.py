@@ -1,4 +1,4 @@
-from trilium_alchemy import BaseRoot, BaseRootSystem, children, label
+from trilium_alchemy import BaseRootNote, BaseRootSystemNote, children, label
 
 from .events import Events
 from .extensions.themes.vscode_dark import VSCodeDark
@@ -6,7 +6,7 @@ from .people import People
 from .places import Places
 
 
-class System(BaseRootSystem):
+class System(BaseRootSystemNote):
     """
     Root `System` note.
     """
@@ -21,6 +21,6 @@ class System(BaseRootSystem):
     Places,
     Events,
 )
-class Root(BaseRoot):
+class Root(BaseRootNote):
     title = "EventTracker"
     system = System

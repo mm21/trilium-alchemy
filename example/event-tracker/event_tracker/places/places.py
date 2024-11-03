@@ -1,11 +1,11 @@
 from trilium_alchemy import (
-    BackendScript,
-    BaseNoteMixin,
-    BaseSystem,
+    BaseBackendScriptNote,
+    BaseDeclarativeMixin,
+    BaseSystemNote,
+    BaseWidgetNote,
+    BaseWorkspaceNote,
+    BaseWorkspaceTemplateNote,
     Note,
-    Widget,
-    Workspace,
-    WorkspaceTemplate,
     children,
     label,
     label_def,
@@ -18,20 +18,20 @@ from ..events import FormatEvents, GetEventsByPlace
 # reusable mixin to capture promoted address attributes
 @label_def("streetAddress")
 @label_def("zip")
-class AddressMixin(BaseNoteMixin):
+class AddressMixin(BaseDeclarativeMixin):
     pass
 
 
 # reusable mixin to capture promoted coordinate attributes
 @label_def("latitude", value_type="number")
 @label_def("longitude", value_type="number")
-class CoordinateMixin(BaseNoteMixin):
+class CoordinateMixin(BaseDeclarativeMixin):
     pass
 
 
 @label_def("altName", multi=True)
 @label("place")
-class Place(WorkspaceTemplate):
+class Place(BaseWorkspaceTemplateNote):
     leaf = True  # allow user to manage children
 
 
@@ -59,7 +59,7 @@ class Land(Place):
     icon = "bx bxs-map"
 
 
-class CreateRelation(BackendScript):
+class CreateRelation(BaseBackendScriptNote):
     content_file = "assets/createRelation.js"
 
 
@@ -67,15 +67,15 @@ class CreateRelation(BackendScript):
     GetEventsByPlace,
     FormatEvents,
 )
-class RelatedEventsWidget(Widget):
+class RelatedEventsWidget(BaseWidgetNote):
     content_file = "assets/relatedEventsWidget.js"
 
 
-class ResidentsWidget(Widget):
+class ResidentsWidget(BaseWidgetNote):
     content_file = "assets/residentsWidget.js"
 
 
-class System(BaseSystem):
+class System(BaseSystemNote):
     workspace_templates = [
         Residence,
         Business,
@@ -105,6 +105,6 @@ class Lands(Note):
 @children(
     Lands,
 )
-class Places(Workspace):
+class Places(BaseWorkspaceNote):
     icon = "bx bxs-map-pin"
     system = System

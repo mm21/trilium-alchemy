@@ -1,5 +1,4 @@
 import datetime
-import logging
 import os
 import sys
 from typing import Generator
@@ -22,7 +21,7 @@ from trilium_alchemy import (
     Session,
 )
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 

@@ -4,10 +4,13 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, MutableSet
 from functools import wraps
 from pprint import pformat
-from typing import Any, Iterable, Type, overload
+from typing import TYPE_CHECKING, Any, Iterable, Type, overload
 
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
+
+if TYPE_CHECKING:
+    from .note import Note
 
 
 class NoteExtension(Extension):
@@ -16,7 +19,7 @@ class NoteExtension(Extension):
     """
 
     @property
-    def _note(self):
+    def _note(self) -> Note:
         return self._entity
 
 
@@ -173,14 +176,16 @@ class BaseEntityList[EntityT: OrderedEntity](
         return self._entity_list[i]
 
     @overload
-    def __setitem__(self, i: int, value: Any) -> None:
+    def __setitem__(self, i: int, value: EntityT) -> None:
         ...
 
     @overload
-    def __setitem__(self, i: slice, value: Iterable[Any]) -> None:
+    def __setitem__(self, i: slice, value: Iterable[EntityT]) -> None:
         ...
 
-    def __setitem__(self, i: int | slice, value: Any | Iterable[Any]) -> None:
+    def __setitem__(
+        self, i: int | slice, value: EntityT | Iterable[EntityT]
+    ) -> None:
         assert self._entity_list is not None
 
         s: slice
@@ -221,7 +226,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._reorder()
         self._validate()
 
-    def insert(self, i: int, value: Any):
+    def insert(self, i: int, value: EntityT):
         assert self._entity_list is not None
 
         entity: EntityT = self._invoke_normalize(value)
@@ -260,7 +265,7 @@ class BaseEntityList[EntityT: OrderedEntity](
             position_prev = entity._position
 
     @check_bailout
-    def _setattr(self, new_list: list[Any]):
+    def _setattr(self, new_list: list[EntityT]):
         """
         Invoked when set by user.
         """
@@ -323,7 +328,7 @@ class BaseEntitySet[EntityT: BaseEntity](
     def __str__(self) -> str:
         return f"Set: {None if self._entity_set is None else pformat(self._entity_set)}"
 
-    def __contains__(self, entity: Any) -> bool:
+    def __contains__(self, entity: EntityT) -> bool:
         assert self._entity_set is not None
         return entity in self._entity_set
 
@@ -335,14 +340,14 @@ class BaseEntitySet[EntityT: BaseEntity](
         assert self._entity_set is not None
         return len(self._entity_set)
 
-    def add(self, value: Any):
+    def add(self, value: EntityT):
         assert self._entity_set is not None
 
         entity: EntityT = self._invoke_normalize(value)
         self._entity_set.add(entity)
         self._bind_entity(entity)
 
-    def discard(self, value: Any):
+    def discard(self, value: EntityT):
         assert self._entity_set is not None
 
         entity: EntityT = self._invoke_normalize(value)
@@ -353,13 +358,13 @@ class BaseEntitySet[EntityT: BaseEntity](
         assert self._entity_set is not None
         return entity in self._entity_set
 
-    def _validate(self) -> None:
+    def _validate(self):
         """
         Ensure set is in a valid state.
         """
 
     @check_bailout
-    def _setattr(self, new_set: set[Any]):
+    def _setattr(self, new_set: set[EntityT]):
         """
         Invoked when set by user.
         """

@@ -1,14 +1,16 @@
+from typing import cast
+
 from trilium_alchemy import *
 
 
 @label("labelm1", "value1")
 @label("labelm1-2")
-class Mixin1(BaseNoteMixin):
-    title = "Mixin1Title"
+class Mixin1(BaseDeclarativeMixin):
+    pass
 
 
 @label("labelm3")
-class Mixin3(BaseNoteMixin):
+class Mixin3(BaseDeclarativeMixin):
     pass
 
 
@@ -18,15 +20,15 @@ class Mixin2(Mixin3):
 
 
 @label("label1")
-class MixinTest(Note, Mixin1, Mixin2):
+class MixinTestNote(BaseDeclarativeNote, Mixin1, Mixin2):
     def init(self, attributes, children):
         attributes.append(self.create_declarative_label("label2"))
 
 
 def test_mixin(session: Session):
-    note = MixinTest(session=session)
+    note = MixinTestNote(session=session)
 
-    assert note.title == "Mixin1Title"
+    assert note.title == "MixinTestNote"
 
     assert len(note.attributes.owned) == 6
     (
@@ -36,7 +38,7 @@ def test_mixin(session: Session):
         labelm1_2,
         labelm2,
         labelm3,
-    ) = note.attributes.owned
+    ) = cast(list[Label], note.attributes.owned)
 
     assert label1.name == "label1"
     assert label1.value == ""

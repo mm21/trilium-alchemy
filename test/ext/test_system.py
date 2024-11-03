@@ -1,15 +1,15 @@
 from trilium_alchemy import *
 
 
-class Template1(Template):
+class Template1(BaseTemplateNote):
     pass
 
 
-class Template2(Template):
+class Template2(BaseTemplateNote):
     pass
 
 
-class System1(BaseSystem):
+class System1(BaseSystemNote):
     templates = [Template1]
 
 
@@ -18,11 +18,11 @@ class System2(System1):
 
 
 def test_system(session: Session, note: Note):
-    system = BaseRootSystem(note_id=note.note_id, session=session)
+    system = BaseRootSystemNote(note_id=note.note_id, session=session)
     session.flush()
 
     assert len(system.children) == 7
-    assert system.children[0].title == "TriliumAlchemySystem"
+    assert system.children[0].title == "TriliumAlchemySystemNote"
 
 
 def test_system_append(session: Session, note: Note):
