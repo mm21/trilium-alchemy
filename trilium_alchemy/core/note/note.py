@@ -129,11 +129,6 @@ class Note(
     {ref}`Working with notes <working-with-notes-notes>`.
     """
 
-    title: str = FieldDescriptor("title")  # type: ignore
-    """
-    Note title.
-    """
-
     # TODO: custom descriptor for type w/validation
     note_type: str = FieldDescriptor("type")  # type: ignore
     """
@@ -470,6 +465,18 @@ class Note(
         and none has been set yet.
         """
         return self._entity_id or ""
+
+    @property
+    def title(self) -> str:
+        """
+        R/W accessor for note title.
+        """
+
+        return self._model.get_field("title")
+
+    @title.setter
+    def title(self, val: str):
+        self._model.set_field("title", val)
 
     @property
     def is_string(self) -> bool:
