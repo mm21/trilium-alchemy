@@ -38,7 +38,7 @@ from __future__ import annotations
 from typing import Type, cast
 
 from ..core import BaseAttribute, Note, label
-from ..core.declarative import BaseDeclarativeNote, is_inherited
+from ..core.declarative.base import BaseDeclarativeNote, is_inherited
 from ..core.note.note import BranchSpecT
 from .types import CssNote, JsBackendNote, JsFrontendNote
 
