@@ -48,7 +48,7 @@ class EtapiDriver(AttributeDriver):
 
     def flush_create(self, sorter: TopologicalSorter):
         assert self.attribute._note is not None
-        assert self.attribute._note.note_id != ""
+        assert self.attribute._note.note_id is not None
 
         model = EtapiAttributeModel(
             note_id=self.attribute._note.note_id,
@@ -196,7 +196,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     @property
     def attribute_id(self) -> str | None:
         """
-        Getter for `attributeId`.
+        Getter for `attributeId`, or `None` if not created yet.
         """
         return self._entity_id
 
