@@ -9,13 +9,11 @@ from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 import trilium_alchemy
 
-from ..entity.entity import BaseEntity, EntityIdDescriptor, OrderedEntity, State
+from ..entity.entity import BaseEntity, OrderedEntity, State
 from ..entity.model import (
     BaseDriver,
     BaseEntityModel,
     FieldDescriptor,
-    ReadOnlyDescriptor,
-    ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..exceptions import _assert_validate
@@ -141,58 +139,22 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     ```
     """
 
-    attribute_id: str = EntityIdDescriptor()
+    attribute_type: str
     """
-    Read-only access to `attributeId`.
-    """
-
-    name: str = ReadOnlyDescriptor("_name")
-    """
-    Read-only access to attribute name.
-    """
-
-    inheritable: bool = FieldDescriptor("is_inheritable")
-    """
-    Whether this attribute is inherited to children and by
-    `template`/`inherit` relations.
-    """
-
-    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")
-    """
-    UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
-    """
-
-    note: Note = ReadOnlyDescriptor("_note", allow_none=True)
-    """
-    Read-only access to note which owns this attribute.
-    """
-
-    position = ReadOnlyDescriptor("_position")
-    """
-    Read-only access to position of this attribute.
-
-    ```{note}
-    This is maintained automatically based on the order of this attribute
-    in its note's {obj}`Note.attributes` list.
-    ```
-    """
-
-    attribute_type: str = None
-    """
-    Type of attribute, to be populated by subclass.
+    Type of attribute, either `"label"` or `"relation"`.
     """
 
     _model_cls = AttributeModel
 
-    _position = FieldDescriptor("position")
+    _position: int = FieldDescriptor("position")
 
     # name of attribute, ensuring only one name is assigned
-    _name = WriteOnceDescriptor("_name_")
-    _name_: str = None
+    _name: str = WriteOnceDescriptor("_name_")
+    _name_: str | None = None
 
     # note which owns this attribute, ensuring only one note is assigned
     # may be None if not yet assigned to a note
-    _note = WriteOnceDescriptor("_note_")
+    _note: Note | None = WriteOnceDescriptor("_note_")
     _note_: Note | None = None
 
     def __new__(cls, *_, **kwargs) -> Self:
@@ -230,6 +192,60 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         # set fields if not getting from database
         if _model_backing is None:
             self.inheritable = inheritable
+
+    @property
+    def attribute_id(self) -> str:
+        """
+        Return `attributeId` or an empty string if newly created and none
+        has been set yet.
+        """
+        return self._entity_id
+
+    @property
+    def name(self) -> str:
+        """
+        Getter for attribute name.
+        """
+        return self._name
+
+    @property
+    def inheritable(self) -> bool:
+        """
+        Getter/setter for whether this attribute is inherited to
+        children and by `template`/`inherit` relations.
+        """
+        return self._model.get_field("is_inheritable")
+
+    @inheritable.setter
+    def inheritable(self, val: bool):
+        self._model.set_field("is_inheritable", val)
+
+    @property
+    def utc_date_modified(self) -> str:
+        """
+        UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        """
+        return self._model.get_field("utc_date_modified")
+
+    @property
+    def note(self) -> Note | None:
+        """
+        Getter for note which owns this attribute, or `None` if it hasn't
+        been bound to a note yet.
+        """
+        return self._note
+
+    @property
+    def position(self) -> int:
+        """
+        Getter for position of this attribute.
+
+        ```{note}
+        This is maintained automatically based on the order of this attribute
+        in its note's {obj}`Note.attributes` list.
+        ```
+        """
+        return self._position
 
     @classmethod
     def _from_id(
