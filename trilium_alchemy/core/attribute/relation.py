@@ -98,7 +98,7 @@ class Relation(BaseAttribute):
         automatically maintain dirty state correctly since any existing value
         can't be None.
         """
-        assert self._target.note_id != ""
+        assert self._target.note_id is not None
 
         if not self._model.get_field("value"):
             self._model.set_field("value", self._target.note_id)

@@ -399,12 +399,11 @@ class Note(
         return True
 
     @property
-    def note_id(self) -> str:
+    def note_id(self) -> str | None:
         """
-        Return `noteId` or an empty string if newly created and none has been
-        set yet.
+        Getter for `noteId`, or `None` if not created yet.
         """
-        return self._entity_id or ""
+        return self._entity_id
 
     @property
     def title(self) -> str:
@@ -738,8 +737,7 @@ class Note(
 
     @property
     def _str_short(self):
-        note_id = None if self.note_id == "" else self.note_id
-        return f"Note(title={self.title}, note_id={note_id})"
+        return f"Note(title={self.title}, note_id={self.note_id})"
 
     @property
     def _str_safe(self):
@@ -775,7 +773,7 @@ class Note(
                 f"Child not set for parent branch {branch}",
             )
 
-            if self.note_id != "" and self.note_id != "root":
+            if self.note_id is not None and self.note_id != "root":
                 _assert_validate(
                     branch.parent is not None,
                     f"Parent not set for branch: {branch}",

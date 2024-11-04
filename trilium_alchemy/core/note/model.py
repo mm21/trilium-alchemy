@@ -50,7 +50,7 @@ class EtapiDriver(NoteDriver):
         # content extension set content later (handling text/bin)
         model_dict["content"] = ""
 
-        if self.note.note_id != "":
+        if self.note.note_id is not None:
             model_dict["note_id"] = self.note.note_id
 
         # assign writeable fields from branch

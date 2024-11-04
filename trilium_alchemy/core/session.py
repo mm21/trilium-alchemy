@@ -300,7 +300,7 @@ class Session:
         """
 
         assert (
-            note.note_id != ""
+            note.note_id is not None
         ), f"Source note {note.str_short} must have a note_id for export"
 
         zip_file: bytes
@@ -334,7 +334,7 @@ class Session:
         """
 
         assert (
-            note.note_id != ""
+            note.note_id is not None
         ), f"Destination note {note.str_short} must have a note_id for import"
 
         zip_file: bytes

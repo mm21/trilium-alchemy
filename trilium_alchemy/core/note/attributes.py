@@ -8,7 +8,7 @@ from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..attribute import attribute, label, relation
 from ..attribute.attribute import BaseAttribute
-from ..entity.model import ExtensionDescriptor
+from ..entity.model import require_setup_prop
 from ..exceptions import *
 from . import note
 from .extension import BaseEntityList, NoteExtension, NoteStatefulExtension
@@ -85,9 +85,7 @@ class NameMap:
 
 class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
     """
-    Interface to a note's owned attributes. Implements same
-    interface as {obj}`Attributes` but accessed as
-    `Note.attributes.owned`.
+    Interface to a note's owned attributes.
     """
 
     _child_cls = attribute.BaseAttribute
@@ -203,11 +201,9 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
 
 class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     """
-    Interface to a note's inherited attributes. Implements same
-    interface as {obj}`Attributes` but accessed as
-    `Note.attributes.inherited`.
+    Interface to a note's inherited attributes.
 
-    Raises {obj}`ReadOnlyError` upon attempt to modify.
+    :raises ReadOnlyError: Upon attempt to modify
     """
 
     _list: list[BaseAttribute] = None
@@ -286,78 +282,6 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
     """
     Interface to a note's owned and inherited attributes.
 
-    Access as {obj}`Note.attributes`, a descriptor mapping to
-    an instance of this class.
-
-    Access as a list:
-
-    ```
-    # add some attributes
-    note.attributes.append(Label("myLabel"))
-    note.attributes.append(Relation("myRelation", session.root))
-
-    for attr in note.attributes:
-        print(f"Attribute: {attr}")
-    ```
-    ```none
-    Attribute: Label(#myLabel, value=, attribute_id=None, note=Note(title=new note, note_id=None), position=10)
-    Attribute: Relation(~myRelation, target=Note(title=root, note_id=root), attribute_id=None, note=Note(title=new note, note_id=None), position=20)
-    ```
-
-    Index by attribute name, getting a list of attributes with that name:
-
-    ```
-    # add a label
-    note += Label("myLabel")
-
-    print(note.attributes["myLabel"][0])
-    ```
-    ```none
-    Label(#myLabel, value=, attribute_id=None, note=Note(title=new note, note_id=None), position=10)
-    ```
-
-    Use `in`{l=python} to check if an attribute exists by name:
-
-    ```
-    assert "myLabel" in note.attributes
-    ```
-
-    When an attribute is deleted from the list, it's automatically marked
-    for delete:
-
-    ```
-    # add a label
-    label = Label("myLabel")
-    note += label
-
-    # delete from list
-    del note.attributes[0]
-
-    print(f"label.state: {label.state}")
-    ```
-    ```none
-    label.state: State.DELETE
-    ```
-
-    Assign a new list, deleting any existing attributes not in the list:
-
-    ```
-    # add a label
-    label1 = Label("myLabel1")
-    note += label1
-
-    # assign a new list of attributes
-    label2 = Label("myLabel2")
-    note.attributes = [label2]
-
-    print(f"label1.state: {label1.state}")
-    print(f"label2.state: {label2.state}")
-    ```
-    ```none
-    label1.state: State.DELETE
-    label2.state: State.CREATE
-    ```
-
     This object is stateless; {obj}`Note.attributes.owned` and
     {obj}`Note.attributes.inherited` are the sources of truth
     for owned and inherited attributes respectively.
@@ -368,26 +292,38 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
     ```
     """
 
-    owned: OwnedAttributes = ExtensionDescriptor("_owned")
-    """
-    Same interface as {obj}`Note.attributes` but filtered by
-    owned attributes.
-    """
-
-    inherited: InheritedAttributes = ExtensionDescriptor("_inherited")
-    """
-    Same interface as {obj}`Note.attributes` but filtered by
-    inherited attributes.
-    """
-
-    _owned: OwnedAttributes = None
-    _inherited: InheritedAttributes = None
+    _owned: OwnedAttributes
+    _inherited: InheritedAttributes
 
     def __init__(self, note):
         super().__init__(note)
 
         self._owned = OwnedAttributes(note)
         self._inherited = InheritedAttributes(note)
+
+    @require_setup_prop
+    @property
+    def owned(self) -> OwnedAttributes:
+        """
+        Getter/setter for owned attributes.
+        Same interface as {obj}`Note.attributes` but filtered by
+        owned attributes.
+        """
+        return self._owned
+
+    @owned.setter
+    def owned(self, val: list[BaseAttribute]):
+        self._owned._setattr(val)
+
+    @require_setup_prop
+    @property
+    def inherited(self) -> InheritedAttributes:
+        """
+        Getter for inherited attributes.
+        Same interface as {obj}`Note.attributes` but filtered by
+        inherited attributes.
+        """
+        return self._inherited
 
     def _setattr(self, val: list[BaseAttribute]):
         # invoke _setattr of owned

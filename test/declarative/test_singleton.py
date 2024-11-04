@@ -352,7 +352,7 @@ def test_instance(request, session: Session):
         session=session,
     )
 
-    assert inst.note_id == ""
+    assert inst.note_id is None
     assert inst._is_create
 
     assert len(inst.attributes.owned) == 1
