@@ -537,11 +537,28 @@ class StatefulExtension(Extension):
 
 def require_setup(func):
     @wraps(func)
-    def _require_setup(self, ent: entity_abc.BaseEntity, objtype=None):
+    def wrapper(self, ent: entity_abc.BaseEntity, objtype=None):
         ent._model.setup_check()
         return func(self, ent, objtype)
 
-    return _require_setup
+    return wrapper
+
+
+def require_setup_prop(func):
+    if isinstance(func, property):
+        # if decorating a property, wrap its getter and return a new property
+        getter = require_setup_prop(func.fget)
+        setter = (
+            require_setup_prop(func.fset) if func.fset is not None else None
+        )
+        return property(getter, setter, func.fdel, func.__doc__)
+
+    @wraps(func)
+    def wrapper(self: entity_abc.BaseEntity, *args, **kwargs):
+        self._model.setup_check()
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class FieldDescriptor:

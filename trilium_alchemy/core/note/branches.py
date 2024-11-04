@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableSequence, MutableSet
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Iterable
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -285,7 +285,7 @@ class Branches(NoteExtension, BranchLookup):
         return list(self)[key]
 
 
-class Parents(NoteExtension, MutableSet[Branch]):
+class Parents(NoteExtension, MutableSet):
     """
     Interface to a note's parent notes. When adding a parent,
     is an alias of `Note.branches.parents`.
@@ -297,7 +297,7 @@ class Parents(NoteExtension, MutableSet[Branch]):
     truth for parent branches.
     """
 
-    def _setattr(self, val: Any) -> None:
+    def _setattr(self, val: set[Note]) -> None:
         self._note.branches.parents = val
 
     def __iadd__(
@@ -344,7 +344,7 @@ class Parents(NoteExtension, MutableSet[Branch]):
         return self._note.branches.parents[key].parent
 
 
-class Children(NoteExtension, MutableSequence[Branch]):
+class Children(NoteExtension, MutableSequence):
     """
     Interface to a note's child notes. For adding a child,
     is an alias of `Note.branches.children`.
@@ -356,7 +356,7 @@ class Children(NoteExtension, MutableSequence[Branch]):
     truth for child branches.
     """
 
-    def _setattr(self, val: Any) -> None:
+    def _setattr(self, val: list[Note]) -> None:
         self._note.branches.children = val
 
     def __iadd__(

@@ -12,16 +12,12 @@ from trilium_client.models.note import Note as EtapiNoteModel
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
 from ..entity.entity import BaseEntity, normalize_entities
-from ..entity.model import (
-    ExtensionDescriptor,
-    FieldDescriptor,
-    ReadOnlyFieldDescriptor,
-)
+from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
 from .attributes import Attributes, ValueSpec
 from .branches import Branches, Children, Parents
-from .content import Content, ContentDescriptor
+from .content import Content
 from .model import NoteModel
 
 __all__ = [
@@ -41,7 +37,7 @@ Specifies a branch to be declaratively added as child. May be:
 - Tuple of `(Note|type[Note]|Branch, dict[str, Any])`{l=python} with dict providing branch kwargs
 """
 
-STRING_NOTE_TYPES = {
+STRING_NOTE_TYPES = [
     "text",
     "code",
     "relationMap",
@@ -50,10 +46,15 @@ STRING_NOTE_TYPES = {
     "book",
     "mermaid",
     "canvas",
-}
+]
 """
 Keep in sync with isStringNote() (src/services/utils.js).
 """
+
+NOTE_TYPES = STRING_NOTE_TYPES + [
+    "file",
+    "image",
+]
 
 STRING_MIME_TYPES = {
     "application/javascript",
@@ -120,74 +121,13 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
 
 class Note(
     BaseEntity[NoteModel],
-    MutableMapping,
+    MutableMapping[str, BaseAttribute],
 ):
     """
-    Encapsulates a note and provides a base class for declarative notes.
+    Encapsulates a note. Can be subclassed for custom attribute accessors.
 
     For a detailed walkthrough of how to use this class, see
     {ref}`Working with notes <working-with-notes-notes>`.
-    """
-
-    # TODO: custom descriptor for type w/validation
-    note_type: str = FieldDescriptor("type")  # type: ignore
-    """
-    Note type.
-    """
-
-    mime: str = FieldDescriptor("mime")  # type: ignore
-    """
-    MIME type.
-    """
-
-    is_protected: bool = ReadOnlyFieldDescriptor("is_protected")  # type: ignore
-    """
-    Whether this note is protected.
-    """
-
-    date_created: str = ReadOnlyFieldDescriptor("date_created")  # type: ignore
-    """
-    Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
-    """
-
-    date_modified: str = ReadOnlyFieldDescriptor("date_modified")  # type: ignore
-    """
-    Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
-    """
-
-    utc_date_created: str = ReadOnlyFieldDescriptor("utc_date_created")  # type: ignore
-    """
-    UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
-    """
-
-    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")  # type: ignore
-    """
-    UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
-    """
-
-    attributes: Attributes = ExtensionDescriptor("_attributes")  # type: ignore
-    """
-    Interface to attributes, both owned and inherited.
-    """
-
-    branches: Branches = ExtensionDescriptor("_branches")  # type: ignore
-    """
-    Interface to branches, both parent and child.
-    """
-
-    parents: Parents = ExtensionDescriptor("_parents")  # type: ignore
-    """
-    Interface to parent notes.
-    """
-
-    children: Children = ExtensionDescriptor("_children")  # type: ignore
-    """
-    Interface to child notes.
-    """
-
-    content: str | bytes = ContentDescriptor("_content")  # type: ignore
-    """
-    Interface to note content. See {obj}`trilium_alchemy.core.note.content.Content`.
     """
 
     _model_cls = NoteModel
@@ -461,22 +401,163 @@ class Note(
     @property
     def note_id(self) -> str:
         """
-        Accessor for `noteId`, returning an empty string if newly created
-        and none has been set yet.
+        Return `noteId` or an empty string if newly created and none has been
+        set yet.
         """
         return self._entity_id or ""
 
     @property
     def title(self) -> str:
         """
-        R/W accessor for note title.
+        Getter/setter for note title.
         """
-
         return self._model.get_field("title")
 
     @title.setter
     def title(self, val: str):
         self._model.set_field("title", val)
+
+    @property
+    def note_type(self) -> str:
+        """
+        Getter/setter for note title.
+        """
+        return self._model.get_field("type")
+
+    @note_type.setter
+    def note_type(self, val: str):
+        assert val in NOTE_TYPES, f"Invalid note_type: {val}"
+        self._model.set_field("type", val)
+
+    @property
+    def mime(self) -> str:
+        """
+        Getter/setter for MIME type.
+        """
+        return self._model.get_field("mime")
+
+    @mime.setter
+    def mime(self, val: str):
+        self._model.set_field("mime", val)
+
+    @property
+    def is_protected(self) -> bool:
+        """
+        Protected state, can only be changed in Trilium UI.
+        """
+        return self._model.get_field("is_protected")
+
+    @property
+    def date_created(self) -> str:
+        """
+        Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
+        """
+        return self._model.get_field("date_created")
+
+    @property
+    def date_modified(self) -> str:
+        """
+        Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
+        """
+        return self._model.get_field("date_modified")
+
+    @property
+    def utc_date_created(self) -> str:
+        """
+        UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        """
+        return self._model.get_field("utc_date_created")
+
+    @property
+    def utc_date_modified(self) -> str:
+        """
+        UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        """
+        return self._model.get_field("utc_date_modified")
+
+    @require_setup_prop
+    @property
+    def attributes(self) -> Attributes:
+        """
+        Getter/setter for attributes, both owned and inherited.
+
+        :setter: Sets list of owned attributes, replacing the existing list
+        """
+        return self._attributes
+
+    @attributes.setter
+    def attributes(self, val: list[BaseAttribute]):
+        self._attributes._setattr(val)
+
+    @require_setup_prop
+    @property
+    def branches(self) -> Branches:
+        """
+        Getter/setter for branches, both parent and child.
+        """
+        return self._branches
+
+    @branches.setter
+    def branches(self, val: list[Branch]):
+        self._branches._setattr(val)
+
+    @require_setup_prop
+    @property
+    def parents(self) -> Parents:
+        """
+        Getter/setter for parent notes.
+
+        :setter: Sets set of parent notes, replacing the existing set
+        """
+        return self._parents
+
+    @parents.setter
+    def parents(self, val: set[Note]):
+        self._parents._setattr(val)
+
+    @require_setup_prop
+    @property
+    def children(self) -> Children:
+        """
+        Getter/setter for child notes.
+
+        :setter: Sets list of parent notes, replacing the existing list
+        """
+        return self._children
+
+    @children.setter
+    def children(self, val: list[Note]):
+        self._children._setattr(val)
+
+    @require_setup_prop
+    @property
+    def content(self) -> str | bytes:
+        """
+        Getter/setter for note content.
+        """
+        return self._content._get()
+
+    @content.setter
+    def content(self, val: str | bytes | IO):
+        self._content._set(val)
+
+    @property
+    def content_str(self) -> str:
+        """
+        Type-safe getter for text note content.
+        """
+        content = self.content
+        assert isinstance(content, str)
+        return content
+
+    @property
+    def content_bin(self) -> bytes:
+        """
+        Type-safe getter for binary note content.
+        """
+        content = self.content
+        assert isinstance(content, bytes)
+        return content
 
     @property
     def is_string(self) -> bool:
