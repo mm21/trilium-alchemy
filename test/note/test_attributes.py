@@ -96,11 +96,11 @@ def test_multi(session: Session, note: Note):
 def test_filter_labels(note1: Note, note2: Note, branch: Branch):
     # note1, owned/inherited labels
 
-    note1_labels = note1.labels.filter("label1")
+    note1_labels = note1.labels.filter_name("label1")
 
     assert len(note1_labels) == 1
     assert note1_labels[0].value == "value1"
-    assert len(note1.labels.filter("label2")) == 0
+    assert len(note1.labels.filter_name("label2")) == 0
 
     assert len(note1.labels.owned) == 1
     assert note1.labels.owned[0].value == "value1"
@@ -109,7 +109,7 @@ def test_filter_labels(note1: Note, note2: Note, branch: Branch):
 
     # note2, owned/inherited labels
 
-    note2_labels = note2.labels.filter("label1")
+    note2_labels = note2.labels.filter_name("label1")
 
     assert len(note2_labels) == 2
     assert note2_labels[0].value == "value2"
@@ -123,11 +123,11 @@ def test_filter_labels(note1: Note, note2: Note, branch: Branch):
 
     # note1, owned/inherited relations
 
-    note1_relations = note1.relations.filter("relation1")
+    note1_relations = note1.relations.filter_name("relation1")
 
     assert len(note1_relations) == 1
     assert note1_relations[0].target.note_id == "root"
-    assert len(note1.relations.filter("relation2")) == 0
+    assert len(note1.relations.filter_name("relation2")) == 0
 
     assert len(note1.relations.owned) == 1
     assert note1.relations.owned[0].target.note_id == "root"
@@ -136,7 +136,7 @@ def test_filter_labels(note1: Note, note2: Note, branch: Branch):
 
     # note2, owned/inherited relations
 
-    note2_relations = note2.relations.filter("relation1")
+    note2_relations = note2.relations.filter_name("relation1")
 
     assert len(note2_relations) == 2
     assert note2_relations[0].target.note_id == "root"

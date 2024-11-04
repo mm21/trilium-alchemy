@@ -289,10 +289,7 @@ class Attributes(
     {obj}`Note.attributes.inherited` are the sources of truth
     for owned and inherited attributes respectively.
 
-    ```{todo}
-    Add `Attributes.labels`, `Attributes.relations` with same interface
-    as {obj}`Attributes`, filtered by attribute type
-    ```
+    For type-safe accesses, use {obj}`Note.labels` or {obj}`Note.relations`.
     """
 
     _owned: OwnedAttributes
@@ -379,7 +376,7 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute]:
     def __init__(self, note: note.Note):
         self._note = note
 
-    def filter(self, name: str) -> list[AttributeT]:
+    def filter_name(self, name: str) -> list[AttributeT]:
         """
         Get attributes filtered by name.
         """
