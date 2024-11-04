@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import MutableSequence, Sequence
-from typing import Any, Iterator, Type, TypeVar
+from typing import Any, Iterator, Type, TypeVar, get_args
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -376,6 +376,29 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute]:
     def __init__(self, note: note.Note):
         self._note = note
 
+    def __init_subclass__(cls: type[BaseFilteredAttributes]):
+        """
+        Set _filter_cls based on the type parameter.
+        """
+
+        orig_bases = cls.__orig_bases__
+        assert len(orig_bases) > 0
+
+        args = get_args(orig_bases[0])
+        assert len(args) > 0
+
+        if isinstance(args[0], TypeVar):
+            # have a TypeVar, look up its bound
+            type_var = args[0]
+            assert type_var.__bound__ is not None
+            filter_cls = type_var.__bound__
+        else:
+            # already have a class
+            filter_cls = args[0]
+
+        assert issubclass(filter_cls, BaseAttribute)
+        cls._filter_cls = filter_cls
+
     def filter_name(self, name: str) -> list[AttributeT]:
         """
         Get attributes filtered by name.
@@ -444,23 +467,17 @@ class OwnedLabels(BaseOwnedFilteredAttributes[label.Label]):
     Accessor for owned labels.
     """
 
-    _filter_cls = label.Label
-
 
 class InheritedLabels(BaseInheritedFilteredAttributes[label.Label]):
     """
     Accessor for inherited labels.
     """
 
-    _filter_cls = label.Label
-
 
 class Labels(BaseCombinedFilteredAttributes[label.Label]):
     """
     Accessor for labels, filtered by owned vs inherited.
     """
-
-    _filter_cls = label.Label
 
     _owned: OwnedLabels
     _inherited: InheritedLabels
@@ -485,23 +502,17 @@ class OwnedRelations(BaseOwnedFilteredAttributes[relation.Relation]):
     Accessor for owned relations.
     """
 
-    _filter_cls = relation.Relation
-
 
 class InheritedRelations(BaseInheritedFilteredAttributes[relation.Relation]):
     """
     Accessor for inherited relations.
     """
 
-    _filter_cls = relation.Relation
-
 
 class Relations(BaseCombinedFilteredAttributes[relation.Relation]):
     """
     Accessor for relations, filtered by owned vs inherited.
     """
-
-    _filter_cls = relation.Relation
 
     _owned: OwnedRelations
     _inherited: InheritedRelations
