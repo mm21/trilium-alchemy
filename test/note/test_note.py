@@ -127,13 +127,13 @@ def test_delete(session: Session, note: Note):
 def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     # make note and attributes/branches dirty
     note1.title = "title2"
-    note1.attributes["label1"] = ""
+    note1["label1"] = ""
     branch.prefix = "prefix2"
 
     parent_branch = list(note1.branches.parents)[0]
     parent_branch.prefix = "prefix2"
 
-    note2.attributes["label1"] = ""
+    note2["label1"] = ""
 
     assert session.dirty_count == 5
 
@@ -141,12 +141,12 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     note1.flush()
 
     assert session.dirty_count == 3
-    assert note2.attributes["label1"][0]._is_dirty
+    assert note2.attributes.get_first("label1")._is_dirty
 
     note2.flush()
 
     assert session.dirty_count == 2
-    assert note2.attributes["label1"][0]._is_clean
+    assert note2.attributes.get_first("label1")._is_clean
 
     branch.flush()
     parent_branch.flush()
@@ -164,10 +164,10 @@ def test_flush_dependency(session: Session, note: Note):
     note3 += note4
 
     # add a relation with target as note4
-    note["relation1"] = note4
+    note += Relation("relation1", note4, session=session)
 
     # should trigger flush of whole tree as relation depends on target
-    note.attributes["relation1"][0].flush()
+    note.attributes.get_first("relation1").flush()
 
     assert note._is_clean
     assert note2._is_clean

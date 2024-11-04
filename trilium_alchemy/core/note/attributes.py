@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import MutableSequence, Sequence
-from typing import Any, Iterator, Type, TypeVar, get_args
+from typing import Any, Iterator, Type, TypeVar, get_args, get_origin
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -31,60 +31,181 @@ ValueSpec = TypeVar(
 )
 
 
-class NameMap:
+class BaseFilteredAttributes[AttributeT: BaseAttribute]:
     """
-    Provides lookup by name and implements dict-like "get" access
-    by name or index.
-    "Set" is implemented by specific class depending on its
-    relevance.
+    Base class to represent attributes filtered by type, with capability to
+    further filter by name.
     """
 
-    # TODO: could return a dict of generators instead of dict of lists
-    # (sometimes we only care about the first result)
+    _filter_cls: type[AttributeT]
+
+    def __init_subclass__(cls: type[BaseFilteredAttributes]):
+        """
+        Set _filter_cls based on the type parameter.
+        """
+
+        def recurse(
+            cls: type[BaseFilteredAttributes],
+        ) -> type[AttributeT] | None:
+            filter_cls: type[AttributeT] | None = None
+            orig_bases: tuple[type] | None = None
+
+            try:
+                orig_bases = cls.__orig_bases__
+            except AttributeError:
+                pass
+
+            if orig_bases is None:
+                return None
+
+            for base in orig_bases:
+                origin = get_origin(base)
+
+                if origin is None:
+                    continue
+
+                if issubclass(origin, BaseFilteredAttributes):
+                    args = get_args(base)
+                    assert len(args) > 0
+
+                    if isinstance(args[0], TypeVar):
+                        # have a TypeVar, look up its bound
+                        type_var = args[0]
+                        assert type_var.__bound__ is not None
+                        filter_cls = type_var.__bound__
+                    else:
+                        # already have a class
+                        filter_cls = args[0]
+                else:
+                    filter_cls = recurse(base)
+
+                if filter_cls:
+                    return filter_cls
+
+        filter_cls = recurse(cls)
+
+        assert filter_cls is not None, f"Failed to get filter_cls for {cls}"
+        assert issubclass(filter_cls, BaseAttribute)
+
+        cls._filter_cls = filter_cls
+
+    def __iter__(self) -> Iterator[AttributeT]:
+        return iter(self._attr_list)
+
+    def __len__(self) -> int:
+        return len(self._attr_list)
+
+    def __getitem__(self, i: int) -> AttributeT:
+        return self._attr_list[i]
+
+    def get_first(self, name: str) -> AttributeT | None:
+        """
+        Get first attribute with provided name, or `None`.
+        """
+        for a in self._attr_list:
+            if a.name == name:
+                return a
+        return None
+
+    def get_all(self, name: str) -> list[AttributeT]:
+        """
+        Get all attributes with provided name.
+        """
+        return [a for a in self._attr_list if a.name == name]
+
+    # TODO: take val type
+    """
+    def get_value(self, name: str) -> ValT | None:
+        pass
+        
+    def get_values(self, name: str) -> list[ValT]:
+        pass
+
+    def set_value(self, name: str, val: ValT):
+        ...
+
+    def set_values(self, name: str, vals: list[ValT]):
+        ...
+    """
+
+    def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
+        return [a for a in attrs if isinstance(a, self._filter_cls)]
+
     @property
-    def _name_map(self) -> dict[str, list[attribute.BaseAttribute]]:
-        attrs = dict()
-        for attr in list(self):
-            if attr.name in attrs:
-                attrs[attr.name].append(attr)
-            else:
-                attrs[attr.name] = [attr]
-        return attrs
-
-    def __getitem__(self, key: str | int) -> list[attribute.BaseAttribute]:
+    def _attr_list(self) -> list[AttributeT]:
         """
-        If key is an int:
-            Get attribute by index
-        If key is a str:
-            Get list of attributes with provided name
+        Overridden by subclass.
         """
-        if type(key) is str:
-            attrs = []
+        ...
 
-            for attr in list(self):
-                if attr.name == key:
-                    attrs.append(attr)
-
-            if len(attrs):
-                return attrs
-            else:
-                raise KeyError
-        else:
-            return list(self)[key]
-
-    def __contains__(self, key: str | attribute.BaseAttribute) -> bool:
+    @property
+    def _note_getter(self) -> note.Note:
         """
-        This can be invoked by name or by object.
+        Overridden by subclass.
         """
-
-        # check name first, then defer to super to check object
-        if key in self._name_map:
-            return True
-        return super().__contains__(key)
+        ...
 
 
-# TODO: deprecate name access, reuse BaseFilteredAttributes
-class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
+class BaseDerivedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseFilteredAttributes[AttributeT]
+):
+    _note_obj: note.Note
+
+    def __init__(self, note: note.Note):
+        self._note_obj = note
+
+    @property
+    def _note_getter(self) -> note.Note:
+        return self._note_obj
+
+
+class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseDerivedFilteredAttributes[AttributeT], MutableSequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(list(self._note_getter.attributes.owned))
+
+    def __setitem__(self, i: int, val: AttributeT):
+        attr = self._attr_list[i]
+        index = self._note_getter.attributes.owned.index(attr)
+
+        self._note_getter.attributes.owned[index] = val
+
+    def __delitem__(self, i: int):
+        attr = self._attr_list[i]
+        attr.delete()
+
+    def insert(self, i: int, val: AttributeT):
+        attr = self._attr_list[i]
+        index = self._note_getter.attributes.owned.index(attr)
+
+        self._note_getter.attributes.owned.insert(index, val)
+
+
+class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseDerivedFilteredAttributes[AttributeT], Sequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(list(self._note_getter.attributes.inherited))
+
+
+class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseDerivedFilteredAttributes[AttributeT], Sequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(
+            list(self._note_getter.attributes.owned)
+            + list(self._note_getter.attributes.inherited)
+        )
+
+
+class OwnedAttributes(
+    BaseFilteredAttributes[attribute.BaseAttribute],
+    BaseEntityList[attribute.BaseAttribute],
+):
     """
     Interface to a note's owned attributes.
     """
@@ -99,58 +220,14 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
             s = "No attributes"
         return f"{s}"
 
-    def __setitem__(self, key: str | int, value_spec: ValueSpec):
-        """
-        Create attribute with provided name and optional kwargs.
-        """
+    @property
+    def _note_getter(self) -> note.Note:
+        return self._note
 
-        if type(key) is str:
-            name = key
-
-            # assigning to note.attributes['name'] or
-            # note.attributes.owned['name']:
-            # - create attribute if no attribute with provided name exists
-            # - update value of first attribute with provided name
-
-            name_map = self._name_map
-
-            if name not in name_map:
-                self.append(self._create_attribute(name, value_spec))
-            else:
-                attr = name_map[name][0]
-
-                value, kwargs = normalize_value_spec(value_spec)
-
-                # update value based on type
-                if isinstance(value, note.Note):
-                    assert isinstance(attr, relation.Relation)
-                    attr.target = value
-                else:
-                    assert type(value) is str
-                    assert isinstance(attr, label.Label)
-                    attr.value = value
-
-                # update kwargs
-                for key in kwargs:
-                    setattr(attr, key, kwargs[key])
-        else:
-            # attributes.owned[index]: invoke superclass
-            super().__setitem__(key, value_spec)
-
-    def __delitem__(self, key: str | int):
-        """
-        Delete all owned attributes with provided name.
-        """
-
-        if type(key) is str:
-            for attr in list(self):
-                if attr.name == key:
-                    attr.delete()
-        else:
-            super().__delitem__(key)
-
-    def __iter__(self) -> Iterator[BaseAttribute]:
-        return iter(self._entity_list)
+    @property
+    def _attr_list(self) -> list[attribute.BaseAttribute]:
+        assert self._entity_list is not None
+        return self._entity_list
 
     def _setup(self, model: EtapiNoteModel | None):
         # only populate if None (no changes by user or explicitly called
@@ -167,13 +244,13 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
                     assert attr_model.note_id
 
                     # only consider owned attributes
-                    if attr_model.note_id == self._note.note_id:
+                    if attr_model.note_id == self._note_getter.note_id:
                         # create attribute object from model
                         attr: attribute.BaseAttribute = (
                             attribute.BaseAttribute._from_model(
                                 attr_model,
-                                session=self._note._session,
-                                owning_note=self._note,
+                                session=self._note_getter._session,
+                                owning_note=self._note_getter,
                             )
                         )
 
@@ -182,25 +259,12 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
             # sort list by position
             self._entity_list.sort(key=lambda x: x._position)
 
-    def _create_attribute(self, name: str, value_spec: ValueSpec):
-        value, kwargs = normalize_value_spec(value_spec)
 
-        if isinstance(value, note.Note):
-            # create relation
-            attr = relation.Relation(
-                name, value, **kwargs, session=self._note._session
-            )
-        else:
-            # create label
-            assert type(value) is str
-            attr = label.Label(
-                name, value, **kwargs, session=self._note._session
-            )
-
-        return attr
-
-
-class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
+class InheritedAttributes(
+    NoteStatefulExtension,
+    BaseFilteredAttributes[attribute.BaseAttribute],
+    Sequence[attribute.BaseAttribute],
+):
     """
     Interface to a note's inherited attributes.
 
@@ -209,21 +273,14 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
 
     _list: list[BaseAttribute] = None
 
-    def __len__(self) -> int:
-        return len(self._list)
+    @property
+    def _attr_list(self) -> list[attribute.BaseAttribute]:
+        assert self._list is not None
+        return self._list
 
-    def __setitem__(self, key: str | int, value: Any):
-        raise ReadOnlyError(
-            f"Attempt to set inherited attribute at key {key} of {self._note}"
-        )
-
-    def __delitem__(self, key: str | int):
-        raise ReadOnlyError(
-            f"Attempt to delete inherited attribute at key {key} of {self._note}"
-        )
-
-    def __iter__(self) -> Iterator[BaseAttribute]:
-        return iter(self._list)
+    @property
+    def _note_getter(self) -> note.Note:
+        return self._note
 
     def _setattr(self, value: Any):
         raise ReadOnlyError(
@@ -280,7 +337,9 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
 
 
 class Attributes(
-    NoteExtension, NameMap, MutableSequence[attribute.BaseAttribute]
+    NoteExtension,
+    BaseFilteredAttributes[attribute.BaseAttribute],
+    MutableSequence[attribute.BaseAttribute],
 ):
     """
     Interface to a note's owned and inherited attributes.
@@ -300,6 +359,12 @@ class Attributes(
 
         self._owned = OwnedAttributes(note)
         self._inherited = InheritedAttributes(note)
+
+    def __setitem__(self, i: int, value_spec: ValueSpec):
+        self._owned[i] = value_spec
+
+    def __delitem__(self, i: int):
+        del self._owned[i]
 
     @require_setup_prop
     @property
@@ -325,35 +390,13 @@ class Attributes(
         """
         return self._inherited
 
+    @property
+    def _attr_list(self) -> list[attribute.BaseAttribute]:
+        return list(self._owned) + list(self._inherited)
+
     def _setattr(self, val: list[BaseAttribute]):
         # invoke _setattr of owned
         self.owned = val
-
-    @property
-    def _combined(self) -> list[BaseAttribute]:
-        """
-        Get a combined list of owned and inherited attributes.
-        """
-        return list(self._owned) + list(self._inherited)
-
-    def __setitem__(self, key: str | int, value_spec: ValueSpec):
-        """
-        Create or update attribute with provided name.
-        """
-        # invoke __setitem__ of owned
-        self._owned[key] = value_spec
-
-    def __delitem__(self, name: str):
-        """
-        Delete all owned attributes with provided name.
-        """
-        del self._owned[name]
-
-    def __iter__(self) -> Iterator[BaseAttribute]:
-        return iter(self._combined)
-
-    def __len__(self):
-        return len(self._owned) + len(self._inherited)
 
     def insert(self, i: int, value: BaseAttribute):
         # need to offset by inherited length since item will be inserted
@@ -362,104 +405,6 @@ class Attributes(
         assert i >= 0
 
         self._owned.insert(i, value)
-
-
-class BaseFilteredAttributes[AttributeT: BaseAttribute]:
-    """
-    Base class to represent attributes filtered by type, with capability to
-    further filter by name.
-    """
-
-    _note: note.Note
-    _filter_cls: type[AttributeT]
-
-    def __init__(self, note: note.Note):
-        self._note = note
-
-    def __init_subclass__(cls: type[BaseFilteredAttributes]):
-        """
-        Set _filter_cls based on the type parameter.
-        """
-
-        orig_bases = cls.__orig_bases__
-        assert len(orig_bases) > 0
-
-        args = get_args(orig_bases[0])
-        assert len(args) > 0
-
-        if isinstance(args[0], TypeVar):
-            # have a TypeVar, look up its bound
-            type_var = args[0]
-            assert type_var.__bound__ is not None
-            filter_cls = type_var.__bound__
-        else:
-            # already have a class
-            filter_cls = args[0]
-
-        assert issubclass(filter_cls, BaseAttribute)
-        cls._filter_cls = filter_cls
-
-    def filter_name(self, name: str) -> list[AttributeT]:
-        """
-        Get attributes filtered by name.
-        """
-        return [a for a in self._attr_list if a.name == name]
-
-    def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
-        return [a for a in attrs if isinstance(a, self._filter_cls)]
-
-    @property
-    def _attr_list(self) -> list[AttributeT]:
-        ...
-
-    def __getitem__(self, i: int) -> AttributeT:
-        return self._attr_list[i]
-
-    def __len__(self):
-        return len(self._attr_list)
-
-
-class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
-    BaseFilteredAttributes[AttributeT], MutableSequence[AttributeT]
-):
-    @property
-    def _attr_list(self) -> list[AttributeT]:
-        return self._filter_list(list(self._note.attributes.owned))
-
-    def __setitem__(self, i: int, val: AttributeT):
-        attr = self._attr_list[i]
-        index = self._note.attributes.owned.index(attr)
-
-        self._note.attributes.owned[index] = val
-
-    def __delitem__(self, i: int):
-        attr = self._attr_list[i]
-        attr.delete()
-
-    def insert(self, i: int, val: AttributeT):
-        attr = self._attr_list[i]
-        index = self._note.attributes.owned.index(attr)
-
-        self._note.attributes.owned.insert(index, val)
-
-
-class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
-    BaseFilteredAttributes[AttributeT], Sequence[AttributeT]
-):
-    @property
-    def _attr_list(self) -> list[AttributeT]:
-        return self._filter_list(list(self._note.attributes.inherited))
-
-
-class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
-    BaseFilteredAttributes[AttributeT], Sequence[AttributeT]
-):
-    @property
-    def _attr_list(self) -> list[AttributeT]:
-        return self._filter_list(
-            list(self._note.attributes.owned)
-            + list(self._note.attributes.inherited)
-        )
 
 
 class OwnedLabels(BaseOwnedFilteredAttributes[label.Label]):

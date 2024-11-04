@@ -119,10 +119,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     return cast(type[Note], type(ent))
 
 
-class Note(
-    BaseEntity[NoteModel],
-    MutableMapping[str, BaseAttribute],
-):
+class Note(BaseEntity[NoteModel]):
     """
     Encapsulates a note. Can be subclassed for custom attribute accessors.
 
@@ -345,62 +342,33 @@ class Note(
 
         return self
 
-    def __getitem__(self, key: str) -> str | Note:
+    def __getitem__(self, name: str) -> str:
         """
         Return value of first attribute with provided name.
 
         :raises KeyError: No such attribute
         """
-        attr = self.attributes[key][0]
-        if isinstance(attr, Relation):
-            return attr.target
+        attr = self.labels.get_first(name)
+
+        if attr is None:
+            raise KeyError(f"Attribute does not exist: {name}, note {self}")
+
         return attr.value
 
-    def __setitem__(self, key: str, value_spec: ValueSpec):
+    def __setitem__(self, name: str, val: str):
         """
         Create or update attribute with provided name.
 
         :param key: Attribute name
         :param value_spec: Attribute value
         """
-        self.attributes[key] = value_spec
+        self.labels.owned.set_value(name, val)
 
     def __hash__(self) -> int:
         return id(self)
 
     def __eq__(self, other) -> bool:
         return self is other
-
-    def __delitem__(self, key: str):
-        """
-        Delete owned attributes with provided name.
-
-        :param key: Attribute name
-        :raises KeyError: No such attribute
-        """
-        del self.attributes.owned[key]
-
-    def __iter__(self) -> Iterator[str]:
-        """
-        Iterate over owned and inherited attribute names.
-
-        :return: Iterator over attributes
-        """
-        return iter(self.attributes._name_map)
-
-    def __len__(self) -> int:
-        """
-        Number of owned and inherited attributes.
-        """
-        return len(self.attributes._name_map)
-
-    def __bool__(self) -> bool:
-        """
-        Ensure reliable check for truthiness since otherwise it will default
-        to going by len(), meaning a note with no attributes would evaluate to
-        False.
-        """
-        return True
 
     @property
     def note_id(self) -> str | None:
@@ -622,6 +590,15 @@ class Note(
         return [
             " > ".join([note.title for note in path]) for path in self.paths
         ]
+
+    def get(self, name: str, default: Any = None) -> str | None:
+        """
+        Get value of first attribute with provided name.
+        """
+        attr = self.labels.get_first(name)
+        if attr is None:
+            return default
+        return attr.value
 
     def copy(self, deep: bool = False, content: bool = False) -> Note:
         """

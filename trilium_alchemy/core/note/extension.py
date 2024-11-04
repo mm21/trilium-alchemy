@@ -226,6 +226,9 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._reorder()
         self._validate()
 
+    def __iter__(self) -> Iterator[EntityT]:
+        return iter(self._entity_list)
+
     def insert(self, i: int, value: EntityT):
         assert self._entity_list is not None
 
