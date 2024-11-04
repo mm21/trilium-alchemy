@@ -12,7 +12,7 @@ For a fully-featured example of a note hierarchy designed using this approach, s
 The basic technique is to subclass {obj}`Note`:
 
 ```python
-class MyNote(Note):
+class MyNote(BaseDeclarativeNote):
     title = "My note"
 ```
 
@@ -43,7 +43,7 @@ Now you can simply subclass this mixin if you want a note's children to be sorte
 
 ```python
 @label("iconClass", "bx bx-group")
-class Contacts(Note, SortedMixin): pass
+class Contacts(BaseDeclarativeNote, SortedMixin): pass
 ```
 
 The above is equivalent to the following imperative approach:
@@ -77,11 +77,11 @@ You can set the following fields by setting attribute values:
 - {obj}`Note.content`
 
 ```python
-class MyNote(Note):
-    title = "My title"
-    note_type = "text"
-    mime = "text/html"
-    content = "<p>Hello, world!</p>"
+class MyNote(BaseDeclarativeNote):
+    title_ = "My title"
+    note_type_ = "text"
+    mime_ = "text/html"
+    content_ = "<p>Hello, world!</p>"
 ```
 
 ## Setting content from file
@@ -89,9 +89,9 @@ class MyNote(Note):
 Set note content from a file by setting {obj}`Note.content_file`:
 
 ```python
-class MyFrontendScript(Note):
-    note_type = "code"
-    mime = "application/javascript;env=frontend"
+class MyFrontendScript(BaseDeclarativeNote):
+    note_type_ = "code"
+    mime_ = "application/javascript;env=frontend"
     content_file = "assets/myFrontendScript.js"
 ```
 
@@ -107,42 +107,52 @@ Without setting {obj}`Note.leaf` or {obj}`BaseDeclarativeMixin.leaf`, TriliumAlc
 
 ### Setting `singleton`
 
-When {obj}`Note.singleton` or {obj}`BaseDeclarativeMixin.singleton` is set, the note's {obj}`Note.note_id` is generated based on the fully qualified class name, i.e. the class name including its modpath.
+When {obj}`BaseDeclarativeNote.singleton` is set, the note's `note_id` is generated based on the fully qualified class name, i.e. the class name including its modpath.
 
 The following creates a template note for a task:
 
 ```python
 @label("template")
 @label("iconClass", "bx bx-task")
-class Task(Note):
+class Task(BaseDeclarativeNote):
     singleton = True
 ```
 
-### Setting `note_id_seed`
+### Setting `idempotent`
 
-When {obj}`Note.note_id_seed` or {obj}`BaseDeclarativeMixin.note_id_seed` is set, the provided value is hashed to generate {obj}`Note.note_id`.
+When {obj}`BaseDeclarativeNote.idempotent` is set, the class name (not fully qualified) is hashed to generate `note_id`.
 
 It uses the same hash algorithm used by {obj}`BaseDeclarativeMixin.singleton`.
 
 ```python
-# now note_id won't change if we move the class to a different module
+# note_id won't change if we move the class to a different module
 @label("template")
 @label("iconClass", "bx bx-task")
-class Task(Note):
-    note_id_seed = "Task"
+class Task(BaseDeclarativeNote):
+    idempotent = True
 ```
 
-```{todo}
-Add a flag to set {obj}`BaseDeclarativeMixin.note_id_seed` from class name (user guarantees uniqueness of class names)
+### Setting `note_id_seed`
+
+When {obj}`BaseDeclarativeNote.note_id_seed` is set, the provided value is hashed to generate `note_id`.
+
+It uses the same hash algorithm used by {obj}`BaseDeclarativeMixin.singleton`.
+
+```python
+# note_id won't change if we move the class to a different module
+@label("template")
+@label("iconClass", "bx bx-task")
+class Task(BaseDeclarativeNote):
+    note_id_seed = "Task"
 ```
 
 ### Setting `note_id`
 
-When {obj}`Note.note_id` or {obj}`BaseDeclarativeMixin.note_id` is set, the provided value is used as {obj}`Note.note_id` directly.
+When {obj}`BaseDeclarativeNote.note_id_` is set, the provided value is used as {obj}`Note.note_id` directly.
 
 ```python
-class MyNote(Note):
-    note_id = "my_note_id"
+class MyNote(BaseDeclarativeNote):
+    note_id_ = "my_note_id"
 ```
 
 ### Passing `note_id`
@@ -151,9 +161,9 @@ When `note_id` is passed in the constructor of a {obj}`Note` subclass, it's simi
 
 ### Child of singleton
 
-Every child of a singleton note is required to also have a deterministic {obj}`Note.note_id`. Therefore a `note_id` is generated for children of singletons, even if they don't satisfy any of the above criteria. 
+Every child of a singleton note is required to also have a deterministic `note_id`. Therefore a `note_id` is generated for children of singletons, even if they don't satisfy any of the above criteria. 
 
-This is recursive, so an entire note tree specified by {obj}`Note` subclasses will be instantiated with a deterministic `note_id` if the root satisfies any of the above criteria.
+This is recursive, so an entire note tree specified by {obj}`BaseDeclarativeNote` subclasses will be instantiated with a deterministic `note_id` if the root satisfies any of the above criteria.
 
 ## Adding relations
 
@@ -163,7 +173,7 @@ For example, to create a `~template` relation:
 
 ```python
 @relation("template", Task)
-class TaskInstance(Note): pass
+class TaskInstance(BaseDeclarativeNote): pass
 ```
 
 Now you can create a task by simply instantiating `TaskInstance`, and it will automatically have `~template=Task`.
@@ -173,22 +183,22 @@ Now you can create a task by simply instantiating `TaskInstance`, and it will au
 Use {obj}`children` or {obj}`child` to add children:
 
 ```python
-class Child1(Note): pass
-class Child2(Note): pass
-class Child3(Note): pass
+class Child1(BaseDeclarativeNote): pass
+class Child2(BaseDeclarativeNote): pass
+class Child3(BaseDeclarativeNote): pass
 
 @children(Child1, Child2) # add children with no branch prefix
 @child(Child3, prefix="My prefix") # add child with branch prefix
-class Parent(Note): pass
+class Parent(BaseDeclarativeNote): pass
 ```
 
 ## Custom initializer to add attributes, children
 
-Define {obj}`Note.init` or {obj}`BaseDeclarativeMixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
+Implement {obj}`BaseDeclarativeMixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
 
-- {obj}`Note.create_declarative_label`
-- {obj}`Note.create_declarative_relation`
-- {obj}`Note.create_declarative_child`
+- {obj}`BaseDeclarativeMixin.create_declarative_label`
+- {obj}`BaseDeclarativeMixin.create_declarative_relation`
+- {obj}`BaseDeclarativeMixin.create_declarative_child`
 
 These APIs are required for singleton notes to generate a deterministic id for attributes and children, generating the same subtree every time the {obj}`Note` subclass is instantiated.
 
@@ -208,7 +218,7 @@ class MyMixin(BaseDeclarativeMixin):
                 self.create_declarative_label("myLabel", self.my_label)
             )
 
-class MyNote(Note, MyMixin):
+class MyNote(BaseDeclarativeNote, MyMixin):
     """
     This note will automatically have the label `#myLabel=my-label-value`.
     """
@@ -219,14 +229,14 @@ class MyNote(Note, MyMixin):
 (leaf-notes)=
 ## Leaf notes
 
-If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`Note.leaf` or {obj}`BaseDeclarativeMixin.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
+If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`BaseDeclarativeNote.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
 
 For example, this would be necessary for a list of contacts:
 
 ```python
 @label("sorted")
 @label("iconClass", "bx bx-group")
-class Contacts(Note):
+class Contacts(BaseDeclarativeNote):
     singleton = True
     leaf = True
 ```
