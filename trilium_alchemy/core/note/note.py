@@ -15,7 +15,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
-from .attributes import Attributes, ValueSpec
+from .attributes import Attributes, Labels, Relations, ValueSpec
 from .branches import Branches, Children, Parents
 from .content import Content
 from .model import NoteModel
@@ -138,6 +138,10 @@ class Note(
     _parents: Parents
     _children: Children
     _content: Content
+
+    # stateless accessors
+    _labels: Labels
+    _relations: Relations
 
     def __new__(cls, *_, **kwargs) -> Self:
         note_id, _ = cls._get_note_id(kwargs.get("note_id"))
@@ -488,6 +492,22 @@ class Note(
     def attributes(self, val: list[BaseAttribute]):
         self._attributes._setattr(val)
 
+    @property
+    def labels(self) -> Labels:
+        """
+        Getter for labels, accessed as combined list or filtered by
+        owned vs inherited.
+        """
+        return self._labels
+
+    @property
+    def relations(self) -> Relations:
+        """
+        Getter for labels, accessed as combined list or filtered by
+        owned vs inherited.
+        """
+        return self._relations
+
     @require_setup_prop
     @property
     def branches(self) -> Branches:
@@ -713,6 +733,10 @@ class Note(
         self._parents = Parents(self)
         self._children = Children(self)
         self._content = Content(self)
+
+        # create accessors
+        self._labels = Labels(self)
+        self._relations = Relations(self)
 
     def _init_hook(
         self,

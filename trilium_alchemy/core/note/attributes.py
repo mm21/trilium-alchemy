@@ -83,6 +83,7 @@ class NameMap:
         return super().__contains__(key)
 
 
+# TODO: deprecate name access, reuse BaseFilteredAttributes
 class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
     """
     Interface to a note's owned attributes.
@@ -136,7 +137,7 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
             # attributes.owned[index]: invoke superclass
             super().__setitem__(key, value_spec)
 
-    def __delitem__(self, key: str):
+    def __delitem__(self, key: str | int):
         """
         Delete all owned attributes with provided name.
         """
@@ -366,12 +367,161 @@ class Attributes(
         self._owned.insert(i, value)
 
 
-# TODO:
-# FilteredAttributes
-# - used for Note.labels, Note.relations
-# - provides same interface as Attributes but filtered by type
-# Labels(FilteredAttributes)
-# Relations(FilteredAttributes)
+class BaseFilteredAttributes[AttributeT: BaseAttribute]:
+    """
+    Base class to represent attributes filtered by type, with capability to
+    further filter by name.
+    """
+
+    _note: note.Note
+    _filter_cls: type[AttributeT]
+
+    def __init__(self, note: note.Note):
+        self._note = note
+
+    def filter(self, name: str) -> list[AttributeT]:
+        """
+        Get attributes filtered by name.
+        """
+        return [a for a in self._attr_list if a.name == name]
+
+    def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
+        return [a for a in attrs if isinstance(a, self._filter_cls)]
+
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        ...
+
+    def __getitem__(self, i: int) -> AttributeT:
+        return self._attr_list[i]
+
+    def __len__(self):
+        return len(self._attr_list)
+
+
+class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseFilteredAttributes[AttributeT], MutableSequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(list(self._note.attributes.owned))
+
+    def __setitem__(self, i: int, val: AttributeT):
+        attr = self._attr_list[i]
+        index = self._note.attributes.owned.index(attr)
+
+        self._note.attributes.owned[index] = val
+
+    def __delitem__(self, i: int):
+        attr = self._attr_list[i]
+        attr.delete()
+
+    def insert(self, i: int, val: AttributeT):
+        attr = self._attr_list[i]
+        index = self._note.attributes.owned.index(attr)
+
+        self._note.attributes.owned.insert(index, val)
+
+
+class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseFilteredAttributes[AttributeT], Sequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(list(self._note.attributes.inherited))
+
+
+class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
+    BaseFilteredAttributes[AttributeT], Sequence[AttributeT]
+):
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        return self._filter_list(
+            list(self._note.attributes.owned)
+            + list(self._note.attributes.inherited)
+        )
+
+
+class OwnedLabels(BaseOwnedFilteredAttributes[label.Label]):
+    """
+    Accessor for owned labels.
+    """
+
+    _filter_cls = label.Label
+
+
+class InheritedLabels(BaseInheritedFilteredAttributes[label.Label]):
+    """
+    Accessor for inherited labels.
+    """
+
+    _filter_cls = label.Label
+
+
+class Labels(BaseCombinedFilteredAttributes[label.Label]):
+    """
+    Accessor for labels, filtered by owned vs inherited.
+    """
+
+    _filter_cls = label.Label
+
+    _owned: OwnedLabels
+    _inherited: InheritedLabels
+
+    def __init__(self, note: note.Note):
+        super().__init__(note)
+
+        self._owned = OwnedLabels(note)
+        self._inherited = InheritedLabels(note)
+
+    @property
+    def owned(self) -> OwnedLabels:
+        return self._owned
+
+    @property
+    def inherited(self) -> InheritedLabels:
+        return self._inherited
+
+
+class OwnedRelations(BaseOwnedFilteredAttributes[relation.Relation]):
+    """
+    Accessor for owned relations.
+    """
+
+    _filter_cls = relation.Relation
+
+
+class InheritedRelations(BaseInheritedFilteredAttributes[relation.Relation]):
+    """
+    Accessor for inherited relations.
+    """
+
+    _filter_cls = relation.Relation
+
+
+class Relations(BaseCombinedFilteredAttributes[relation.Relation]):
+    """
+    Accessor for relations, filtered by owned vs inherited.
+    """
+
+    _filter_cls = relation.Relation
+
+    _owned: OwnedRelations
+    _inherited: InheritedRelations
+
+    def __init__(self, note: note.Note):
+        super().__init__(note)
+
+        self._owned = OwnedRelations(note)
+        self._inherited = InheritedRelations(note)
+
+    @property
+    def owned(self) -> OwnedRelations:
+        return self._owned
+
+    @property
+    def inherited(self) -> InheritedRelations:
+        return self._inherited
 
 
 def normalize_value_spec(
