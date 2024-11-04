@@ -16,7 +16,7 @@ from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
 from .attributes import Attributes, Labels, Relations, ValueSpec
-from .branches import Branches, Children, Parents
+from .branches import Branches, ChildNotes, ParentNotes
 from .content import Content
 from .model import NoteModel
 
@@ -135,8 +135,8 @@ class Note(
     # model extensions
     _attributes: Attributes
     _branches: Branches
-    _parents: Parents
-    _children: Children
+    _parents: ParentNotes
+    _children: ChildNotes
     _content: Content
 
     # stateless accessors
@@ -522,7 +522,7 @@ class Note(
 
     @require_setup_prop
     @property
-    def parents(self) -> Parents:
+    def parents(self) -> ParentNotes:
         """
         Getter/setter for parent notes.
 
@@ -536,7 +536,7 @@ class Note(
 
     @require_setup_prop
     @property
-    def children(self) -> Children:
+    def children(self) -> ChildNotes:
         """
         Getter/setter for child notes.
 
@@ -730,8 +730,8 @@ class Note(
         # create extensions
         self._attributes = Attributes(self)
         self._branches = Branches(self)
-        self._parents = Parents(self)
-        self._children = Children(self)
+        self._parents = ParentNotes(self)
+        self._children = ChildNotes(self)
         self._content = Content(self)
 
         # create accessors

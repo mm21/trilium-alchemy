@@ -17,8 +17,8 @@ __all__ = [
     "Branches",
     "ParentBranches",
     "ChildBranches",
-    "Parents",
-    "Children",
+    "ParentNotes",
+    "ChildNotes",
 ]
 
 
@@ -269,7 +269,7 @@ class Branches(NoteExtension, BranchLookup):
         )
 
 
-class Parents(NoteExtension, MutableSet):
+class ParentNotes(NoteExtension, MutableSet):
     """
     Interface to a note's parent notes.
 
@@ -277,13 +277,10 @@ class Parents(NoteExtension, MutableSet):
     truth for parent branches.
     """
 
-    def _setattr(self, val: set[Note]) -> None:
-        self._note.branches.parents = val
-
     def __iadd__(
         self,
         parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
-    ) -> Parents:
+    ) -> ParentNotes:
         """
         Implement helper:
         note.parents += branch_spec
@@ -312,6 +309,10 @@ class Parents(NoteExtension, MutableSet):
     def __len__(self):
         return len(self._note.branches.parents)
 
+    def __getitem__(self, key: int) -> Note:
+        """Return parent Note of Branch given by index."""
+        return self._note.branches.parents[key].parent
+
     def add(self, value: Note):
         self._note.branches.parents.add(value)
 
@@ -321,12 +322,11 @@ class Parents(NoteExtension, MutableSet):
                 self._note.branches.parents.discard(branch)
                 break
 
-    def __getitem__(self, key: int) -> Note:
-        """Return parent Note of Branch given by index."""
-        return self._note.branches.parents[key].parent
+    def _setattr(self, val: set[Note]) -> None:
+        self._note.branches.parents = val
 
 
-class Children(NoteExtension, MutableSequence):
+class ChildNotes(NoteExtension, MutableSequence):
     """
     Interface to a note's child notes.
 
@@ -334,13 +334,10 @@ class Children(NoteExtension, MutableSequence):
     truth for child branches.
     """
 
-    def _setattr(self, val: list[Note]) -> None:
-        self._note.branches.children = val
-
     def __iadd__(
         self,
         child: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
-    ) -> Children:
+    ) -> ChildNotes:
         """
         Implement helper:
         note.children += branch_spec
@@ -387,3 +384,6 @@ class Children(NoteExtension, MutableSequence):
         val: Note,
     ):
         self._note.branches.children.insert(i, val)
+
+    def _setattr(self, val: list[Note]) -> None:
+        self._note.branches.children = val
