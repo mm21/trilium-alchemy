@@ -53,16 +53,16 @@ class BaseEntity[ModelT: BaseEntityModel](
     # unique id
     # TODO: use WriteOnceDescriptor subclass with automatic invocation
     # of session._cache.add()
-    _entity_id: str = None
+    _entity_id: str | None = None
 
     # init state
     _init_done: bool = False
 
     # current state
-    _state: State = None
+    _state: State
 
     # type used to create _model
-    _model_cls: Type[ModelT] = None
+    _model_cls: Type[ModelT]
 
     def __new__(
         cls,

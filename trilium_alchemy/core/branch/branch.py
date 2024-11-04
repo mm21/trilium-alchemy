@@ -7,13 +7,11 @@ from typing import TYPE_CHECKING, Self
 from trilium_client.exceptions import NotFoundException, ServiceException
 from trilium_client.models.branch import Branch as EtapiBranchModel
 
-from ..entity.entity import EntityIdDescriptor, OrderedEntity
+from ..entity.entity import OrderedEntity
 from ..entity.model import (
     BaseDriver,
     BaseEntityModel,
     FieldDescriptor,
-    ReadOnlyDescriptor,
-    ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..entity.types import State
@@ -133,50 +131,16 @@ class Branch(OrderedEntity[BranchModel]):
     ```
     """
 
-    branch_id: str = EntityIdDescriptor()
-    """
-    Read-only access to `branchId`.
-    """
-
-    parent: Note = WriteOnceDescriptor("_parent", validator="_validate")
-    """
-    Parent note.
-    """
-
-    child: Note = WriteOnceDescriptor("_child", validator="_validate")
-    """
-    Child note.
-    """
-
-    prefix: str = FieldDescriptor("prefix")
-    """
-    Branch prefix.
-    """
-
-    expanded: bool = FieldDescriptor("is_expanded")
-    """
-    Whether child note (as a folder) appears expanded in UI.
-    """
-
-    utc_date_modified: str = ReadOnlyFieldDescriptor("utc_date_modified")
-    """
-    UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
-    """
-
-    position: int = ReadOnlyDescriptor("_position")
-    """
-    Read-only access to position of this branch.
-
-    ```{note}
-    This is maintained automatically based on the order of this branch
-    in the parent note's {obj}`Note.branches.children <Note.branches>` list.
-    ```
-    """
-
     _model_cls = BranchModel
 
-    _parent: Note = None
-    _child: Note = None
+    _parent: Note | None = WriteOnceDescriptor(
+        "_parent_", validator="_validate"
+    )
+    _parent_: Note | None = None
+
+    _child: Note = WriteOnceDescriptor("_child_", validator="_validate")
+    _child_: Note | None = None
+
     _position: int = FieldDescriptor("note_position")
 
     def __new__(cls, *_, **kwargs) -> Self:
@@ -232,13 +196,85 @@ class Branch(OrderedEntity[BranchModel]):
             self._set_attrs(prefix=prefix, expanded=expanded)
 
     @property
+    def branch_id(self) -> str | None:
+        """
+        Getter for `branchId`.
+        """
+        return self._entity_id
+
+    @property
+    def parent(self) -> Note | None:
+        """
+        Getter/setter for branch's parent note.
+        """
+        return self._parent
+
+    @parent.setter
+    def parent(self, val: Note):
+        self._parent = val
+
+    @property
+    def child(self) -> Note | None:
+        """
+        Getter/setter for branch's child note.
+        """
+        return self._child
+
+    @child.setter
+    def child(self, val: Note):
+        self._child = val
+
+    @property
+    def prefix(self) -> str:
+        """
+        Getter/setter for branch prefix.
+        """
+        return self._model.get_field("prefix")
+
+    @prefix.setter
+    def prefix(self, val: str):
+        self._model.set_field("prefix", val)
+
+    @property
+    def expanded(self) -> bool:
+        """
+        Getter/setter for whether child note (as a folder) appears
+        expanded in UI.
+        """
+        return self._model.get_field("is_expanded")
+
+    @expanded.setter
+    def expanded(self, val: bool):
+        self._model.set_field("is_expanded", val)
+
+    @property
+    def utc_date_modified(self) -> str:
+        """
+        UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        """
+        return self._model.get_field("utc_date_modified")
+
+    @property
+    def position(self) -> int:
+        """
+        Getter for position of this branch.
+
+        ```{note}
+        This is maintained automatically based on the order of this branch
+        in its parent note's
+        {obj}`Note.branches.children <Note.branches>` list.
+        ```
+        """
+        return self._position
+
+    @property
     def _str_short(self):
         return f"Branch(parent={self.parent}, child={self.child}, prefix={self.prefix}, expanded={self.expanded}, position={self._position}, branch_id={self.branch_id})"
 
     @property
     def _str_safe(self):
-        str_parent = self._parent._str_safe if self._parent else None
-        str_child = self._child._str_safe if self._child else None
+        str_parent = self._parent_._str_safe if self._parent_ else None
+        str_child = self._child_._str_safe if self._child_ else None
         return f"Branch(parent={str_parent}, child={str_child}, branch_id={self._entity_id}, id={id(self)})"
 
     @classmethod
@@ -284,7 +320,7 @@ class Branch(OrderedEntity[BranchModel]):
         # in Trilium, root note has a parent branch to a
         # non-existent note with id 'none'; handle this case here
         if model.parent_note_id == "none":
-            assert self._parent is None
+            assert self._parent_ is None
             assert model.note_id == "root"
         else:
             self.parent = Note(
@@ -349,7 +385,7 @@ class Branch(OrderedEntity[BranchModel]):
         Ensure there isn't already a Branch between parent and child.
         """
 
-        if self._parent and self._child:
+        if self._parent_ and self._child_:
             # collect cached and newly created branches
             branches = {
                 entity
@@ -369,6 +405,6 @@ class Branch(OrderedEntity[BranchModel]):
                     continue
 
                 assert not (
-                    branch._parent is self._parent
-                    and branch._child is self._child
-                ), f"Multiple branches mapping parent {self._parent._str_safe} to child {self._child._str_safe}: {self._str_safe}, {branch._str_safe}"
+                    branch._parent_ is self._parent_
+                    and branch._child_ is self._child_
+                ), f"Multiple branches mapping parent {self._parent_._str_safe} to child {self._child_._str_safe}: {self._str_safe}, {branch._str_safe}"

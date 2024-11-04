@@ -194,10 +194,9 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             self.inheritable = inheritable
 
     @property
-    def attribute_id(self) -> str:
+    def attribute_id(self) -> str | None:
         """
-        Return `attributeId` or an empty string if newly created and none
-        has been set yet.
+        Getter for `attributeId`.
         """
         return self._entity_id
 
