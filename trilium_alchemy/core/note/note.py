@@ -382,7 +382,7 @@ class Note(
 
         :return: Iterator over attributes
         """
-        yield from self.attributes._name_map
+        return iter(self.attributes._name_map)
 
     def __len__(self) -> int:
         """

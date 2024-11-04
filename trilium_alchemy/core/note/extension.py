@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, MutableSet
 from functools import wraps
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Iterable, Type, overload
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Type, overload
 
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
@@ -332,9 +332,9 @@ class BaseEntitySet[EntityT: BaseEntity](
         assert self._entity_set is not None
         return entity in self._entity_set
 
-    def __iter__(self) -> Iterable[EntityT]:
+    def __iter__(self) -> Iterator[EntityT]:
         assert self._entity_set is not None
-        yield from self._entity_set
+        return iter(self._entity_set)
 
     def __len__(self) -> int:
         assert self._entity_set is not None

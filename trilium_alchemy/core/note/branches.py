@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableSequence, MutableSet
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Iterator
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -43,7 +43,7 @@ class BranchLookup:
     Enables looking up a branch given a related Note, either parent or child.
     """
 
-    def lookup(self, note: Note):
+    def lookup(self, note: Note) -> Branch:
         """
         Lookup a branch given a related {obj}`Note`, either parent or child.
         """
@@ -61,7 +61,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
     _child_cls = Branch
     _owner_field = "_child"
 
-    def __contains__(self, val: Branch | Note):
+    def __contains__(self, val: Branch | Note) -> bool:
         """
         Implement helper:
         note1 in note2.branches.parents
@@ -75,6 +75,14 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
             return val in {branch.parent for branch in self._entity_set}
         else:
             raise ValueError(f"Unexpected type: {val}")
+
+    def __getitem__(self, key: int) -> Branch:
+        """
+        Parent branches are inherently unsorted, but sort set by object id
+        so traversal by index is deterministic.
+        We can't use parent note_id since it may not be known yet.
+        """
+        return sorted(self._entity_set, key=lambda branch: id(branch))[key]
 
     def _setup(self, model: EtapiNoteModel | None):
         # TODO: handle refresh
@@ -122,14 +130,6 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
             branch_obj.prefix = prefix
 
         return branch_obj
-
-    def __getitem__(self, key: int) -> Branch:
-        """
-        Parent branches are inherently unsorted, but sort set by object id
-        so traversal by index is deterministic.
-        We can't use parent note_id since it may not be known yet.
-        """
-        return sorted(self._entity_set, key=lambda branch: id(branch))[key]
 
 
 class ChildBranches(BaseEntityList[Branch], BranchLookup):
@@ -233,6 +233,12 @@ class Branches(NoteExtension, BranchLookup):
         self._parents = ParentBranches(note)
         self._children = ChildBranches(note)
 
+    def __iter__(self) -> Iterator[Branch]:
+        return iter(list(self.parents) + list(self.children))
+
+    def __getitem__(self, key: int) -> Branch:
+        return list(self)[key]
+
     @require_setup_prop
     @property
     def parents(self) -> ParentBranches:
@@ -261,12 +267,6 @@ class Branches(NoteExtension, BranchLookup):
         raise Exception(
             "Ambiguous assignment: must specify branches.parents or branches.children"
         )
-
-    def __iter__(self) -> Iterable[Note]:
-        yield from list(self.parents) + list(self.children)
-
-    def __getitem__(self, key: int):
-        return list(self)[key]
 
 
 class Parents(NoteExtension, MutableSet):
@@ -302,10 +302,12 @@ class Parents(NoteExtension, MutableSet):
         """
         return val in self._note.branches.parents
 
-    def __iter__(self) -> Iterable[Note]:
+    def __iter__(self) -> Iterator[Note]:
+        parents = []
         for branch in self._note.branches.parents:
             if branch.parent is not None:
-                yield branch.parent
+                parents.append(branch.parent)
+        return iter(parents)
 
     def __len__(self):
         return len(self._note.branches.parents)
@@ -349,6 +351,13 @@ class Children(NoteExtension, MutableSequence):
         self._note.branches.children += children
 
         return self
+
+    def __iter__(self) -> Iterator[Note]:
+        children = []
+        for branch in self._note.branches.children:
+            if branch.child is not None:
+                children.append(branch.child)
+        return iter(children)
 
     def __contains__(self, val: Note) -> bool:
         """

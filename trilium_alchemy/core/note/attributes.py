@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import MutableSequence, Sequence
-from typing import Any, Type, TypeVar
+from typing import Any, Iterator, Type, TypeVar
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -51,7 +51,7 @@ class NameMap:
                 attrs[attr.name] = [attr]
         return attrs
 
-    def __getitem__(self, key: str | int):
+    def __getitem__(self, key: str | int) -> list[attribute.BaseAttribute]:
         """
         If key is an int:
             Get attribute by index
@@ -97,53 +97,6 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
         else:
             s = "No attributes"
         return f"{s}"
-
-    def _setup(self, model: EtapiNoteModel | None):
-        # only populate if None (no changes by user or explicitly called
-        # invalidate()) - don't want to discard user's changes
-        # TODO: re-resolve list with latest from backing (to implement refresh()
-        # and in case a new model comes in e.g. a search result)
-
-        if self._entity_list is None:
-            self._entity_list = []
-
-            # populate attributes
-            if model is not None:
-                for attr_model in model.attributes:
-                    assert attr_model.note_id
-
-                    # only consider owned attributes
-                    if attr_model.note_id == self._note.note_id:
-                        # create attribute object from model
-                        attr: attribute.BaseAttribute = (
-                            attribute.BaseAttribute._from_model(
-                                attr_model,
-                                session=self._note._session,
-                                owning_note=self._note,
-                            )
-                        )
-
-                        self._entity_list.append(attr)
-
-            # sort list by position
-            self._entity_list.sort(key=lambda x: x._position)
-
-    def _create_attribute(self, name: str, value_spec: ValueSpec):
-        value, kwargs = normalize_value_spec(value_spec)
-
-        if isinstance(value, note.Note):
-            # create relation
-            attr = relation.Relation(
-                name, value, **kwargs, session=self._note._session
-            )
-        else:
-            # create label
-            assert type(value) is str
-            attr = label.Label(
-                name, value, **kwargs, session=self._note._session
-            )
-
-        return attr
 
     def __setitem__(self, key: str | int, value_spec: ValueSpec):
         """
@@ -195,8 +148,55 @@ class OwnedAttributes(NameMap, BaseEntityList[attribute.BaseAttribute]):
         else:
             super().__delitem__(key)
 
-    def __iter__(self):
-        yield from self._entity_list
+    def __iter__(self) -> Iterator[BaseAttribute]:
+        return iter(self._entity_list)
+
+    def _setup(self, model: EtapiNoteModel | None):
+        # only populate if None (no changes by user or explicitly called
+        # invalidate()) - don't want to discard user's changes
+        # TODO: re-resolve list with latest from backing (to implement refresh()
+        # and in case a new model comes in e.g. a search result)
+
+        if self._entity_list is None:
+            self._entity_list = []
+
+            # populate attributes
+            if model is not None:
+                for attr_model in model.attributes:
+                    assert attr_model.note_id
+
+                    # only consider owned attributes
+                    if attr_model.note_id == self._note.note_id:
+                        # create attribute object from model
+                        attr: attribute.BaseAttribute = (
+                            attribute.BaseAttribute._from_model(
+                                attr_model,
+                                session=self._note._session,
+                                owning_note=self._note,
+                            )
+                        )
+
+                        self._entity_list.append(attr)
+
+            # sort list by position
+            self._entity_list.sort(key=lambda x: x._position)
+
+    def _create_attribute(self, name: str, value_spec: ValueSpec):
+        value, kwargs = normalize_value_spec(value_spec)
+
+        if isinstance(value, note.Note):
+            # create relation
+            attr = relation.Relation(
+                name, value, **kwargs, session=self._note._session
+            )
+        else:
+            # create label
+            assert type(value) is str
+            attr = label.Label(
+                name, value, **kwargs, session=self._note._session
+            )
+
+        return attr
 
 
 class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
@@ -207,6 +207,22 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     """
 
     _list: list[BaseAttribute] = None
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def __setitem__(self, key: str | int, value: Any):
+        raise ReadOnlyError(
+            f"Attempt to set inherited attribute at key {key} of {self._note}"
+        )
+
+    def __delitem__(self, key: str | int):
+        raise ReadOnlyError(
+            f"Attempt to delete inherited attribute at key {key} of {self._note}"
+        )
+
+    def __iter__(self) -> Iterator[BaseAttribute]:
+        return iter(self._list)
 
     def _setattr(self, value: Any):
         raise ReadOnlyError(
@@ -261,24 +277,10 @@ class InheritedAttributes(NoteStatefulExtension, NameMap, Sequence):
     def _teardown(self):
         self._list = None
 
-    def __len__(self):
-        return len(self._list)
 
-    def __setitem__(self, key: str | int, value: Any):
-        raise ReadOnlyError(
-            f"Attempt to set inherited attribute at key {key} of {self._note}"
-        )
-
-    def __delitem__(self, key: str | int):
-        raise ReadOnlyError(
-            f"Attempt to delete inherited attribute at key {key} of {self._note}"
-        )
-
-    def __iter__(self):
-        yield from self._list
-
-
-class Attributes(NoteExtension, NameMap, MutableSequence):
+class Attributes(
+    NoteExtension, NameMap, MutableSequence[attribute.BaseAttribute]
+):
     """
     Interface to a note's owned and inherited attributes.
 
@@ -349,13 +351,13 @@ class Attributes(NoteExtension, NameMap, MutableSequence):
         """
         del self._owned[name]
 
-    def __iter__(self):
-        yield from self._combined
+    def __iter__(self) -> Iterator[BaseAttribute]:
+        return iter(self._combined)
 
     def __len__(self):
         return len(self._owned) + len(self._inherited)
 
-    def insert(self, i: int, value: Any):
+    def insert(self, i: int, value: BaseAttribute):
         # need to offset by inherited length since item will be inserted
         # at len()
         i -= len(self._inherited)
