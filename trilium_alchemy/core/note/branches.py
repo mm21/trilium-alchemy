@@ -7,7 +7,7 @@ from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..branch import Branch
 from ..entity.entity import normalize_entities
-from ..entity.model import ExtensionDescriptor
+from ..entity.model import require_setup_prop
 from .extension import BaseEntityList, BaseEntitySet, NoteExtension
 
 if TYPE_CHECKING:
@@ -55,15 +55,7 @@ class BranchLookup:
 
 class ParentBranches(BaseEntitySet[Branch], BranchLookup):
     """
-    Interface to a note's parent branches. Modeled as a {obj}`set`
-    as parent branches are not inherently ordered, but serialized by
-    {obj}`id() <id>` when iterated.
-
-    Access as `Note.branches.parents`, a descriptor mapping to
-    an instance of this class.
-
-    When a {obj}`Note` is added, a parent {obj}`Branch` is automatically
-    created.
+    Interface to a note's parent branches.
     """
 
     _child_cls = Branch
@@ -142,13 +134,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
 
 class ChildBranches(BaseEntityList[Branch], BranchLookup):
     """
-    Interface to a note's child branches. Modeled as a {obj}`list`.
-
-    Access as `Note.branches.children`, a descriptor mapping to
-    an instance of this class.
-
-    When a {obj}`Note` is added, a child {obj}`Branch` is automatically
-    created.
+    Interface to a note's child branches.
     """
 
     _child_cls = Branch
@@ -233,45 +219,43 @@ class Branches(NoteExtension, BranchLookup):
     """
     Interface to a note's parent and child branches.
 
-    Access as {obj}`Note.branches`, a descriptor mapping to
-    an instance of this class.
-
-    When iterated, yields from parent branches (sorted by
-    {obj}`id() <id>`) and then child branches.
-
-    ```
-    # add root as parent of note
-    note ^= session.root
-
-    # create child note
-    note += Note()
-
-    # iterate over branches
-    for branch in note.branches:
-        print(branch)
-    ```
-
-    ```none
-    Branch(parent=Note(title=root, note_id=root), child=Note(title=new note, note_id=None), prefix=, expanded=False, position=1000000009, branch_id=None)
-    Branch(parent=Note(title=new note, note_id=None), child=Note(title=new note, note_id=None), prefix=, expanded=False, position=10, branch_id=None)
-    ```
-
     This object is stateless; `Note.branches.parents` and
     `Note.branches.children` are the sources of truth
     for parent and child branches respectively.
     """
 
-    parents: ParentBranches = ExtensionDescriptor("_parents")
-    children: ChildBranches = ExtensionDescriptor("_children")
-
-    _parents: ParentBranches = None
-    _children: ChildBranches = None
+    _parents: ParentBranches
+    _children: ChildBranches
 
     def __init__(self, note):
         super().__init__(note)
 
         self._parents = ParentBranches(note)
         self._children = ChildBranches(note)
+
+    @require_setup_prop
+    @property
+    def parents(self) -> ParentBranches:
+        """
+        Getter/setter for parent branches, modeled as a set.
+        """
+        return self._parents
+
+    @parents.setter
+    def parents(self, val: set[Branch]):
+        self._parents._setattr(val)
+
+    @require_setup_prop
+    @property
+    def children(self) -> ChildBranches:
+        """
+        Getter/setter for child branches, modeled as a list.
+        """
+        return self._children
+
+    @children.setter
+    def children(self, val: list[Branch]):
+        self._children._setattr(val)
 
     def _setattr(self, val: list[Branch]):
         raise Exception(
@@ -287,11 +271,7 @@ class Branches(NoteExtension, BranchLookup):
 
 class Parents(NoteExtension, MutableSet):
     """
-    Interface to a note's parent notes. When adding a parent,
-    is an alias of `Note.branches.parents`.
-
-    Access as {obj}`Note.parents`, a descriptor mapping to
-    an instance of this class.
+    Interface to a note's parent notes.
 
     This object is stateless; `Note.branches.parents` is the source of
     truth for parent branches.
@@ -346,11 +326,7 @@ class Parents(NoteExtension, MutableSet):
 
 class Children(NoteExtension, MutableSequence):
     """
-    Interface to a note's child notes. For adding a child,
-    is an alias of `Note.branches.children`.
-
-    Access as {obj}`Note.parents`, a descriptor mapping to
-    an instance of this class.
+    Interface to a note's child notes.
 
     This object is stateless; `Note.branches.children` is the source of
     truth for child branches.
