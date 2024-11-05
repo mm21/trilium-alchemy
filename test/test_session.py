@@ -76,7 +76,7 @@ def test_get_info(session: Session):
 
 def test_search_label(session: Session, note: Note):
     # give note an attribute to use for searching
-    note.attributes["testLabel"] = ""
+    note["testLabel"] = ""
     session.flush()
 
     # perform search

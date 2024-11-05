@@ -3,9 +3,9 @@ from __future__ import annotations
 import base64
 import hashlib
 from abc import ABCMeta
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import IO, Any, Iterator, Literal, Self, cast
+from typing import IO, Any, Literal, Self, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -15,7 +15,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
-from .attributes import Attributes, Labels, Relations, ValueSpec
+from .attributes import Attributes, Labels, Relations
 from .branches import Branches, ChildNotes, ParentNotes
 from .content import Content
 from .model import NoteModel

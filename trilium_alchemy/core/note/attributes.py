@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import MutableSequence, Sequence
-from typing import Any, Iterator, Type, TypeVar, get_args, get_origin
+from typing import Any, Iterator, TypeVar, get_args, get_origin
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -23,15 +23,35 @@ __all__ = [
 # - str: label value
 # - Note: relation target
 # - tuple: label value/relation target with attribute kwargs
-ValueSpec = TypeVar(
-    "ValueSpec",
-    str,
-    Type["note.Note"],
-    tuple[str | Type["note.Note"], dict[str, Any]],
-)
+type ValueSpec = str | type[note.Note] | tuple[
+    str | type[note.Note], dict[str, Any]
+]
 
 
-class BaseFilteredAttributes[AttributeT: BaseAttribute]:
+class AttributeListMixin[AttributeT: BaseAttribute]:
+    @property
+    def _attr_list(self) -> list[AttributeT]:
+        """
+        Overridden by subclass.
+        """
+        ...
+
+    def _create_attr(self, name: str) -> AttributeT:
+        ...
+
+    def _get_attribute(self, name: str) -> AttributeT:
+        for attr in self._attr_list:
+            if attr.name == name:
+                return attr
+        return None
+
+    def _get_attributes(self, name: str) -> list[BaseAttribute]:
+        return [attr for attr in self._attr_list if attr.name == name]
+
+
+class BaseFilteredAttributes[AttributeT: BaseAttribute](
+    AttributeListMixin[AttributeT]
+):
     """
     Base class to represent attributes filtered by type, with capability to
     further filter by name.
@@ -68,26 +88,27 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute]:
                     args = get_args(base)
                     assert len(args) > 0
 
-                    if isinstance(args[0], TypeVar):
-                        # have a TypeVar, look up its bound
-                        type_var = args[0]
-                        assert type_var.__bound__ is not None
-                        filter_cls = type_var.__bound__
-                    else:
-                        # already have a class
-                        filter_cls = args[0]
+                    for arg in args:
+                        if isinstance(arg, TypeVar):
+                            # have a TypeVar, look up its bound
+
+                            if arg.__bound__ is None:
+                                continue
+
+                            if issubclass(arg.__bound__, BaseAttribute):
+                                return arg.__bound__
+
+                        elif issubclass(arg, BaseAttribute):
+                            return arg
                 else:
                     filter_cls = recurse(base)
 
-                if filter_cls:
-                    return filter_cls
+                    if filter_cls:
+                        return filter_cls
 
-        filter_cls = recurse(cls)
+            return None
 
-        assert filter_cls is not None, f"Failed to get filter_cls for {cls}"
-        assert issubclass(filter_cls, BaseAttribute)
-
-        cls._filter_cls = filter_cls
+        cls._filter_cls = recurse(cls)
 
     def __iter__(self) -> Iterator[AttributeT]:
         return iter(self._attr_list)
@@ -113,36 +134,53 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute]:
         """
         return [a for a in self._attr_list if a.name == name]
 
-    # TODO: take val type
-    """
-    def get_value(self, name: str) -> ValT | None:
-        pass
-        
-    def get_values(self, name: str) -> list[ValT]:
-        pass
-
-    def set_value(self, name: str, val: ValT):
-        ...
-
-    def set_values(self, name: str, vals: list[ValT]):
-        ...
-    """
-
     def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
         return [a for a in attrs if isinstance(a, self._filter_cls)]
-
-    @property
-    def _attr_list(self) -> list[AttributeT]:
-        """
-        Overridden by subclass.
-        """
-        ...
 
     @property
     def _note_getter(self) -> note.Note:
         """
         Overridden by subclass.
         """
+        ...
+
+
+class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
+    def get_value(self, name: str) -> str | None:
+        for attr in self._attr_list:
+            if attr.name == name:
+                return attr.value
+        return None
+
+    def get_values(self, name: str) -> list[str]:
+        return [attr.value for attr in self._attr_list if attr.name == name]
+
+
+# TODO
+class BaseWriteableLabelMixin(BaseReadableLabelMixin):
+    def set_value(self, name: str, val: str):
+        print(f"--- setting attr value: {name}={val}")
+
+    def set_values(self, name: str, vals: list[str]):
+        pass
+
+
+class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
+    def get_value(self, name: str) -> note.Note | None:
+        for attr in self._attr_list:
+            if attr.name == name:
+                return attr.target
+        return None
+
+    def get_values(self, name: str) -> list[note.Note]:
+        return [attr.target for attr in self._attr_list if attr.name == name]
+
+
+class BaseWriteableRelationMixin(BaseReadableRelationMixin):
+    def set_value(self, name: str, val: note.Note):
+        ...
+
+    def set_values(self, name: str, vals: list[note.Note]):
         ...
 
 
@@ -160,7 +198,8 @@ class BaseDerivedFilteredAttributes[AttributeT: BaseAttribute](
 
 
 class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
-    BaseDerivedFilteredAttributes[AttributeT], MutableSequence[AttributeT]
+    BaseDerivedFilteredAttributes[AttributeT],
+    MutableSequence[AttributeT],
 ):
     @property
     def _attr_list(self) -> list[AttributeT]:
@@ -184,7 +223,8 @@ class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
 
 
 class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
-    BaseDerivedFilteredAttributes[AttributeT], Sequence[AttributeT]
+    BaseDerivedFilteredAttributes[AttributeT],
+    Sequence[AttributeT],
 ):
     @property
     def _attr_list(self) -> list[AttributeT]:
@@ -339,7 +379,7 @@ class InheritedAttributes(
 class Attributes(
     NoteExtension,
     BaseFilteredAttributes[attribute.BaseAttribute],
-    MutableSequence[attribute.BaseAttribute],
+    Sequence[attribute.BaseAttribute],
 ):
     """
     Interface to a note's owned and inherited attributes.
@@ -359,12 +399,6 @@ class Attributes(
 
         self._owned = OwnedAttributes(note)
         self._inherited = InheritedAttributes(note)
-
-    def __setitem__(self, i: int, value_spec: ValueSpec):
-        self._owned[i] = value_spec
-
-    def __delitem__(self, i: int):
-        del self._owned[i]
 
     @require_setup_prop
     @property
@@ -398,28 +432,27 @@ class Attributes(
         # invoke _setattr of owned
         self.owned = val
 
-    def insert(self, i: int, value: BaseAttribute):
-        # need to offset by inherited length since item will be inserted
-        # at len()
-        i -= len(self._inherited)
-        assert i >= 0
 
-        self._owned.insert(i, value)
-
-
-class OwnedLabels(BaseOwnedFilteredAttributes[label.Label]):
+class OwnedLabels(
+    BaseOwnedFilteredAttributes[label.Label], BaseWriteableLabelMixin
+):
     """
     Accessor for owned labels.
     """
 
 
-class InheritedLabels(BaseInheritedFilteredAttributes[label.Label]):
+class InheritedLabels(
+    BaseInheritedFilteredAttributes[label.Label], BaseReadableLabelMixin
+):
     """
     Accessor for inherited labels.
     """
 
 
-class Labels(BaseCombinedFilteredAttributes[label.Label]):
+class Labels(
+    BaseCombinedFilteredAttributes[label.Label],
+    BaseReadableLabelMixin,
+):
     """
     Accessor for labels, filtered by owned vs inherited.
     """
@@ -442,19 +475,27 @@ class Labels(BaseCombinedFilteredAttributes[label.Label]):
         return self._inherited
 
 
-class OwnedRelations(BaseOwnedFilteredAttributes[relation.Relation]):
+class OwnedRelations(
+    BaseOwnedFilteredAttributes[relation.Relation], BaseWriteableRelationMixin
+):
     """
     Accessor for owned relations.
     """
 
 
-class InheritedRelations(BaseInheritedFilteredAttributes[relation.Relation]):
+class InheritedRelations(
+    BaseInheritedFilteredAttributes[relation.Relation],
+    BaseReadableRelationMixin,
+):
     """
     Accessor for inherited relations.
     """
 
 
-class Relations(BaseCombinedFilteredAttributes[relation.Relation]):
+class Relations(
+    BaseCombinedFilteredAttributes[relation.Relation],
+    BaseReadableRelationMixin,
+):
     """
     Accessor for relations, filtered by owned vs inherited.
     """
