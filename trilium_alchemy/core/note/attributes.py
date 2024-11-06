@@ -29,10 +29,30 @@ type ValueSpec = str | type[note.Note] | tuple[
 
 
 class AttributeListMixin[AttributeT: BaseAttribute]:
+    _value_name: str
+    """
+    Name of attribute containing the value, i.e. "value" or "target".
+    """
+
     def __contains__(self, obj: Any) -> bool:
         if isinstance(obj, str):
             return self.get_first(obj) is not None
         return super().__contains__(obj)
+
+    def get_first(self, name: str) -> AttributeT | None:
+        """
+        Get first attribute with provided name, or `None`.
+        """
+        for a in self._attr_list:
+            if a.name == name:
+                return a
+        return None
+
+    def get_all(self, name: str) -> list[AttributeT]:
+        """
+        Get all attributes with provided name.
+        """
+        return [a for a in self._attr_list if a.name == name]
 
     @property
     def _attr_list(self) -> list[AttributeT]:
@@ -55,20 +75,35 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
-    def get_first(self, name: str) -> AttributeT | None:
-        """
-        Get first attribute with provided name, or `None`.
-        """
-        for a in self._attr_list:
-            if a.name == name:
-                return a
-        return None
+    def _set_value(self, name: str, val: Any, inheritable: bool):
+        attr = self.get_first(name)
 
-    def get_all(self, name: str) -> list[AttributeT]:
-        """
-        Get all attributes with provided name.
-        """
-        return [a for a in self._attr_list if a.name == name]
+        if attr is None:
+            attr = self._create_attr(name)
+
+        setattr(attr, self._value_name, val)
+        attr.inheritable = inheritable
+
+    def _set_values(
+        self, name: str, vals: list[Any], inheritable: bool = False
+    ):
+        attrs = self.get_all(name)
+
+        if len(vals) > len(attrs):
+            # need to create new attributes
+            for _ in range(len(vals) - len(attrs)):
+                attrs.append(self._create_attr(name))
+
+        elif len(attrs) > len(vals):
+            # need to delete attributes
+            for _ in range(len(attrs) - len(vals)):
+                # pop from end
+                attr = attrs.pop()
+                attr.delete()
+
+        for attr, val in zip(attrs, vals):
+            setattr(attr, self._value_name, val)
+            attr.inheritable = inheritable
 
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](
@@ -155,33 +190,13 @@ class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
 
 
 class BaseWriteableLabelMixin(BaseReadableLabelMixin):
+    _value_name = "value"
+
     def set_value(self, name: str, val: str, inheritable: bool = False):
-        attr = self.get_first(name)
-
-        if attr is None:
-            attr = self._create_attr(name)
-
-        attr.value = val
-        attr.inheritable = inheritable
+        self._set_value(name, val, inheritable)
 
     def set_values(self, name: str, vals: list[str], inheritable: bool = False):
-        attrs = self.get_all(name)
-
-        if len(vals) > len(attrs):
-            # need to create new labels
-            for _ in range(len(vals) - len(attrs)):
-                attrs.append(self._create_attr(name))
-
-        elif len(attrs) > len(vals):
-            # need to delete labels
-            for _ in range(len(attrs) - len(vals)):
-                # pop from end
-                attr = attrs.pop()
-                attr.delete()
-
-        for attr, val in zip(attrs, vals):
-            attr.value = val
-            attr.inheritable = inheritable
+        self._set_values(name, vals, inheritable)
 
     def _create_attr(self, name: str) -> label.Label:
         attr = label.Label(name, session=self._note_getter.session)
@@ -195,15 +210,24 @@ class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
         return None if attr is None else attr.target
 
     def get_values(self, name: str) -> list[note.Note]:
-        return [attr.target for attr in self._attr_list if attr.name == name]
+        return [attr.target for attr in self.get_all(name)]
 
 
 class BaseWriteableRelationMixin(BaseReadableRelationMixin):
-    def set_value(self, name: str, val: note.Note):
-        ...
+    _value_name = "target"
 
-    def set_values(self, name: str, vals: list[note.Note]):
-        ...
+    def set_value(self, name: str, val: note.Note, inheritable: bool = False):
+        self._set_value(name, val, inheritable)
+
+    def set_values(
+        self, name: str, vals: list[note.Note], inheritable: bool = False
+    ):
+        self._set_values(name, vals, inheritable)
+
+    def _create_attr(self, name: str) -> relation.Relation:
+        attr = relation.Relation(name, session=self._note_getter.session)
+        self._note_getter.attributes.owned.append(attr)
+        return attr
 
 
 class BaseDerivedFilteredAttributes[AttributeT: BaseAttribute](

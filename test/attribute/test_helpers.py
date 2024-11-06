@@ -78,13 +78,25 @@ def test_labels(session: Session, note: Note):
     session.flush()
 
     # replace with different attribute
-    note.attributes.owned[0] = Label("label1-2", "value1-2", session=session)
+    note.attributes.owned[0] = Label("label2", "value1", session=session)
 
-    assert note.attributes.owned[0].name == "label1-2"
-    assert note.labels.get_first("label1-2").value == "value1-2"
-    assert note.labels.get_value("label1-2") == "value1-2"
+    assert note.attributes.owned[0].name == "label2"
+    assert note.labels.get_first("label2").value == "value1"
+    assert note.labels.get_value("label2") == "value1"
 
     session.flush()
+
+    note.labels.set_value("label2", "value2")
+    assert note.labels.get_value("label2") == "value2"
+
+    label2 = note.labels.get_first("label2")
+    assert label2 is not None
+
+    note.labels.set_values("label2", ["value3", "value4"])
+
+    assert label2 is note.labels.get_first("label2")
+    assert len(note.labels.get_all("label2")) == 2
+    assert note.labels.get_values("label2") == ["value3", "value4"]
 
 
 @mark.attribute("label1")

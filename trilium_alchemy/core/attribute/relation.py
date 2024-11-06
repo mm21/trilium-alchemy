@@ -34,12 +34,12 @@ class Relation(BaseAttribute):
 
     attribute_type: str = "relation"
 
-    _target: Note = None
+    _target: Note | None = None
 
     def __init__(
         self,
         name: str,
-        target: Note,
+        target: Note | None = None,
         inheritable: bool = False,
         session: Session | None = None,
         **kwargs,
@@ -61,8 +61,8 @@ class Relation(BaseAttribute):
             **kwargs,
         )
 
-        # set target if not getting from database
-        if model_backing is None:
+        # set target if provided and not getting from database
+        if model_backing is None and target is not None:
             self.target = target
 
     @property
@@ -87,6 +87,9 @@ class Relation(BaseAttribute):
     def _flush_check(self):
         from ..note.note import Note
 
+        _assert_validate(
+            self._target is not None, f"Relation {self} has no target note"
+        )
         _assert_validate(isinstance(self._target, Note))
 
     def _flush_prep(self):
