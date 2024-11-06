@@ -37,30 +37,52 @@ def test_index_get(session: Session, note: Note):
     session.flush()
 
 
-def test_index_set(session: Session, note: Note):
+def test_labels(session: Session, note: Note):
     assert "label1" not in note.attributes
+    assert "label1" not in note.labels
+    assert "label1" not in note.labels.owned
+    assert "label1" not in note.labels.inherited
 
     # create list of attributes
     note.attributes = [Label("label1", "value1", session=session)]
-    assert len(note.attributes["label1"]) == 1
+
+    assert "label1" in note.attributes
+    assert "label1" in note.labels
+    assert "label1" in note.labels.owned
+    assert "label1" not in note.labels.inherited
+
+    assert len(note.attributes.get_all("label1")) == 1
+    assert len(note.labels.get_all("label1")) == 1
+    assert len(note.relations.get_all("label1")) == 0
     assert note["label1"] == "value1"
 
-    label1 = note.attributes["label1"][0]
+    label1 = note.labels.get_first("label1")
+    assert label1 is not None
     assert label1.name == "label1"
+    assert label1.value == "value1"
+
+    assert label1 is note.attributes[0]
+    assert label1 is note.attributes.owned[0]
+    assert label1 is note.labels[0]
+    assert label1 is note.labels.owned[0]
+    assert len(note.labels.inherited) == 0
 
     # change value of existing attribute
     label1.value = "value2"
 
-    assert note.attributes["label1"][0].value == "value2"
+    assert note.labels.get_value("label1") == "value2"
 
-    note.attributes[0].value = "value3"
+    note.labels.set_value("label1", "value3")
     assert label1.value == "value3"
 
     session.flush()
 
     # replace with different attribute
-    note.attributes.owned[0] = Label("label1-2", session=session)
+    note.attributes.owned[0] = Label("label1-2", "value1-2", session=session)
+
     assert note.attributes.owned[0].name == "label1-2"
+    assert note.labels.get_first("label1-2").value == "value1-2"
+    assert note.labels.get_value("label1-2") == "value1-2"
 
     session.flush()
 

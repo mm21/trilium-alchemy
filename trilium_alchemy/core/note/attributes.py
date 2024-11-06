@@ -29,6 +29,11 @@ type ValueSpec = str | type[note.Note] | tuple[
 
 
 class AttributeListMixin[AttributeT: BaseAttribute]:
+    def __contains__(self, obj: Any) -> bool:
+        if isinstance(obj, str):
+            return self.get_first(obj) is not None
+        return super().__contains__(obj)
+
     @property
     def _attr_list(self) -> list[AttributeT]:
         """
@@ -37,16 +42,33 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         ...
 
     def _create_attr(self, name: str) -> AttributeT:
+        """
+        Overridden by subclass to create an attribute of the respective type,
+        already bound to this note.
+        """
         ...
 
-    def _get_attribute(self, name: str) -> AttributeT:
-        for attr in self._attr_list:
-            if attr.name == name:
-                return attr
+    @property
+    def _note_getter(self) -> note.Note:
+        """
+        Overridden by subclass.
+        """
+        ...
+
+    def get_first(self, name: str) -> AttributeT | None:
+        """
+        Get first attribute with provided name, or `None`.
+        """
+        for a in self._attr_list:
+            if a.name == name:
+                return a
         return None
 
-    def _get_attributes(self, name: str) -> list[BaseAttribute]:
-        return [attr for attr in self._attr_list if attr.name == name]
+    def get_all(self, name: str) -> list[AttributeT]:
+        """
+        Get all attributes with provided name.
+        """
+        return [a for a in self._attr_list if a.name == name]
 
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](
@@ -119,58 +141,58 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](
     def __getitem__(self, i: int) -> AttributeT:
         return self._attr_list[i]
 
-    def get_first(self, name: str) -> AttributeT | None:
-        """
-        Get first attribute with provided name, or `None`.
-        """
-        for a in self._attr_list:
-            if a.name == name:
-                return a
-        return None
-
-    def get_all(self, name: str) -> list[AttributeT]:
-        """
-        Get all attributes with provided name.
-        """
-        return [a for a in self._attr_list if a.name == name]
-
     def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
         return [a for a in attrs if isinstance(a, self._filter_cls)]
-
-    @property
-    def _note_getter(self) -> note.Note:
-        """
-        Overridden by subclass.
-        """
-        ...
 
 
 class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
     def get_value(self, name: str) -> str | None:
-        for attr in self._attr_list:
-            if attr.name == name:
-                return attr.value
-        return None
+        attr = self.get_first(name)
+        return None if attr is None else attr.value
 
     def get_values(self, name: str) -> list[str]:
-        return [attr.value for attr in self._attr_list if attr.name == name]
+        return [attr.value for attr in self.get_all(name)]
 
 
-# TODO
 class BaseWriteableLabelMixin(BaseReadableLabelMixin):
-    def set_value(self, name: str, val: str):
-        print(f"--- setting attr value: {name}={val}")
+    def set_value(self, name: str, val: str, inheritable: bool = False):
+        attr = self.get_first(name)
 
-    def set_values(self, name: str, vals: list[str]):
-        pass
+        if attr is None:
+            attr = self._create_attr(name)
+
+        attr.value = val
+        attr.inheritable = inheritable
+
+    def set_values(self, name: str, vals: list[str], inheritable: bool = False):
+        attrs = self.get_all(name)
+
+        if len(vals) > len(attrs):
+            # need to create new labels
+            for _ in range(len(vals) - len(attrs)):
+                attrs.append(self._create_attr(name))
+
+        elif len(attrs) > len(vals):
+            # need to delete labels
+            for _ in range(len(attrs) - len(vals)):
+                # pop from end
+                attr = attrs.pop()
+                attr.delete()
+
+        for attr, val in zip(attrs, vals):
+            attr.value = val
+            attr.inheritable = inheritable
+
+    def _create_attr(self, name: str) -> label.Label:
+        attr = label.Label(name, session=self._note_getter.session)
+        self._note_getter.attributes.owned.append(attr)
+        return attr
 
 
 class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
-    def get_value(self, name: str) -> note.Note | None:
-        for attr in self._attr_list:
-            if attr.name == name:
-                return attr.target
-        return None
+    def get_value(self, name: str) -> relation.Relation | None:
+        attr = self.get_first(name)
+        return None if attr is None else attr.target
 
     def get_values(self, name: str) -> list[note.Note]:
         return [attr.target for attr in self._attr_list if attr.name == name]
@@ -473,6 +495,12 @@ class Labels(
     @property
     def inherited(self) -> InheritedLabels:
         return self._inherited
+
+    def set_value(self, name: str, val: str, inheritable: bool = False):
+        self.owned.set_value(name, val, inheritable=inheritable)
+
+    def set_values(self, name: str, vals: list[str], inheritable: bool = False):
+        self.owned.set_values(name, vals, inheritable=inheritable)
 
 
 class OwnedRelations(
