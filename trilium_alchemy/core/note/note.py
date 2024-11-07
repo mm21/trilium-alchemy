@@ -15,7 +15,9 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
-from .attributes import Attributes, Labels, Relations
+from .attributes.attributes import Attributes
+from .attributes.labels import Labels
+from .attributes.relations import Relations
 from .branches import Branches, ChildNotes, ParentNotes
 from .content import Content
 from .model import NoteModel
