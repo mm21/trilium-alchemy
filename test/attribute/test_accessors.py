@@ -103,6 +103,77 @@ def test_labels(session: Session, note: Note):
     assert note.labels.get_values("label2") == ["value3", "value4", "value5"]
 
 
+def test_relations(session: Session, note: Note):
+    assert "relation1" not in note.attributes
+    assert "relation1" not in note.relations
+    assert "relation1" not in note.relations.owned
+    assert "relation1" not in note.relations.inherited
+
+    # create list of attributes
+    note.attributes = [Relation("relation1", session.root, session=session)]
+
+    assert "relation1" in note.attributes
+    assert "relation1" in note.relations
+    assert "relation1" in note.relations.owned
+    assert "relation1" not in note.relations.inherited
+
+    assert len(note.attributes.get_all("relation1")) == 1
+    assert len(note.relations.get_all("relation1")) == 1
+    assert len(note.relations.inherited.get_all("relation1")) == 0
+
+    relation1 = note.relations.get("relation1")
+    assert relation1 is not None
+    assert relation1.name == "relation1"
+    assert relation1.target is session.root
+
+    assert relation1 is note.attributes[0]
+    assert relation1 is note.attributes.owned[0]
+    assert relation1 is note.relations[0]
+    assert relation1 is note.relations.owned[0]
+    assert len(note.relations.inherited) == 0
+
+    # change value of existing attribute
+    relation1.target = note
+
+    assert note.relations.get_value("relation1") is note
+
+    note.relations.set_value("relation1", session.root)
+    assert relation1.target is session.root
+
+    session.flush()
+
+    # replace with different attribute
+    note.attributes.owned[0] = Relation(
+        "relation2", session.root, session=session
+    )
+
+    assert note.attributes.owned[0].name == "relation2"
+    assert note.relations.get("relation2").target is session.root
+    assert note.relations.get_value("relation2") is session.root
+
+    session.flush()
+
+    note.relations.set_value("relation2", note)
+    assert note.relations.get_value("relation2") is note
+
+    relation2 = note.relations.get("relation2")
+    assert relation2 is not None
+
+    note.relations.set_values("relation2", [session.root, note])
+
+    assert relation2 is note.relations.get("relation2")
+    assert len(note.relations.get_all("relation2")) == 2
+    assert note.relations.get_values("relation2") == [session.root, note]
+
+    note.relations.append_value("relation2", session.root)
+
+    assert note.relations.get_values("relation2") == [
+        session.root,
+        note,
+        session.root,
+    ]
+
+
 @mark.attribute("label1")
 def test_index_del(session: Session, note: Note):
     assert note["label1"] == ""

@@ -82,7 +82,7 @@ class InheritedRelations(
 
 class Relations(
     BaseCombinedFilteredAttributes[relation.Relation],
-    BaseReadableRelationMixin,
+    BaseWriteableRelationMixin,
 ):
     """
     Accessor for relations, filtered by owned vs inherited.
