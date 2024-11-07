@@ -36,12 +36,12 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
 
     def __contains__(self, obj: Any) -> bool:
         if isinstance(obj, str):
-            return self.get_first(obj) is not None
+            return self.get(obj) is not None
         return super().__contains__(obj)
 
-    def get_first(self, name: str) -> AttributeT | None:
+    def get(self, name: str) -> AttributeT | None:
         """
-        Get first attribute with provided name, or `None`.
+        Get first attribute with provided name, or `None` if none exist.
         """
         for a in self._attr_list:
             if a.name == name:
@@ -76,7 +76,7 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         ...
 
     def _set_value(self, name: str, val: Any, inheritable: bool):
-        attr = self.get_first(name)
+        attr = self.get(name)
 
         if attr is None:
             attr = self._create_attr(name)
@@ -104,6 +104,11 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         for attr, val in zip(attrs, vals):
             setattr(attr, self._value_name, val)
             attr.inheritable = inheritable
+
+    def _append_value(self, name: str, val: Any, inheritable: bool):
+        attr = self._create_attr(name)
+        setattr(attr, self._value_name, val)
+        attr.inheritable = inheritable
 
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](
@@ -182,10 +187,16 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](
 
 class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
     def get_value(self, name: str) -> str | None:
-        attr = self.get_first(name)
+        """
+        Get value of first label with provided name.
+        """
+        attr = self.get(name)
         return None if attr is None else attr.value
 
     def get_values(self, name: str) -> list[str]:
+        """
+        Get values of all labels with provided name.
+        """
         return [attr.value for attr in self.get_all(name)]
 
 
@@ -193,10 +204,23 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
     _value_name = "value"
 
     def set_value(self, name: str, val: str, inheritable: bool = False):
+        """
+        Set value of first label with provided name.
+        """
         self._set_value(name, val, inheritable)
 
     def set_values(self, name: str, vals: list[str], inheritable: bool = False):
+        """
+        Set values of all labels with provided name, creating or deleting
+        labels as necessary.
+        """
         self._set_values(name, vals, inheritable)
+
+    def append_value(self, name: str, val: str, inheritable: bool = False):
+        """
+        Create and append new label.
+        """
+        self._append_value(name, val, inheritable)
 
     def _create_attr(self, name: str) -> label.Label:
         attr = label.Label(name, session=self._note_getter.session)
@@ -206,10 +230,16 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
 
 class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
     def get_value(self, name: str) -> relation.Relation | None:
-        attr = self.get_first(name)
+        """
+        Get value of first relation with provided name.
+        """
+        attr = self.get(name)
         return None if attr is None else attr.target
 
     def get_values(self, name: str) -> list[note.Note]:
+        """
+        Get values of all relations with provided name.
+        """
         return [attr.target for attr in self.get_all(name)]
 
 
@@ -217,12 +247,27 @@ class BaseWriteableRelationMixin(BaseReadableRelationMixin):
     _value_name = "target"
 
     def set_value(self, name: str, val: note.Note, inheritable: bool = False):
+        """
+        Set value of first relation with provided name.
+        """
         self._set_value(name, val, inheritable)
 
     def set_values(
         self, name: str, vals: list[note.Note], inheritable: bool = False
     ):
+        """
+        Set values of all relations with provided name, creating or deleting
+        relations as necessary.
+        """
         self._set_values(name, vals, inheritable)
+
+    def append_value(
+        self, name: str, val: note.Note, inheritable: bool = False
+    ):
+        """
+        Create and append new relation.
+        """
+        self._append_value(name, val, inheritable)
 
     def _create_attr(self, name: str) -> relation.Relation:
         attr = relation.Relation(name, session=self._note_getter.session)
@@ -497,7 +542,7 @@ class InheritedLabels(
 
 class Labels(
     BaseCombinedFilteredAttributes[label.Label],
-    BaseReadableLabelMixin,
+    BaseWriteableLabelMixin,
 ):
     """
     Accessor for labels, filtered by owned vs inherited.
@@ -519,12 +564,6 @@ class Labels(
     @property
     def inherited(self) -> InheritedLabels:
         return self._inherited
-
-    def set_value(self, name: str, val: str, inheritable: bool = False):
-        self.owned.set_value(name, val, inheritable=inheritable)
-
-    def set_values(self, name: str, vals: list[str], inheritable: bool = False):
-        self.owned.set_values(name, vals, inheritable=inheritable)
 
 
 class OwnedRelations(

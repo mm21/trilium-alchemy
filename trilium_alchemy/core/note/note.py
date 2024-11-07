@@ -348,7 +348,7 @@ class Note(BaseEntity[NoteModel]):
 
         :raises KeyError: No such attribute
         """
-        attr = self.labels.get_first(name)
+        attr = self.labels.get(name)
 
         if attr is None:
             raise KeyError(f"Attribute does not exist: {name}, note {self}")
@@ -595,7 +595,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Get value of first attribute with provided name.
         """
-        attr = self.labels.get_first(name)
+        attr = self.labels.get(name)
         if attr is None:
             return default
         return attr.value

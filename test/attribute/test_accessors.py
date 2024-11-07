@@ -56,7 +56,7 @@ def test_labels(session: Session, note: Note):
     assert len(note.relations.get_all("label1")) == 0
     assert note["label1"] == "value1"
 
-    label1 = note.labels.get_first("label1")
+    label1 = note.labels.get("label1")
     assert label1 is not None
     assert label1.name == "label1"
     assert label1.value == "value1"
@@ -81,7 +81,7 @@ def test_labels(session: Session, note: Note):
     note.attributes.owned[0] = Label("label2", "value1", session=session)
 
     assert note.attributes.owned[0].name == "label2"
-    assert note.labels.get_first("label2").value == "value1"
+    assert note.labels.get("label2").value == "value1"
     assert note.labels.get_value("label2") == "value1"
 
     session.flush()
@@ -89,14 +89,18 @@ def test_labels(session: Session, note: Note):
     note.labels.set_value("label2", "value2")
     assert note.labels.get_value("label2") == "value2"
 
-    label2 = note.labels.get_first("label2")
+    label2 = note.labels.get("label2")
     assert label2 is not None
 
     note.labels.set_values("label2", ["value3", "value4"])
 
-    assert label2 is note.labels.get_first("label2")
+    assert label2 is note.labels.get("label2")
     assert len(note.labels.get_all("label2")) == 2
     assert note.labels.get_values("label2") == ["value3", "value4"]
+
+    note.labels.append_value("label2", "value5")
+
+    assert note.labels.get_values("label2") == ["value3", "value4", "value5"]
 
 
 @mark.attribute("label1")
