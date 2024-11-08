@@ -19,16 +19,16 @@ __all__ = [
 
 
 class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
-    def get_value(self, name: str) -> relation.Relation | None:
+    def get_target(self, name: str) -> relation.Relation | None:
         """
-        Get value of first relation with provided name.
+        Get target of first relation with provided name.
         """
         attr = self.get(name)
         return None if attr is None else attr.target
 
-    def get_values(self, name: str) -> list[Note]:
+    def get_targets(self, name: str) -> list[Note]:
         """
-        Get values of all relations with provided name.
+        Get targets of all relations with provided name.
         """
         return [attr.target for attr in self.get_all(name)]
 
@@ -36,24 +36,24 @@ class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
 class BaseWriteableRelationMixin(BaseReadableRelationMixin):
     _value_name = "target"
 
-    def set_value(self, name: str, val: Note, inheritable: bool = False):
+    def set_target(self, name: str, val: Note, inheritable: bool = False):
         """
-        Set value of first relation with provided name.
+        Set target of first relation with provided name.
         """
         self._set_value(name, val, inheritable)
 
-    def set_values(
+    def set_targets(
         self, name: str, vals: list[Note], inheritable: bool = False
     ):
         """
-        Set values of all relations with provided name, creating or deleting
+        Set targets of all relations with provided name, creating or deleting
         relations as necessary.
         """
         self._set_values(name, vals, inheritable)
 
-    def append_value(self, name: str, val: Note, inheritable: bool = False):
+    def append_target(self, name: str, val: Note, inheritable: bool = False):
         """
-        Create and append new relation.
+        Create and append new relation with provided target.
         """
         self._append_value(name, val, inheritable)
 

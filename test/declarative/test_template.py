@@ -28,4 +28,4 @@ def test_contact(session: Session):
     instance2 = Note(template=contact, session=session)
 
     assert instance1.relations.get("template").target is contact
-    assert instance2.relations.get_value("template") is contact
+    assert instance2.relations.get_target("template") is contact

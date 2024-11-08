@@ -118,9 +118,9 @@ def test_relations(session: Session, note: Note):
     # change value of existing attribute
     relation1.target = note
 
-    assert note.relations.get_value("relation1") is note
+    assert note.relations.get_target("relation1") is note
 
-    note.relations.set_value("relation1", session.root)
+    note.relations.set_target("relation1", session.root)
     assert relation1.target is session.root
 
     session.flush()
@@ -132,25 +132,25 @@ def test_relations(session: Session, note: Note):
 
     assert note.attributes.owned[0].name == "relation2"
     assert note.relations.get("relation2").target is session.root
-    assert note.relations.get_value("relation2") is session.root
+    assert note.relations.get_target("relation2") is session.root
 
     session.flush()
 
-    note.relations.set_value("relation2", note)
-    assert note.relations.get_value("relation2") is note
+    note.relations.set_target("relation2", note)
+    assert note.relations.get_target("relation2") is note
 
     relation2 = note.relations.get("relation2")
     assert relation2 is not None
 
-    note.relations.set_values("relation2", [session.root, note])
+    note.relations.set_targets("relation2", [session.root, note])
 
     assert relation2 is note.relations.get("relation2")
     assert len(note.relations.get_all("relation2")) == 2
-    assert note.relations.get_values("relation2") == [session.root, note]
+    assert note.relations.get_targets("relation2") == [session.root, note]
 
-    note.relations.append_value("relation2", session.root)
+    note.relations.append_target("relation2", session.root)
 
-    assert note.relations.get_values("relation2") == [
+    assert note.relations.get_targets("relation2") == [
         session.root,
         note,
         session.root,
