@@ -42,12 +42,12 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
-    def _create_attr(self, name: str) -> AttributeT:
+    @property
+    def _writeable_attr_list(self) -> list[AttributeT]:
         """
-        Overridden by subclass to create an attribute of the respective type,
-        already bound to this note.
+        Attribute list which can be written to, i.e. owned attributes.
         """
-        ...
+        return self._attr_list
 
     @property
     def _note_getter(self) -> Note:
@@ -56,8 +56,30 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
+    def _create_attr(self, name: str) -> AttributeT:
+        """
+        Overridden by subclass to create an attribute of the respective type,
+        already bound to this note.
+        """
+        ...
+
+    def _get_writeable(self, name: str) -> AttributeT | None:
+        """
+        Get first writeable attribute with provided name.
+        """
+        for a in self._writeable_attr_list:
+            if a.name == name:
+                return a
+        return None
+
+    def _get_all_writeable(self, name: str) -> list[AttributeT]:
+        """
+        Get all writeable attributes with provided name.
+        """
+        return [a for a in self._writeable_attr_list if a.name == name]
+
     def _set_value(self, name: str, val: Any, inheritable: bool):
-        attr = self.get(name)
+        attr = self._get_writeable(name)
 
         if attr is None:
             attr = self._create_attr(name)
@@ -68,7 +90,7 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
     def _set_values(
         self, name: str, vals: list[Any], inheritable: bool = False
     ):
-        attrs = self.get_all(name)
+        attrs = self._get_all_writeable(name)
 
         if len(vals) > len(attrs):
             # need to create new attributes
@@ -188,20 +210,13 @@ class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
         return self._filter_list(list(self._note_getter.attributes.owned))
 
     def __setitem__(self, i: int, val: AttributeT):
-        attr = self._attr_list[i]
-        index = self._note_getter.attributes.owned.index(attr)
-
-        self._note_getter.attributes.owned[index] = val
+        self._note_getter.attributes.owned[i] = val
 
     def __delitem__(self, i: int):
-        attr = self._attr_list[i]
-        attr.delete()
+        del self._note_getter.attributes.owned[i]
 
     def insert(self, i: int, val: AttributeT):
-        attr = self._attr_list[i]
-        index = self._note_getter.attributes.owned.index(attr)
-
-        self._note_getter.attributes.owned.insert(index, val)
+        self._note_getter.attributes.owned.insert(i, val)
 
 
 class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
@@ -222,3 +237,7 @@ class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
             list(self._note_getter.attributes.owned)
             + list(self._note_getter.attributes.inherited)
         )
+
+    @property
+    def _writeable_attr_list(self) -> list[AttributeT]:
+        return self._filter_list(list(self._note_getter.attributes.owned))

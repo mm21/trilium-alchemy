@@ -101,6 +101,10 @@ class Relations(
     def owned(self) -> OwnedRelations:
         return self._owned
 
+    @owned.setter
+    def owned(self, val: OwnedRelations):
+        assert val is self._owned
+
     @property
     def inherited(self) -> InheritedRelations:
         return self._inherited

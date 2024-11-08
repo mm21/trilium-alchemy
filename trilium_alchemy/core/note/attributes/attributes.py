@@ -108,6 +108,8 @@ class InheritedAttributes(
         # init list every time: unlike owned attributes, no need to preserve
         # local version which may have changes
 
+        from ..note import Note
+
         if model is None:
             self._list = []
         else:

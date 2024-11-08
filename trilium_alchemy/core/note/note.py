@@ -366,6 +366,9 @@ class Note(BaseEntity[NoteModel]):
         """
         self.labels.owned.set_value(name, val)
 
+    def __contains__(self, label: str):
+        return self.labels.owned.get(label) is not None
+
     def __hash__(self) -> int:
         return id(self)
 

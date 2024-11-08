@@ -11,28 +11,11 @@ def test_index_get(session: Session, note: Note):
 
     assert note["label1"] == ""
 
-    assert "label1" in note
-    assert "label1" in note.attributes
-    assert "label1" in note.attributes.owned
-    assert "label1" not in note.attributes.inherited
+    attr = note.labels[0]
+    assert attr.value == ""
 
-    assert len(note.attributes["label1"]) == 1
-    assert len(note.attributes.owned["label1"]) == 1
-
-    assert note.attributes["label1"][0].value == ""
-    assert note.attributes.owned["label1"][0].value == ""
-
-    assert note.attributes["label1"][0] is note.attributes.owned["label1"][0]
-
-    label1 = note.attributes.owned["label1"][0]
-
-    assert label1.attribute_type == "label"
-    assert label1.name == "label1"
-    assert label1.value == ""
-
-    # get numeric indices
-    assert label1 is note.attributes[0]
-    assert label1 is note.attributes.owned[0]
+    assert attr is note.attributes[0]
+    assert attr is note.attributes.owned[0]
 
     session.flush()
 
@@ -176,16 +159,11 @@ def test_relations(session: Session, note: Note):
 
 @mark.attribute("label1")
 def test_index_del(session: Session, note: Note):
-    assert note["label1"] == ""
+    label = note.labels.get("label1")
+    assert label is not None
 
-    # delete by name
-    note.attributes["label1"][0].delete()
-
-    assert "label1" not in note.attributes
-
-    # delete by index
-    note["label2"] = ""
-    del note.attributes[0]
+    del note.attributes.owned[0]
+    assert label._is_delete
 
     session.flush()
 
@@ -196,20 +174,11 @@ def test_index_inherited(
     session: Session, note1: Note, note2: Note, branch: Branch
 ):
     assert len(note1.attributes) == 1
-    assert len(note1.attributes["label1"]) == 1
-    assert len(note1.attributes.owned["label1"]) == 1
-
     assert len(note2.attributes) == 2
-    assert len(note2.attributes["label1"]) == 2
-    assert len(note2.attributes.owned["label1"]) == 1
-    assert len(note2.attributes.inherited["label1"]) == 1
 
-    # test attribute iteration
-    count = 0
-    for attr in note1.attributes:
-        count += 1
-
-    assert count == 1
+    assert len(note2.labels.inherited) == 1
+    assert note2.labels.owned.get_value("label1") == "value2"
+    assert note2.labels.inherited.get_value("label1") == ""
 
     # test iteration by numeric index
     assert len(note1.attributes) == 1
@@ -231,85 +200,35 @@ def test_index_inherited(
     assert len(session.dirty_set) == 0
 
 
-# Set attribute kwargs using index mechanism
-def test_index_kwargs(session: Session, note: Note):
-    note.attributes["label1"] = ("value1", {"inheritable": True})
-
-    label1 = note.attributes[0]
-
-    assert label1._is_create
-    assert label1.name == "label1"
-    assert label1.value == "value1"
-    assert label1.inheritable is True
-
-    session.flush()
-
-
-# Update attribute and use kwargs
-@mark.attribute("label1")
-@mark.attribute("relation1", "root", type="relation")
-def test_index_update(session: Session, note: Note):
-    assert len(note.attributes["label1"]) == 1
-    assert len(note.attributes["relation1"]) == 1
-
-    assert note["label1"] == ""
-    assert note["relation1"].note_id == "root"
-
-    # label update
-    note["label1"] = "value1"
-    assert note["label1"] == "value1"
-    assert note.attributes["label1"][0].inheritable is False
-
-    # label update w/kwargs
-    note["label1"] = ("value1-2", {"inheritable": True})
-    assert note["label1"] == "value1-2"
-    assert note.attributes["label1"][0].inheritable is True
-
-    # relation update
-    note["relation1"] = note
-    assert note["relation1"] is note
-    assert note.attributes["relation1"][0].inheritable is False
-
-    # set target back to root
-    note["relation1"] = Note(note_id="root", session=session)
-    assert note["relation1"].note_id == "root"
-
-    # relation update w/kwargs
-    note["relation1"] = (note, {"inheritable": True})
-    assert note["relation1"] is note
-    assert note.attributes["relation1"][0].inheritable is True
-
-    session.flush()
-
-
 def test_append(session: Session, note: Note):
     note += Label("label1", "value1", inheritable=True, session=session)
     assert len(note.attributes) == 1
 
-    label1 = note.attributes[0]
+    label1 = note.labels[0]
     assert label1.name == "label1"
     assert label1.value == "value1"
     assert label1.inheritable is True
 
-    assert len(note.attributes.owned["label1"]) == 1
-    assert note.attributes["label1"][0] is label1
-    assert note.attributes.owned["label1"][0] is label1
+    assert len(note.attributes.owned.get_all("label1")) == 1
+    assert note.attributes.get("label1") is label1
+    assert note.attributes.owned.get("label1") is label1
 
-    assert "label1" not in note.attributes.inherited
+    note.attributes.owned.append(Label("label2", session=session))
 
-    note.attributes.append(Label("label2", session=session))
-
-    assert note.attributes[1].name == "label2"
-    assert note.attributes[1].value == ""
+    assert note.labels[1].name == "label2"
+    assert note.labels[1].value == ""
 
     session.flush()
 
 
 def test_extend(session: Session, note: Note):
-    note.attributes += [
+    note.attributes.owned += [
         Label("label1", "value1", session=session),
+    ]
+    note.labels.owned += [
         Label("label2", "value2", inheritable=True, session=session),
     ]
+
     assert len(note.attributes) == 2
     assert len(note.attributes.owned) == 2
 
@@ -321,8 +240,8 @@ def test_extend(session: Session, note: Note):
     assert len(note.attributes) == 4
     assert len(note.attributes.owned) == 4
 
-    for i in range(len(note.attributes)):
-        attr = note.attributes[i]
+    for i, attr in enumerate(note.labels):
+        assert attr is note.attributes[i]
         assert attr is note.attributes.owned[i]
 
         assert attr.name == f"label{i+1}"
@@ -338,7 +257,7 @@ def test_extend(session: Session, note: Note):
 
 def test_slice(session: Session, note: Note):
     # create attributes
-    note.attributes[0:3] = [
+    note.attributes.owned[0:3] = [
         Label("label1", session=session),
         Label("label2", session=session),
         Label("label3", session=session),
@@ -357,9 +276,9 @@ def test_slice(session: Session, note: Note):
     session.flush()
 
     # shift attributes
-    note.attributes[0:3] = [Label("label0", session=session)] + note.attributes[
-        0:2
-    ]
+    note.attributes.owned[0:3] = [
+        Label("label0", session=session)
+    ] + note.attributes[0:2]
 
     label0, label1, label2 = note.attributes
 
@@ -376,16 +295,13 @@ def test_slice(session: Session, note: Note):
     session.flush()
 
     # delete attributes
-    del note.attributes[0:2]
+    del note.attributes.owned[0:2]
 
     assert label0._is_delete
     assert label1._is_delete
     assert not label2._is_delete
 
     session.flush()
-
-
-# TODO: test to verify attempting to add same attr multiple times fails
 
 
 @mark.label("label1", "value1")

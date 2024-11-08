@@ -98,6 +98,10 @@ class Labels(
     def owned(self) -> OwnedLabels:
         return self._owned
 
+    @owned.setter
+    def owned(self, val: OwnedLabels):
+        assert val is self._owned
+
     @property
     def inherited(self) -> InheritedLabels:
         return self._inherited
