@@ -27,5 +27,5 @@ def test_contact(session: Session):
     # test using instantiated template
     instance2 = Note(template=contact, session=session)
 
-    assert instance1["template"] is contact
-    assert instance2["template"] is contact
+    assert instance1.relations.get("template").target is contact
+    assert instance2.relations.get_value("template") is contact

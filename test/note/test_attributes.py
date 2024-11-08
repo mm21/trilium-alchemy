@@ -25,9 +25,8 @@ def test_update(session: Session, note: Note):
 
 @mark.attribute("label1", "value1")
 def test_del(session: Session, note: Note):
-    # del / not in attribute
-    del note["label1"]
-    assert len(note) == 0
+    del note.attributes.owned[0]
+    assert len(note.attributes) == 0
     assert "label1" not in note
 
     with raises(KeyError):
@@ -73,8 +72,10 @@ def test_iter(session: Session, note: Note):
 @mark.attribute("label1", "value2")
 def test_multi(session: Session, note: Note):
     # multi-valued label
-    assert len(note) == 1
-    assert len(note.attributes["label1"]) == 2
+    assert len(note.attributes) == 2
+    assert note.labels[0].value == "value1"
+    assert note.labels[1].value == "value2"
+    assert note.labels.get_values("label1") == ["value1", "value2"]
     assert note["label1"] == "value1"
 
 

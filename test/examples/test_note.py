@@ -60,5 +60,5 @@ def test_notes(session: Session):
 
     note += [Label("myLabel", "value1"), Label("myLabel", "value2")]
 
-    for attr in note.attributes.owned["myLabel"]:
+    for attr in note.labels.get_all("myLabel"):
         print(attr)

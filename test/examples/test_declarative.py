@@ -12,7 +12,19 @@ def test_relation(session: Session):
     class TaskNote(BaseDeclarativeNote):
         pass
 
+    template = Task()
     task = TaskNote()
 
-    assert task["template"] is Task()
-    assert task["template"]["iconClass"] == "bx bx-task"
+    assert template is Task()
+
+    session.root += [task, template]
+    session.flush()
+
+    task.refresh()
+
+    assert task.relations.get("template").target is template
+    assert task.labels.inherited.get_value("iconClass") == "bx bx-task"
+
+    task.delete()
+    template.delete()
+    session.flush()

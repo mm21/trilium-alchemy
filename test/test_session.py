@@ -174,8 +174,8 @@ def test_dirty_set(session: Session, note: Note):
     assert session.dirty_count == 0
 
     # add an entity for create
-    note.attributes["label2"] = ""
-    assert note.attributes["label2"][0] in session.dirty_map[State.CREATE]
+    note["label2"] = ""
+    assert note.attributes[1] in session.dirty_map[State.CREATE]
     assert session.dirty_count == 1
     assert len(session.dirty_map[State.CREATE]) == 1
 
@@ -186,7 +186,7 @@ def test_dirty_set(session: Session, note: Note):
     assert len(session.dirty_map[State.UPDATE]) == 1
 
     # add an entity for delete
-    label1 = note.attributes["label1"][0]
+    label1 = note.attributes[0]
     label1.delete()
     assert "label1" not in note.attributes
 

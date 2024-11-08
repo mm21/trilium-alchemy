@@ -34,7 +34,7 @@ def test_text(session: Session, note: Note):
     assert note_test.content == "<p>Test content</p>"
 
     # check originalFilename attribute
-    assert len(note_test.attributes["originalFilename"]) == 1
+    assert len(note_test.labels.get_all("originalFilename")) == 1
     assert note_test["originalFilename"] == "test.html"
 
 
