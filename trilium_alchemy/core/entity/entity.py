@@ -260,6 +260,13 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         self._delete()
 
+    def refresh(self):
+        """
+        Update value from Trilium, discarding any local changes.
+        """
+        self.invalidate()
+        self._model.setup()
+
     def _delete(self):
         """
         Use wrapper so delete() is listed in a consistent order when
