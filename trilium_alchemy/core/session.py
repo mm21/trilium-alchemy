@@ -13,7 +13,7 @@ import json
 import logging
 from collections.abc import Iterable
 from enum import Enum, auto
-from typing import Callable, Literal, cast
+from typing import TYPE_CHECKING, Callable, Literal, cast
 
 import requests
 from trilium_client import ApiClient, Configuration, DefaultApi
@@ -26,9 +26,12 @@ from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
 from trilium_client.models.search_response import SearchResponse
 
-import trilium_alchemy
-
 from .cache import Cache
+
+if TYPE_CHECKING:
+    from .entity.entity import BaseEntity
+    from .entity.types import State
+    from .note.note import Note
 
 __all__ = ["Session"]
 
@@ -187,8 +190,7 @@ class Session:
 
     def flush(
         self,
-        entities: Iterable[trilium_alchemy.core.entity.BaseEntity]
-        | None = None,
+        entities: Iterable[BaseEntity] | None = None,
     ):
         """
         Commits pending changes to Trilium via ETAPI.
@@ -215,10 +217,10 @@ class Session:
         limit: int | None = None,
         fast_search: bool = False,
         include_archived_notes: bool = False,
-        ancestor_note: trilium_alchemy.core.note.Note | None = None,
+        ancestor_note: Note | None = None,
         ancestor_depth: int | None = None,
         debug: bool = False,
-    ) -> list[trilium_alchemy.core.note.Note]:
+    ) -> list[Note]:
         """
         Perform note search using query string as described at:
         <https://github.com/zadam/trilium/wiki/Search>
@@ -235,6 +237,8 @@ class Session:
 
         :returns: List of notes
         """
+
+        from .note.note import Note
 
         ancestor_note_id: str | None = (
             ancestor_note.note_id if ancestor_note is not None else None
@@ -268,8 +272,7 @@ class Session:
             logging.debug(f"Got search debug: {response.debug_info}")
 
         return [
-            trilium_alchemy.core.note.Note._from_model(model, session=self)
-            for model in response.results
+            Note._from_model(model, session=self) for model in response.results
         ]
 
     def backup(self, name: str):
@@ -282,7 +285,7 @@ class Session:
 
     def export_zip(
         self,
-        note: trilium_alchemy.core.note.Note,
+        note: Note,
         dest_path: str,
         export_format: Literal["html", "markdown"] = "html",
     ):
@@ -290,8 +293,7 @@ class Session:
         Export note subtree to zip file.
 
         ```{note}
-        You can equivalently invoke {obj}`Note.export_zip
-        <trilium_alchemy.core.note.Note.export_zip>`.
+        You can equivalently invoke {obj}`Note.export_zip`.
         ```
 
         :param note: Root of source subtree
@@ -302,6 +304,9 @@ class Session:
         assert (
             note.note_id is not None
         ), f"Source note {note.str_short} must have a note_id for export"
+
+        # TODO: support markdown
+        assert export_format == "html", f"Markdown format not yet supported"
 
         zip_file: bytes
 
@@ -318,7 +323,7 @@ class Session:
 
     def import_zip(
         self,
-        note: trilium_alchemy.core.note.Note,
+        note: Note,
         src_path: str,
     ):
         """
@@ -359,15 +364,13 @@ class Session:
         # use returned note model to refresh note
         note._refresh_model(response_model.note)
 
-    def get_today_note(self) -> trilium_alchemy.core.note.Note:
+    def get_today_note(self) -> Note:
         """
         Returns today's day note. Gets created if doesn't exist.
         """
         return self.get_day_note(datetime.date.today())
 
-    def get_day_note(
-        self, date: datetime.date
-    ) -> trilium_alchemy.core.note.Note:
+    def get_day_note(self, date: datetime.date) -> Note:
         """
         Returns a day note for a given date. Gets created if doesn't exist.
 
@@ -375,9 +378,7 @@ class Session:
         """
         return self._etapi_wrapper(self.api.get_day_note, date)
 
-    def get_week_note(
-        self, date: datetime.date
-    ) -> trilium_alchemy.core.note.Note:
+    def get_week_note(self, date: datetime.date) -> Note:
         """
         Returns a week note for a given date. Gets created if doesn't exist.
 
@@ -385,7 +386,7 @@ class Session:
         """
         return self._etapi_wrapper(self.api.get_week_note, date)
 
-    def get_month_note(self, month: str) -> trilium_alchemy.core.note.Note:
+    def get_month_note(self, month: str) -> Note:
         """
         Returns a month note for a given date. Gets created if doesn't exist.
 
@@ -393,7 +394,7 @@ class Session:
         """
         return self._etapi_wrapper(self.api.get_month_note, month)
 
-    def get_year_note(self, year: str) -> trilium_alchemy.core.note.Note:
+    def get_year_note(self, year: str) -> Note:
         """
         Returns a year note for a given date. Gets created if doesn't exist.
 
@@ -401,9 +402,7 @@ class Session:
         """
         return self._etapi_wrapper(self.api.get_year_note, year)
 
-    def get_inbox_note(
-        self, date: datetime.date
-    ) -> trilium_alchemy.core.note.Note:
+    def get_inbox_note(self, date: datetime.date) -> Note:
         """
         Returns an "inbox" note into which note can be created. Date will
         be used depending on whether the inbox is a fixed note
@@ -421,9 +420,7 @@ class Session:
         app_info: AppInfo = self.api.get_app_info()
         return app_info
 
-    def refresh_note_ordering(
-        self, note: trilium_alchemy.core.note.Note
-    ) -> None:
+    def refresh_note_ordering(self, note: Note) -> None:
         """
         Refresh ordering of provided note's children for any connected clients.
 
@@ -433,7 +430,9 @@ class Session:
         provided for completeness.
         ```
         """
-        assert isinstance(note, trilium_alchemy.core.note.Note)
+        from .note.note import Note
+
+        assert isinstance(note, Note)
         self.api.post_refresh_note_ordering(note.note_id)
 
     @classmethod
@@ -515,11 +514,17 @@ class Session:
             default_session = None
 
     @property
-    def root(self) -> trilium_alchemy.core.note.Note:
+    def root(self) -> Note:
         """
         Helper to lookup root note.
         """
-        return trilium_alchemy.core.note.Note(note_id="root", session=self)
+        from .note.note import Note
+
+        return Note(note_id="root", session=self)
+
+    @root.setter
+    def root(self, obj: Note):
+        assert obj is self.root
 
     @property
     def dirty_count(self) -> int:
@@ -529,7 +534,7 @@ class Session:
         return len(self.dirty_set)
 
     @property
-    def dirty_set(self) -> set[trilium_alchemy.core.entity.BaseEntity]:
+    def dirty_set(self) -> set[BaseEntity]:
         """
         All dirty {obj}`BaseEntity` objects.
         """
@@ -538,10 +543,7 @@ class Session:
     @property
     def dirty_map(
         self,
-    ) -> dict[
-        trilium_alchemy.core.entity.types.State,
-        set[trilium_alchemy.core.entity.BaseEntity],
-    ]:
+    ) -> dict[State, set[BaseEntity],]:
         """
         Mapping of state to dirty {obj}`BaseEntity` objects
         in that state.
@@ -552,13 +554,12 @@ class Session:
         ```
         """
 
-        index: dict[
-            trilium_alchemy.core.entity.types.State,
-            set[trilium_alchemy.core.entity.BaseEntity],
-        ] = {
-            trilium_alchemy.core.entity.types.State.CREATE: set(),
-            trilium_alchemy.core.entity.types.State.UPDATE: set(),
-            trilium_alchemy.core.entity.types.State.DELETE: set(),
+        from .entity.types import State
+
+        index: dict[State, set[BaseEntity]] = {
+            State.CREATE: set(),
+            State.UPDATE: set(),
+            State.DELETE: set(),
         }
 
         for entity in self._cache.dirty_set:
@@ -620,11 +621,11 @@ class Session:
         global default_session
         return default_session is self
 
-    def _etapi_wrapper(
-        self, method: Callable, *args, **kwargs
-    ) -> trilium_alchemy.core.note.Note:
+    def _etapi_wrapper(self, method: Callable, *args, **kwargs) -> Note:
+        from .note.note import Note
+
         model: EtapiNoteModel = method(*args, **kwargs)
-        return trilium_alchemy.core.note.Note._from_model(model, session=self)
+        return Note._from_model(model, session=self)
 
 
 class SessionContainer:
