@@ -271,16 +271,20 @@ class MystRenderer(RendererBase):
         # check if sig should be skipped
         # TODO: make generic, config-based (register callback?)
         mixin_subclass = (
-            item["full_name"] != "trilium_alchemy.core.note.Note"
-        ) and self._check_subclass(item, "trilium_alchemy.core.note.Mixin")
+            item["full_name"]
+            != "trilium_alchemy.core.declarative.base.BaseDeclarativeNote"
+        ) and self._check_subclass(
+            item, "trilium_alchemy.core.declarative.base.BaseDeclarativeMixin"
+        )
         skip_constructor = mixin_subclass
         skip_inherited = mixin_subclass
 
         # ancestors to skip
         ancestors_skip = {
-            "trilium_alchemy.core.entity.Entity",
+            "trilium_alchemy.core.entity.BaseEntity",
             "trilium_alchemy.core.note.Note",
-            "trilium_alchemy.core.note.Mixin",
+            "trilium_alchemy.core.declarative.base.BaseDeclarativeNote",
+            "trilium_alchemy.core.declarative.base.BaseDeclarativeMixin",
             "collections.abc.Mapping",
             "collections.abc.MutableMapping",
         }

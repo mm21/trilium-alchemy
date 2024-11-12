@@ -59,10 +59,10 @@ class Symbol:
     is_canonical: bool = False
 
     # if canonical, list of aliases
-    aliases: list[Symbol] = None
+    aliases: list[Symbol] | None = None
 
     # if virtual alias, symbol this is an alias of
-    canonical_symbol: Symbol = None
+    canonical_symbol: Symbol | None = None
 
     def __init__(self, symbol_map: SymbolMap, path: str):
         self.symbol_map = symbol_map
@@ -144,15 +144,6 @@ class Symbol:
 
         Can't naively use getattr(cls, attr) since it may activate
         a descriptor. Manually traverse MRO and check vars() for each class.
-
-        Also accounts for renamed declarative attributes. For example:
-
-        class MyNote(Note):
-            title = 'My title'
-
-        Here the attribute of interest for documentation is actually "title_"
-        since it gets renamed by the metaclass to keep the "title" descriptor
-        intact.
         """
 
         # raise AttributeError if it couldn't be found since None is a valid
@@ -163,9 +154,6 @@ class Symbol:
             if attr in attrs:
                 # has attribute
                 key = attr
-            elif f"{attr}_" in attrs:
-                # has renamed declarative attribute (e.g. title -> title_)
-                key = f"{attr}_"
             else:
                 raise AttributeError
 
@@ -177,10 +165,16 @@ class Symbol:
             except AttributeError:
                 pass
 
+        return None
+
     def _get_attr(self, cls, attr):
-        return self._get_attr_impl(cls, attr)[0]
+        val = self._get_attr_impl(cls, attr)
+        return None if val is None else val[0]
 
     def get_ancestor(self, attr):
+        val = self._get_attr_impl(self.py_obj, attr)
+        assert len(val) == 2
+
         cls = self._get_attr_impl(self.py_obj, attr)[1]
         return f"{cls.__module__}.{cls.__name__}"
 
@@ -626,11 +620,11 @@ class Env:
         if result is None:
             return
 
-        item, symbol = result
+        item, _ = result
 
-        if symbol is None or item is None:
+        if item is None:
             print(f"Warning: failed to get item and/or symbol for {target}")
-            return
+            return None
 
         full_name = item["full_name"]
 

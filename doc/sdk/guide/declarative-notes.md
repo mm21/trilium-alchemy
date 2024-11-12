@@ -27,7 +27,7 @@ class MyMixin(BaseDeclarativeMixin): pass
 ```
 
 ```{note}
-{obj}`Note` inherits from {obj}`BaseDeclarativeMixin`, so the following semantics can be applied to {obj}`Note` subclasses and {obj}`BaseDeclarativeMixin` subclasses equally.
+{obj}`BaseDeclarativeNote` inherits from {obj}`BaseDeclarativeMixin`, so the following semantics can be applied to {obj}`Note` subclasses and {obj}`BaseDeclarativeMixin` subclasses equally.
 ```
 
 ## Adding labels
@@ -102,7 +102,7 @@ The filename is relative to the package the class is defined in. Currently acces
 In some cases it's important to generate the same {obj}`Note.note_id` every time the class is instantiated. Templates, for example, should have only one instance and be automatically updated as changes are made to the code. This behavior can be accomplished in a number of ways.
 
 ```{warning}
-Without setting {obj}`Note.leaf` or {obj}`BaseDeclarativeMixin.leaf`, TriliumAlchemy assumes that you want to explicitly specify the note's children. Therefore it will delete any existing children which aren't declaratively added. See {ref}`leaf-notes` to learn more.
+Without setting {obj}`BaseDeclarativeNote.leaf`, TriliumAlchemy assumes that you want to explicitly specify the note's children in the class itself. Therefore it will delete any existing children which aren't declaratively added. See {ref}`leaf-notes` to learn more.
 ```
 
 ### Setting `singleton`
@@ -122,7 +122,7 @@ class Task(BaseDeclarativeNote):
 
 When {obj}`BaseDeclarativeNote.idempotent` is set, the class name (not fully qualified) is hashed to generate `note_id`.
 
-It uses the same hash algorithm used by {obj}`BaseDeclarativeMixin.singleton`.
+It uses the same hash algorithm used by {obj}`BaseDeclarativeNote.singleton`.
 
 ```python
 # note_id won't change if we move the class to a different module
@@ -136,7 +136,7 @@ class Task(BaseDeclarativeNote):
 
 When {obj}`BaseDeclarativeNote.note_id_seed` is set, the provided value is hashed to generate `note_id`.
 
-It uses the same hash algorithm used by {obj}`BaseDeclarativeMixin.singleton`.
+It uses the same hash algorithm used by {obj}`BaseDeclarativeNote.singleton`.
 
 ```python
 # note_id won't change if we move the class to a different module
@@ -157,7 +157,7 @@ class MyNote(BaseDeclarativeNote):
 
 ### Passing `note_id`
 
-When `note_id` is passed in the constructor of a {obj}`Note` subclass, it's similarly considered a singleton.
+When `note_id` is passed in the constructor of a {obj}`BaseDeclarativeNote` subclass, it's similarly considered a singleton.
 
 ### Child of singleton
 
@@ -192,7 +192,7 @@ class Child3(BaseDeclarativeNote): pass
 class Parent(BaseDeclarativeNote): pass
 ```
 
-## Custom initializer to add attributes, children
+## Custom initializer to add attributes and children
 
 Implement {obj}`BaseDeclarativeMixin.init` to add attributes and children dynamically. Use the following APIs to add attributes and children:
 
@@ -213,7 +213,7 @@ class MyMixin(BaseDeclarativeMixin):
     """
 
     def init(self, attributes: list[Attribute], children: list[Branch]):
-        if self.my_label:
+        if self.my_label is not None:
             attributes.append(
                 self.create_declarative_label("myLabel", self.my_label)
             )
@@ -229,7 +229,7 @@ class MyNote(BaseDeclarativeNote, MyMixin):
 (leaf-notes)=
 ## Leaf notes
 
-If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold user-maintained notes. Set {obj}`BaseDeclarativeNote.leaf` to indicate this, in which case using {obj}`children` or {obj}`child` will raise an exception.
+If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold notes maintained in the UI. Set {obj}`BaseDeclarativeNote.leaf` to indicate this, in which case existing children are kept intact and using {obj}`children` or {obj}`child` will raise an exception.
 
 For example, this would be necessary for a list of contacts:
 
