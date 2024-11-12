@@ -6,16 +6,23 @@
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
 import shutil
 import sys
+import tomllib
+from pathlib import Path
 
 sys.path.append(".")
 import util
 
 project = "TriliumAlchemy"
-copyright = "2023, mm21"
+copyright = "2023-2024, mm21"
 author = "mm21"
-release = "0.1.0"
+
+with open(
+    Path(os.path.abspath(__file__)).parent.parent / "pyproject.toml", "rb"
+) as fh:
+    release = tomllib.load(fh)["tool"]["poetry"]["version"]
 
 package = "trilium_alchemy"
 env = util.Env(package)
@@ -103,7 +110,7 @@ html_baseurl = "https://mm21.github.com/trilium-alchemy/"
 
 html_theme = "furo"
 
-html_title = "TriliumAlchemy"
+html_title = f"{project} {release}"
 
 html_theme_options = {
     "light_logo": "logo-light.svg",

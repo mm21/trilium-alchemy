@@ -1,5 +1,5 @@
 [tool.poetry]
-authors = ["mm21 <mm21.apps@gmail.com>"]
+authors = ["mm21 <mm21.dev@gmail.com>"]
 classifiers = [
   # Get the list of trove classifiers here: https://pypi.org/classifiers/
   "Programming Language :: Python :: Implementation :: CPython",
