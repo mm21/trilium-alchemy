@@ -18,7 +18,7 @@ class System2(System1):
 
 
 def test_system(session: Session, note: Note):
-    system = BaseRootSystemNote(note_id=note.note_id, session=session)
+    system = note.transmute(BaseRootSystemNote)
     session.flush()
 
     assert len(system.children) == 7
@@ -29,7 +29,7 @@ def test_system_append(session: Session, note: Note):
     """
     Verify that attributes are appended rather than clobbered.
     """
-    system = System2(note_id=note.note_id, session=session)
+    system = note.transmute(System2)
     session.flush()
 
     assert len(system.children) == 5

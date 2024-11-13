@@ -96,6 +96,16 @@ class Content(NoteStatefulExtension):
         self._working = BlobState()
 
     @property
+    def blob_id(self) -> str:
+        """
+        Get blob id from the working model if it exists, else backing model.
+        """
+
+        digest = self._working.digest or self._backing.digest
+        assert digest is not None
+        return digest
+
+    @property
     def _is_string(self):
         return self._note.is_string
 
@@ -103,23 +113,18 @@ class Content(NoteStatefulExtension):
     def _is_changed(self):
         """
         Return whether note content is changed, as determined by content hash
-        (blobId) if available.
+        (blobId).
         """
 
-        # content not set by user
         if self._working.blob is None:
+            # content not set by user
             return False
 
+        assert self._backing.digest is not None
         assert self._working.digest is not None
 
-        if self._backing.digest is None:
-            # using version of Trilium which doesn't have content blobId,
-            # so we need to compare the content manually (less efficient)
-            self._fetch_check()
-            return self._backing.blob != self._working.blob
-        else:
-            # Trilium provided blobId, so efficiently check digest
-            return self._backing.digest != self._working.digest
+        # efficiently check digest
+        return self._backing.digest != self._working.digest
 
     def _setattr(self, val: Any):
         self._set(val)
@@ -140,12 +145,10 @@ class Content(NoteStatefulExtension):
             self._backing.digest = self._get_digest(self._backing.blob)
         else:
             # get digest from model, only fetch content if accessed by user
+            assert (
+                model.blob_id is not None
+            ), f"Digest not provided in note model; please upgrade your Trilium version"
             self._backing.digest = model.blob_id
-
-            if self._backing.digest is None:
-                logging.debug(
-                    "You are using an older version of Trilium which doesn't provide blobId. Performance of setting note content may be worsened in some cases."
-                )
 
     def _teardown(self):
         """

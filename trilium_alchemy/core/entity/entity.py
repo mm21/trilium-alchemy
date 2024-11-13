@@ -62,7 +62,7 @@ class BaseEntity[ModelT: BaseEntityModel](
     _state: State
 
     # type used to create _model
-    _model_cls: Type[ModelT]
+    _model_cls: type[ModelT]
 
     def __new__(
         cls,

@@ -41,12 +41,12 @@ def test_text(session: Session, note: Note):
     note.content = f"{TEXT}_2"
     assert note._is_update
 
-    if note._content._backing.digest:
-        # if we have blobId, we shouldn't have fetched the content
-        assert note._content._backing.blob is None
-    else:
-        # if we don't have blobId, we should have fetched the content to compare
-        assert note._content._backing.blob is not None
+    # should have gotten blobId from note model, not fetched content
+    assert note._content._backing.digest is not None
+    assert note._content._backing.blob is None
+
+    assert note._content._working.digest is not None
+    assert note.blob_id == note._content._working.digest
 
     note.content = TEXT
     assert note._is_clean

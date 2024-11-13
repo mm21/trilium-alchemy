@@ -13,6 +13,16 @@ from trilium_alchemy import *
 from ..conftest import check_read_only, note_exists
 
 
+class NoteSubclass(Note):
+    @property
+    def label1(self) -> str:
+        return self["label1"]
+
+    @label1.setter
+    def label1(self, val: str):
+        self["label1"] = val
+
+
 def test_create(session: Session, note: Note):
     """
     Create new note as a child of provided note.
@@ -402,3 +412,37 @@ def test_export_import(note: Note, tmp_path: Path):
 
     for i, export_format in enumerate(formats):
         export_import(export_format, i)
+
+
+def test_subclass(note: Note):
+    """
+    Verify subclass with convenience property.
+    """
+
+    note.title = "Test note"
+    subclass = note.transmute(NoteSubclass)
+
+    assert note is subclass
+    assert subclass.title == "Test note"
+
+    subclass.label1 = "value1"
+    assert subclass.label1 == "value1"
+
+
+def test_transmute(note1: Note, note2: Note):
+    @label("testLabel")
+    class DeclarativeNoteSubclass(BaseDeclarativeNote):
+        pass
+
+    def check_subclass(note: Note, subclass: Note, note_cls: type[Note]):
+        assert note is subclass
+        assert isinstance(note, note_cls)
+        assert note.title == note_cls.__name__
+
+    note1.title = "NoteSubclass"
+
+    note_subclass = note1.transmute(NoteSubclass)
+    decl_note_subclass = note2.transmute(DeclarativeNoteSubclass)
+
+    check_subclass(note1, note_subclass, NoteSubclass)
+    check_subclass(note2, decl_note_subclass, DeclarativeNoteSubclass)

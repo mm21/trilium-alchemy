@@ -555,6 +555,14 @@ class Note(BaseEntity[NoteModel]):
         return content
 
     @property
+    def blob_id(self) -> str:
+        """
+        Getter for `blobId`, a digest of the note content.
+        """
+        self._model.setup_check()
+        return self._content.blob_id
+
+    @property
     def is_string(self) -> bool:
         """
         `True`{l=python} if note as it's currently configured has text content.
@@ -671,6 +679,22 @@ class Note(BaseEntity[NoteModel]):
             )
 
         return note_copy
+
+    def transmute[NoteT: Note](self, note_cls: type[NoteT]) -> NoteT:
+        """
+        Change this note's base to the provided class and return it.
+        This is useful for converting a {obj}`Note` instance to a subclass
+        thereof with custom convenience APIs.
+
+        ```{note}
+        Has a side effect of committing any changes to this note to Trilium.
+        ```
+        """
+
+        # commit changes to this note so state is retained
+        self.flush()
+
+        return note_cls(note_id=self.note_id, session=self.session)
 
     def export_zip(
         self,

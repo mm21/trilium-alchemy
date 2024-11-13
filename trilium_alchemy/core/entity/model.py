@@ -4,7 +4,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from pydantic import BaseModel
 
@@ -152,23 +152,6 @@ class BaseEntityModel(ABC):
         fields_str = ", ".join(fields)
 
         return f"{{{fields_str}}}"
-
-    @classmethod
-    @property
-    def fields_update_alias(cls) -> Iterable[str]:
-        """
-        Maps aliased fields to canonical fields using fields_alias if
-        provided.
-        """
-        if cls.fields_alias:
-            fields_update = cls.fields_update.copy()
-            for alias, field in cls.fields_alias.items():
-                if field in fields_update:
-                    fields_update[fields_update.index(field)] = alias
-
-            return fields_update
-        else:
-            return cls.fields_update
 
     @property
     def exists(self) -> bool:
