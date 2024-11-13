@@ -1,0 +1,29 @@
+@startgantt roadmap-gantt
+
+hide footbox
+
+[Template re-sync API] as [template_resync] lasts 2 days
+note bottom
+    Synchronizes a given note with a given template, useful if template changes were made after note creation
+end note
+
+[Initial CLI tool] as [cli_initial] lasts 2 days
+note bottom
+    Invoke template re-sync from command line
+end note
+
+[CLI tool enhancements] as [cli_enhancements] lasts 2 days
+note bottom
+    Invoke backup and export/import functionality from command line
+end note
+
+[CLI tool extension management] as [cli_extensions] lasts 30 days
+note bottom
+    Manage extensions, themes, etc from a local folder or Git repository
+end note
+
+[template_resync] -> [cli_initial]
+[cli_initial] -> [cli_enhancements]
+[cli_enhancements] -> [cli_extensions]
+
+@endgantt

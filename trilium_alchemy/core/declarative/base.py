@@ -156,8 +156,8 @@ class BaseDeclarativeMixin(
         """
         Create a child {obj}`Note` with deterministic `note_id` and return a
         {obj}`Branch`. Should be used in subclassed
-        {obj}`Note.init` or {obj}`BaseDeclarativeMixin.init` to generate
-        the same child `note_id` upon every instantiation.
+        {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init`
+        to generate the same child `note_id` upon every instantiation.
 
         Instantiate provided class as a declarative child of the current
         note by generating a deterministic id and returning the
@@ -368,8 +368,8 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     ```{todo}
     Add `auto_mime=True`{l=python} to also set `mime` using `magic` package
-    (or do so automatically if {obj}`Note.content_file` set, but
-    {obj}`Note.mime` not set)
+    (or do so automatically if `BaseDeclarativeNote.content_file` set, but
+    `BaseDeclarativeNote.mime_` not set)
     ```
     """
 
@@ -414,13 +414,6 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     Seed from which to generate `note_id`. Useful to generate a
     collision-avoidant id from a human-friendly identifier.
     Generated as base64-encoded hash of seed.
-
-    If you want to fix the id of a subclassed note, it's recommended
-    to use {obj}`BaseDeclarativeMixin.singleton`, which internally generates
-    {obj}`BaseDeclarativeMixin.note_id_seed` from the class name. However if you
-    want `note_id` to be invariant of where the class is located in
-    its package, you may prefer to use {obj}`BaseDeclarativeMixin.note_id_seed`
-    directly.
     """
 
     note_id_segment: str | None = None
@@ -431,46 +424,44 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     singleton: bool = False
     """
-    If set on a {obj}`Note` subclass, enables deterministic calculation
-    of `note_id` based on the fully qualified class name. This means the same
-    class will always have the same `note_id` when instantiated.
+    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic 
+    calculation of `note_id` based on the fully qualified class name. 
+    This means the same class will always have the same `note_id` when 
+    instantiated.
 
     ```{warning}
     If you move this class to a different module, it will result in a different
     `note_id` which will break any non-declarative relations to it. 
-    To enable more portable behavior, set `idempotent` or assign a 
-    `note_id_seed` explicitly.
+    To enable more portable behavior, set 
+    {obj}`BaseDeclarativeNote.idempotent` or assign 
+    {obj}`BaseDeclarativeNote.note_id_seed` explicitly.
     ```
     """
 
     idempotent: bool = False
     """
-    If set on a {obj}`Note` subclass, enables deterministic calculation
-    of `note_id` based on the class name. Similar to `singleton`, but only
-    the class name (not fully qualified) is used.
+    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic 
+    calculation of `note_id` based on the class name. Similar to 
+    {obj}`BaseDeclarativeNote.singleton`, but only the class name 
+    (not fully qualified) is used.
     """
 
     idempotent_segment: bool = False
     """
-    If set on a {obj}`Note` subclass, sets segment name to class name
-    for the purpose of `note_id` calculation. 
-    An explicitly provided {obj}`BaseDeclarativeMixin.note_id_segment` takes precedence.
+    If set on a {obj}`BaseDeclarativeNote` subclass, sets segment name to 
+    class name for the purpose of `note_id` calculation. 
+    An explicitly provided {obj}`BaseDeclarativeNote.note_id_segment` 
+    takes precedence.
     """
 
     leaf: bool = False
     """
-    If set to `True`{l=python} on a {obj}`Note` subclass, disables setting
-    of child notes declaratively, allowing children to be manually
-    maintained by the user. Otherwise, notes added by the user will be
+    If set to `True`{l=python} on a {obj}`BaseDeclarativeNote` subclass,
+    disables setting of child notes declaratively, allowing children to be 
+    manually maintained by the user. Otherwise, notes added by the user will be
     deleted to match the children added declaratively.
 
     Should be set on notes intended to hold user notes, e.g. todo lists.
-
-    If `False`{l=python} and `note_id` is deterministically generated (e.g.
-    it's a singleton or child of a singleton), a label
-    `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy.
-    This enables hiding of the "Add child note" button in Trilium's UI
-    via the {obj}`AppCss` note added by {obj}`BaseRootSystemNote`.
     """
 
     hide_new_note: bool = False

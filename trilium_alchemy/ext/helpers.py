@@ -7,9 +7,10 @@ scripts, etc. This module provides automation of such a system, with a
 
 The root system {obj}`BaseRootSystemNote` additionally holds themes and a
 built-in stylesheet which hides the "Create child note" button in the UI
-for subclass-managed notes ({obj}`BaseDeclarativeMixin.leaf` is `False`{l=python}).
+for subclass-managed notes 
+({obj}`BaseDeclarativeNote.leaf` is `False`{l=python}).
 
-If a note hierarchy is defined under a {obj}`BaseRoot` subclass,
+If a note hierarchy is defined under a {obj}`BaseRootNote` subclass,
 a {obj}`BaseRootSystemNote` is automatically added.
 
 For a complete example of a note hierarchy using these classes, see 
@@ -29,7 +30,7 @@ class System(BaseRootSystemNote):
 
 # define a root note
 # use @children or @child to add child notes
-class MyRoot(BaseRoot):
+class MyRoot(BaseRootNote):
     system = System
 ```
 """

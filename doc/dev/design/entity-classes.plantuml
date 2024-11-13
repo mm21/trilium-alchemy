@@ -7,6 +7,12 @@ package trilium_alchemy.core <<Frame>> {
   class Note {
   }
 
+  class BaseDeclarativeNote {
+  }
+
+  class BaseDeclarativeMixin {
+  }
+
   class BaseAttribute {
   }
 
@@ -22,6 +28,12 @@ package trilium_alchemy.core <<Frame>> {
   BaseEntity <|-- Note
   BaseEntity <|-- BaseAttribute
   BaseEntity <|-- Branch
+
+  Note <|-- BaseDeclarativeNote
+  BaseDeclarativeMixin <|-- BaseDeclarativeNote
+
   BaseAttribute <|-- Label
   BaseAttribute <|-- Relation
 }
+
+@enduml

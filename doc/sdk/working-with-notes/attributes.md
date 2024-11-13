@@ -1,18 +1,20 @@
 (working-with-attributes)=
 # Attributes
 
-One or more attributes can be added to a note via the `+=` operator:
+As mentioned in {ref}`working-with-notes-notes`, one or more attributes can be added to a note via the `+=` operator:
 
 ```python
 note += Label("myLabel")
 note += [Label("myLabel2", "myValue2"), Relation("myRelation", other_note)]
 ```
 
-The following sections describe interfaces to access attributes.
+The following sections describe other interfaces to access attributes.
 
 ## Single-valued labels
 
-Single-valued labels can be created, updated, or retrieved by indexing into the note itself:
+Notes can be indexed to get/set an owned single-valued label, or specifically the first owned label matching the provided name. If no owned label with that name exists, a new one is created.
+
+For example, to set `#priority=10`:
 
 ```python
 assert "priority" not in note
@@ -20,8 +22,10 @@ assert "priority" not in note
 note["priority"] = "10"
 
 assert "priority" in note
-assert note["priority"] == "10
+assert note["priority"] == "10"
 ```
+
+{obj}`Note` does not implement a fully-featured dictionary, only dictionary-like semantics for single-valued labels.
 
 ## Labels
 
@@ -83,3 +87,7 @@ To filter by owned vs inherited, use:
 
 - {obj}`OwnedAttributes <Note.attributes.owned>`
 - {obj}`InheritedAttributes <Note.attributes.inherited>`
+
+```{note}
+Implementation detail: The latter two objects constitute the source of truth for attributes; all other interfaces simply map to these while enforcing type correctness.
+```

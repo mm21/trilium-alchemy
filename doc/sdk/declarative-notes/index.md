@@ -1,6 +1,13 @@
 (declarative-notes)=
 # Declarative notes: Notes as code
 
+```{toctree}
+:maxdepth: 2
+:hidden:
+
+example
+```
+
 One of the goals of this project is to enable building, maintaining, and sharing complex note hierarchies using Python. This approach is declarative in nature, inspired by SQLAlchemy's [declarative mapping](https://docs.sqlalchemy.org/en/20/orm/mapping_styles.html#orm-declarative-mapping) approach.
 
 The general idea of declarative programming is that you specify the desired end state, not the steps needed to reach it.
@@ -9,16 +16,32 @@ For a fully-featured example of a note hierarchy designed using this approach, s
 
 ## Note subclasses
 
-The basic technique is to subclass {obj}`Note`:
+The basic technique is to subclass {obj}`BaseDeclarativeNote`. Set {obj}`Note` fields (`note_id`, `title`, `note_type`, `mime`, `content`) by setting the corresponding field name suffixed with `_`.
+
+For example:
 
 ```python
 class MyNote(BaseDeclarativeNote):
-    title = "My note"
+    title_ = "My title"
+    note_type_ = "text"
+    mime_ = "text/html"
+    content_ = "<p>Hello, world!</p>"
+```
+
+When you subclass {obj}`BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained from the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
+
+### Icon helper
+
+To set an icon (label `#iconClass`), simply set the `icon` attribute:
+
+```python
+class MyTask(BaseDeclarativeNote):
+    icon = "bx bx-task"
 ```
 
 ## Mixin subclasses
 
-Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured {obj}`Note`. In those cases you can use a {obj}`BaseDeclarativeMixin`.
+Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured {obj}`BaseDeclarativeNote`. In those cases you can use a {obj}`BaseDeclarativeMixin`.
 
 The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
 
@@ -27,7 +50,7 @@ class MyMixin(BaseDeclarativeMixin): pass
 ```
 
 ```{note}
-{obj}`BaseDeclarativeNote` inherits from {obj}`BaseDeclarativeMixin`, so the following semantics can be applied to {obj}`Note` subclasses and {obj}`BaseDeclarativeMixin` subclasses equally.
+{obj}`BaseDeclarativeNote` inherits from {obj}`BaseDeclarativeMixin`, so the following semantics can be applied to {obj}`BaseDeclarativeNote` subclasses and {obj}`BaseDeclarativeMixin` subclasses equally.
 ```
 
 ## Adding labels
@@ -42,8 +65,8 @@ class SortedMixin(BaseDeclarativeMixin): pass
 Now you can simply subclass this mixin if you want a note's children to be sorted:
 
 ```python
-@label("iconClass", "bx bx-group")
-class Contacts(BaseDeclarativeNote, SortedMixin): pass
+class Contacts(BaseDeclarativeNote, SortedMixin):
+    icon = "bx bx-group"
 ```
 
 The above is equivalent to the following imperative approach:
@@ -63,30 +86,13 @@ A special type of label is one which defines a [promoted attribute](https://gith
 @label_def("birthday", value_type="date")
 @relation_def("livesAt")
 @relation_def("livedAt", multi=True)
-class Person(WorkspaceTemplate):
+class Person(BaseWorkspaceTemplateNote):
     icon = "bx bxs-user-circle"
-```
-
-## Setting fields
-
-You can set the following fields by setting attribute values:
-
-- {obj}`Note.title`
-- {obj}`Note.note_type`
-- {obj}`Note.mime`
-- {obj}`Note.content`
-
-```python
-class MyNote(BaseDeclarativeNote):
-    title_ = "My title"
-    note_type_ = "text"
-    mime_ = "text/html"
-    content_ = "<p>Hello, world!</p>"
 ```
 
 ## Setting content from file
 
-Set note content from a file by setting {obj}`Note.content_file`:
+Set note content from a file by setting {obj}`BaseDeclarativeNote.content_file`:
 
 ```python
 class MyFrontendScript(BaseDeclarativeNote):
@@ -95,7 +101,11 @@ class MyFrontendScript(BaseDeclarativeNote):
     content_file = "assets/myFrontendScript.js"
 ```
 
-The filename is relative to the package the class is defined in. Currently accessing parent paths (`".."`{l=python}) is not supported.
+The filename is relative to the subpackage in which the class is defined. Currently accessing parent paths (`".."`{l=python}) is not supported.
+
+```{note}
+If you use [Poetry](https://python-poetry.org/) and want to publish a Python note hierarchy with content from a file, no additional steps are needed to package these files if they reside in your project. If you use setuptools, you'll need to use `package_data` or `data_files` to include them (however using setuptools for this is currently untested).
+```
 
 ## Singleton notes
 
@@ -136,10 +146,10 @@ class Task(BaseDeclarativeNote):
 
 When {obj}`BaseDeclarativeNote.note_id_seed` is set, the provided value is hashed to generate `note_id`.
 
-It uses the same hash algorithm used by {obj}`BaseDeclarativeNote.singleton`.
+It uses the same hash algorithm used by {obj}`BaseDeclarativeNote.singleton` and {obj}`BaseDeclarativeNote.idempotent`.
 
 ```python
-# note_id won't change if we move the class to a different module
+# note_id won't change if we rename the class or move it to a different module
 @label("template")
 @label("iconClass", "bx bx-task")
 class Task(BaseDeclarativeNote):
@@ -178,6 +188,12 @@ class TaskInstance(BaseDeclarativeNote): pass
 
 Now you can create a task by simply instantiating `TaskInstance`, and it will automatically have `~template=Task`.
 
+```python
+my_task = TaskInstance()
+
+assert my_task.relations.get_target("template") is Task()
+```
+
 ## Adding children
 
 Use {obj}`children` or {obj}`child` to add children:
@@ -200,7 +216,7 @@ Implement {obj}`BaseDeclarativeMixin.init` to add attributes and children dynami
 - {obj}`BaseDeclarativeMixin.create_declarative_relation`
 - {obj}`BaseDeclarativeMixin.create_declarative_child`
 
-These APIs are required for singleton notes to generate a deterministic id for attributes and children, generating the same subtree every time the {obj}`Note` subclass is instantiated.
+These APIs are required for singleton notes to generate a deterministic id for attributes and children, generating the same subtree every time the {obj}`BaseDeclarativeNote` subclass is instantiated.
 
 For example, a mixin which provides a convenient way to set an attribute `#myLabel` to a given value:
 
@@ -209,7 +225,7 @@ class MyMixin(BaseDeclarativeMixin):
 
     my_label: str | None = None
     """
-    If set, add attribute `myLabel` with provided value.
+    If set, add label `myLabel` with provided value.
     """
 
     def init(self, attributes: list[Attribute], children: list[Branch]):
@@ -224,6 +240,9 @@ class MyNote(BaseDeclarativeNote, MyMixin):
     """
 
     my_label = "my-label-value"
+
+my_note = MyNote()
+assert my_note["myLabel"] == "my-label-value"
 ```
 
 (leaf-notes)=
@@ -235,10 +254,12 @@ For example, this would be necessary for a list of contacts:
 
 ```python
 @label("sorted")
-@label("iconClass", "bx bx-group")
 class Contacts(BaseDeclarativeNote):
+    icon = "bx bx-group"
     singleton = True
     leaf = True
 ```
 
-Now, assuming it's been placed in your hierarchy, you can access your contact list by simply instantiating `Contacts`.
+Now, assuming it has been placed in your hierarchy, you can access your contact list by simply instantiating `Contacts`.
+
+If `False`{l=python} and `note_id` is deterministically generated (e.g. it's a singleton or child of a singleton), a label `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy. This enables hiding of the "Add child note" button in Trilium's UI via the {obj}`AppCss` note added by {obj}`BaseRootSystemNote`.

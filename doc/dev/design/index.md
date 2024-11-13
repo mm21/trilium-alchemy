@@ -4,12 +4,12 @@
 
 {obj}`BaseEntity` is the base class representing notes, attributes, and branches. It essentially maps to a record in Trilium's database.
 
-```{uml} entity.plantuml
+```{uml} entity-classes.plantuml
 ```
 
 ## Entity state machine
 
-The entity state ({obj}`Entity.state`) is automatically managed based on the user's actions. The following illustrates the possible state transitions.
+The entity state ({obj}`BaseEntity.state`) is automatically managed based on the user's actions. The following illustrates the possible state transitions.
 
 ```{uml} entity-state.plantuml
 ```

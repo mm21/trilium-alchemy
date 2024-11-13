@@ -9,7 +9,7 @@ attributes
 branches
 ```
 
-This section describes how to work with notes imperatively.
+This section describes how to work with notes imperatively, i.e. by performing step-by-step note operations.
 
 Following is a brief, self-explanatory example of what will be covered:
 

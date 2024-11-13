@@ -179,7 +179,7 @@ def test_index_del(session: Session, note: Note):
     label = note.labels.get("label1")
     assert label is not None
 
-    del note.attributes.owned[0]
+    del note.labels.owned[0]
     assert label._is_delete
 
     session.flush()

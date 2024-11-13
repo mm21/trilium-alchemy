@@ -19,9 +19,7 @@ getting-started/setup
 :caption: SDK
 :hidden:
 
-sdk/guide/index
-sdk/examples/index
-sdk/tutorials/index
+sdk/index
 ```
 
 ```{toctree}
@@ -29,7 +27,7 @@ sdk/tutorials/index
 :caption: Tools
 :hidden:
 
-tools/trilium-sync/index
+tools/index
 ```
 
 ```{toctree}
@@ -38,7 +36,6 @@ tools/trilium-sync/index
 :hidden:
 
 reference/api
-reference/fs-spec
 ```
 
 ```{toctree}
@@ -46,8 +43,8 @@ reference/fs-spec
 :caption: Development
 :hidden:
 
-dev/guide
+dev/guide/index
 dev/design/index
-dev/roadmap
+dev/roadmap/index
 ```
 % TODO: add acknowledgements

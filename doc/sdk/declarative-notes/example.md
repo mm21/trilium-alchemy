@@ -1,5 +1,5 @@
 (event-tracker)=
-# Event tracker
+# Example: Event tracker
 
 See `trilium-alchemy/example/event-tracker` for a fully featured showcase of both declarative and imperative approaches. An installation script is provided.
 
@@ -16,13 +16,9 @@ Then run its `__main__.py` to install it:
 
 ```shell
 python -m event_tracker 
-````
+```
 
 A note must be designated with label `#eventTrackerRoot` to be the hierarchy root. Alternatively, you can pass `--root` to install it to your root note.
-
-```{note}
-Eventually sync functionality will be provided by a CLI to provide equivalent functionality as the install script.
-```
 
 ```{warning}
 Any existing children of the destination note will be deleted, so you should install it into an empty subtree. To be safe, if the installation script detects existing children it requires that you pass `--clobber` to delete them.

@@ -1,5 +1,7 @@
 # Installation
 
+It's recommended to create an isolated environment via [Pipenv](https://pipenv.pypa.io/en/latest/) or [Poetry](https://python-poetry.org/) so as to more closely track the TriliumAlchemy version installed. This will enable you to upgrade TriliumAlchemy and make any required API changes at your convenience.
+
 ## PyPI
 
 Install from PyPI:
@@ -7,21 +9,3 @@ Install from PyPI:
 ```bash
 pip install trilium-alchemy
 ```
-
-## GitHub
-
-Install from GitHub:
-
-```bash
-pip install git+https://github.com/mm21/trilium-alchemy.git
-```
-
-## Local installation
-
-Install using [Poetry](https://python-poetry.org/):
-
-```bash
-git clone https://github.com/mm21/trilium-alchemy.git
-cd trilium-alchemy
-poetry install
-````

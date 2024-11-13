@@ -1,5 +1,5 @@
 """
-Builds upon declarative Note definition to streamline Trilium extension 
+Builds upon {obj}`BaseDeclarativeNote` to streamline Trilium extension 
 development.
 """
 

@@ -2,9 +2,10 @@
 Decorators to add attributes and children declaratively.
 
 ```{todo}
-Configuration of {obj}`Session` to ignore changes to 
-{obj}`Branch.expanded` as this is mostly a UI concept. It can be clobbered
-as children of {obj}`Note` subclasses force setting {obj}`Branch.expanded`.
+Configuration of `Session` to ignore changes to 
+`Branch.expanded` as this is mostly a UI concept. It can be clobbered
+as children of `BaseDeclarativeNote` subclasses force setting 
+`Branch.expanded`.
 ```
 """
 
@@ -119,7 +120,7 @@ def relation(
     assert task["template"]["iconClass"] == "bx bx-task"
     ```
     :param name: Relation name
-    :param target_cls: Class of relation target, will be instantiated when this note is instantiated (so it must have {obj}`BaseDeclarativeMixin.singleton`, {obj}`BaseDeclarativeMixin.note_id`, or {obj}`BaseDeclarativeMixin.note_id_seed` set)
+    :param target_cls: Class of relation target, will be instantiated when this note is instantiated (so it must have {obj}`BaseDeclarativeNote.singleton`, {obj}`BaseDeclarativeNote.note_id_`, or {obj}`BaseDeclarativeNote.note_id_seed` set)
     :param inheritable: Whether relation should be inherited to children
     :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
