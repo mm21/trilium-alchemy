@@ -353,6 +353,8 @@ class Note(BaseEntity[NoteModel]):
 
         :raises KeyError: No such attribute
         """
+        assert isinstance(name, str), f"Invalid type for label name: {val}"
+
         attr = self.labels.get(name)
 
         if attr is None:
@@ -367,6 +369,8 @@ class Note(BaseEntity[NoteModel]):
         :param key: Attribute name
         :param value_spec: Attribute value
         """
+        assert isinstance(name, str), f"Invalid type for label name: {val}"
+        assert isinstance(val, str), f"Invalid type for label value: {val}"
         self.labels.owned.set_value(name, val)
 
     def __contains__(self, label: str):

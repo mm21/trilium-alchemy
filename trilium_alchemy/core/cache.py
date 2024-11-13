@@ -68,7 +68,7 @@ class Cache:
         # validate newly added entities
         self._validate(dirty_set - dirty_set_old)
 
-        logging.info(
+        logging.debug(
             f"Flushing {len(dirty_set)} entities: (create/update/delete) {self._summary(dirty_set)}"
         )
 
