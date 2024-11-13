@@ -97,11 +97,9 @@ note ^= (today, "My prefix")
 assert note.branches.parents[0].prefix == "My prefix"
 ```
 
-## Single-valued attributes
+## Single-valued labels
 
-Notes can be indexed to get/set a single-valued attribute, or rather the first attribute matching the provided name. 
-
-If no attribute with that name exists, a new one is created. The attribute type ({obj}`Label` or {obj}`Relation`) is inferred by the type of the assigned value.
+Notes can be indexed to get/set a single-valued label, or specifically the first label matching the provided name. If no label with that name exists, a new one is created.
 
 For example, to set `#priority=10`:
 
@@ -109,36 +107,6 @@ For example, to set `#priority=10`:
 task = Note()
 task["priority"] = "10"
 assert task["priority"] == "10"
-```
-
-To set `~template=Task`:
-
-```python
-task_template = session.search("#template #task")[0]
-
-task = Note()
-task["template"] = task_template
-```
-
-## Multi-valued attributes
-
-To access a list of all attributes of a given name, index into any of the following:
-
-- Combined owned and inherited attributes: {obj}`Note.attributes`
-- Owned attributes: `Note.attributes.owned`
-- Inherited attributes: `Note.attributes.inherited`
-
-```python
-note = Note()
-
-note += [Label("myLabel", "value1"), Label("myLabel", "value2")]
-
-for attr in note.attributes.owned["myLabel"]:
-    print(attr)
-```
-```none
-Label(#myLabel, value=value1, attribute_id=None, note=Note(title=new note, note_id=None), position=10)
-Label(#myLabel, value=value2, attribute_id=None, note=Note(title=new note, note_id=None), position=20)
 ```
 
 ## Content

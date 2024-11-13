@@ -1,83 +1,85 @@
 (working-with-attributes)=
 # Attributes
 
-## Owned and inherited attributes
-
-Combined owned and inherited attributes are accessed as: {obj}`Note.attributes`
-
-Access as a list:
+One or more attributes can be added to a note via the `+=` operator:
 
 ```python
-# add some attributes
-note.attributes.append(Label("myLabel"))
-note.attributes.append(Relation("myRelation", session.root))
-
-for attr in note.attributes:
-    print(f"Attribute: {attr}")
-```
-```none
-Attribute: Label(#myLabel, value=, attribute_id=None, note=Note(title=new note, note_id=None), position=10)
-Attribute: Relation(~myRelation, target=Note(title=root, note_id=root), attribute_id=None, note=Note(title=new note, note_id=None), position=20)
-```
-
-Index by attribute name, getting a list of attributes with that name:
-
-```python
-# add a label
 note += Label("myLabel")
-
-print(note.attributes["myLabel"][0])
-```
-```none
-Label(#myLabel, value=, attribute_id=None, note=Note(title=new note, note_id=None), position=10)
+note += [Label("myLabel2", "myValue2"), Relation("myRelation", other_note)]
 ```
 
-Use `in`{l=python} to check if an attribute exists by name:
+The following sections describe interfaces to access attributes.
+
+## Single-valued labels
+
+Single-valued labels can be created, updated, or retrieved by indexing into the note itself:
 
 ```python
-assert "myLabel" in note.attributes
+assert "priority" not in note
+
+note["priority"] = "10"
+
+assert "priority" in note
+assert note["priority"] == "10
 ```
 
-When an attribute is deleted from the list, it's automatically marked
-for delete:
+## Labels
+
+Labels are accessed as {obj}`Note.labels`. For example, to get/set the first label with a given name:
 
 ```python
-# add a label
-label = Label("myLabel")
-note += label
+assert "myLabel" not in note.labels
+assert note.labels.get_value("myLabel") is None
 
-# delete from list
-del note.attributes[0]
+note.labels.set_value("myLabel", "myValue1")
 
-print(f"label.state: {label.state}")
-```
-```none
-label.state: State.DELETE
+assert "myLabel" in note.labels
+assert note.labels.get_value("myLabel") == "myValue1"
 ```
 
-Assign a new list, deleting any existing attributes not in the list:
+To get all labels with a given name:
 
 ```python
-# add a label
-label1 = Label("myLabel1")
-note += label1
-
-# assign a new list of attributes
-label2 = Label("myLabel2")
-note.attributes = [label2]
-
-print(f"label1.state: {label1.state}")
-print(f"label2.state: {label2.state}")
-```
-```none
-label1.state: State.DELETE
-label2.state: State.CREATE
+assert len(note.labels.get_all("myLabel")) == 1
+assert note.labels.get_values("myLabel") == ["myValue1"]
 ```
 
-## Owned attributes
+To filter by owned vs inherited, use:
 
-Owned attributes are accessed as: {obj}`OwnedAttributes <Note.attributes.owned>`. Implements the same interface as {obj}`Attributes`.
+- {obj}`OwnedLabels <Note.labels.owned>`
+- {obj}`InheritedLabels <Note.labels.inherited>`
 
-## Inherited attributes
+## Relations
 
-Inherited attributes are accessed as: {obj}`InheritedAttributes <Note.attributes.inherited>`. Implements the same interface as {obj}`Attributes`.
+Relations are accessed as {obj}`Note.relations`. For example, to get/set the first relation with a given name:
+
+```python
+assert "myRelation" not in note.relations
+assert note.relations.get_target("myRelation") is None
+
+note.relations.set_target("myRelation", other_note)
+
+assert "myRelation" in note.relations
+assert note.relations.get_target("myLabel") is other_note
+```
+
+To get all relations with a given name:
+
+```python
+assert len(note.relations.get_all("myRelation")) == 1
+assert note.relations.get_targets("myRelation") == [other_note]
+```
+
+To filter by owned vs inherited, use:
+
+- {obj}`OwnedRelations <Note.relations.owned>`
+- {obj}`InheritedRelations <Note.relations.inherited>`
+
+## Combined labels and relations
+
+The combined list of labels and relations is accessed as: {obj}`Note.attributes`. It provides an interface similar to {obj}`Note.labels` and {obj}`Note.relations`.
+
+To filter by owned vs inherited, use:
+
+- {obj}`OwnedAttributes <Note.attributes.owned>`
+- {obj}`InheritedAttributes <Note.attributes.inherited>`
