@@ -69,21 +69,6 @@ class _BaseTemplateNote(BaseDeclarativeNote):
         """
         Create new note with `~template` relation to this note, passing through
         constructor args.
-
-        Example:
-
-        ```
-        # define a task template (not shown: instantiation in hierarchy)
-        @label_def("priority", value_type="number")
-        class Task(Template): # or WorkspaceTemplate
-            icon = "bx bx-task"
-
-        # create a new note with ~template=Task
-        task = Task.instance(title="Buy cookies")
-
-        # equivalent to:
-        task = Note(title="Buy cookies", template=Task)
-        ```
         """
         return Note(*args, **kwargs, template=cls)
 
@@ -263,7 +248,7 @@ class BaseSystemNote(BaseDeclarativeNote):
 
     workspace_templates: list[Type[BaseWorkspaceTemplateNote]] | None = None
     """
-    List of {obj}`WorkspaceTemplate` subclasses.
+    List of {obj}`BaseWorkspaceTemplateNote` subclasses.
     """
 
     stylesheets: list[Type[BaseAppCssNote]] | None = None

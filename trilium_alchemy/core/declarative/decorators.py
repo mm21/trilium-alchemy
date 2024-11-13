@@ -75,6 +75,8 @@ def label(
         attributes: list[BaseAttribute],
         children: list[BranchSpecT],
     ):
+        assert isinstance(self, BaseDeclarativeNote)
+
         attributes.append(
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable
@@ -128,6 +130,7 @@ def relation(
         attributes: list[BaseAttribute],
         children: list[BranchSpecT],
     ):
+        assert isinstance(self, BaseDeclarativeNote)
         assert (
             target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -269,8 +272,12 @@ def children(*children: type[Note] | tuple[type[Note], dict[str, Any]]):
     """
 
     def init(
-        self, attributes: list[BaseAttribute], children_: list[BranchSpecT]
+        self: BaseDeclarativeNote,
+        attributes: list[BaseAttribute],
+        children_: list[BranchSpecT],
     ):
+        assert isinstance(self, BaseDeclarativeNote)
+
         children_ += list(cast(Iterable[BranchSpecT], children))
 
     return _patch_init_decl(init)
@@ -296,8 +303,12 @@ def child(child: type[Note], prefix: str = "", expanded: bool = False):
     """
 
     def init(
-        self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+        self: BaseDeclarativeNote,
+        attributes: list[BaseAttribute],
+        children: list[BranchSpecT],
     ):
+        assert isinstance(self, BaseDeclarativeNote)
+
         children.append(
             cast(
                 BranchSpecT,

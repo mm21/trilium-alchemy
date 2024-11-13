@@ -353,28 +353,34 @@ class Note(BaseEntity[NoteModel]):
 
         :raises KeyError: No such attribute
         """
-        assert isinstance(name, str), f"Invalid type for label name: {val}"
+        assert isinstance(
+            name, str
+        ), f"Invalid type for label name: {name} ({type(name)})"
 
-        attr = self.labels.get(name)
+        attr = self.labels.owned.get(name)
 
         if attr is None:
             raise KeyError(f"Attribute does not exist: {name}, note {self}")
 
         return attr.value
 
-    def __setitem__(self, name: str, val: str):
+    def __setitem__(self, name: str, value: str):
         """
-        Create or update attribute with provided name.
+        Create or update owned label with provided name.
 
-        :param key: Attribute name
-        :param value_spec: Attribute value
+        :param name: Label name
+        :param val: Label value
         """
-        assert isinstance(name, str), f"Invalid type for label name: {val}"
-        assert isinstance(val, str), f"Invalid type for label value: {val}"
-        self.labels.owned.set_value(name, val)
+        assert isinstance(
+            name, str
+        ), f"Invalid type for label name: {name} ({type(name)})"
+        assert isinstance(
+            value, str
+        ), f"Invalid type for label value: {value} ({type(value)})"
+        self.labels.owned.set_value(name, value)
 
     def __contains__(self, label: str):
-        return self.labels.get(label) is not None
+        return self.labels.owned.get(label) is not None
 
     def __hash__(self) -> int:
         return id(self)
@@ -546,7 +552,12 @@ class Note(BaseEntity[NoteModel]):
         Type-safe getter for text note content.
         """
         content = self.content
-        assert isinstance(content, str)
+
+        if not isinstance(content, str):
+            raise ValueError(
+                f"Invalid content type {type(content)} for note with is_string={self.is_string}"
+            )
+
         return content
 
     @property
@@ -555,7 +566,12 @@ class Note(BaseEntity[NoteModel]):
         Type-safe getter for binary note content.
         """
         content = self.content
-        assert isinstance(content, bytes)
+
+        if not isinstance(content, bytes):
+            raise ValueError(
+                f"Invalid content type {type(content)} for note with is_string={self.is_string}"
+            )
+
         return content
 
     @property
