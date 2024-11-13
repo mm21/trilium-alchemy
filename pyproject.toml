@@ -54,6 +54,13 @@ testpaths = "test"
 data_file = "__out__/test/.coverage"
 source = ["trilium_alchemy"]
 
+[tool.coverage.report]
+exclude_lines = [
+  "if TYPE_CHECKING:",
+  "\\.\\.\\.$",
+  "\\.\\.\\."
+]
+
 [tool.black]
 line-length = 80
 
