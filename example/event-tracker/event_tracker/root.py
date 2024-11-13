@@ -1,3 +1,7 @@
+"""
+Root note and top-level hierarchy.
+"""
+
 from trilium_alchemy import BaseRootNote, BaseRootSystemNote, children, label
 
 from .events import Events

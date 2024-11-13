@@ -1,11 +1,11 @@
 from trilium_alchemy import (
     BaseBackendScriptNote,
     BaseDeclarativeMixin,
+    BaseDeclarativeNote,
     BaseSystemNote,
     BaseWidgetNote,
     BaseWorkspaceNote,
     BaseWorkspaceTemplateNote,
-    Note,
     children,
     label,
     label_def,
@@ -96,7 +96,7 @@ class System(BaseSystemNote):
 @label("sorted")
 @relation("runOnNoteCreation", CreateRelation, inheritable=True)
 @relation("runOnAttributeCreation", CreateRelation, inheritable=True)
-class Lands(Note):
+class Lands(BaseDeclarativeNote):
     icon = ""
     singleton = True
     leaf = True

@@ -1,9 +1,9 @@
 from trilium_alchemy import (
+    BaseDeclarativeNote,
     BaseSystemNote,
     BaseWidgetNote,
     BaseWorkspaceNote,
     BaseWorkspaceTemplateNote,
-    Note,
     children,
     label,
     label_def,
@@ -45,7 +45,7 @@ class System(BaseSystemNote):
 
 
 @label("iconClass", "bx bxs-group")
-class Groups(Note):
+class Groups(BaseDeclarativeNote):
     singleton = True
     leaf = True
 

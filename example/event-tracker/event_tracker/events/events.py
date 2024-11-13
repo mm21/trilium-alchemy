@@ -1,9 +1,9 @@
 from trilium_alchemy import (
+    BaseDeclarativeNote,
     BaseFrontendScriptNote,
     BaseSystemNote,
     BaseWorkspaceNote,
     BaseWorkspaceTemplateNote,
-    Note,
     Relation,
     children,
     label,
@@ -63,7 +63,7 @@ class System(BaseSystemNote):
 
 
 @label("iconClass", "bx bx-calendar")
-class Type(Note):
+class Type(BaseDeclarativeNote):
     singleton = True
     leaf = True
 
@@ -92,13 +92,15 @@ class Events(BaseWorkspaceNote):
 
 # common base to provide convenience methods for adding groups of ~person
 # relations
-class EventInstance(Note):
+class EventInstance(BaseDeclarativeNote):
     # set leaf since this note isn't intended to have declarative children
     # (should be same as if it was created in UI)
     leaf = True
 
     def add_people(self, *people):
-        self.attributes += [Relation("person", person) for person in people]
+        self.attributes.owned += [
+            Relation("person", person) for person in people
+        ]
 
 
 @relation("template", Birthday)
