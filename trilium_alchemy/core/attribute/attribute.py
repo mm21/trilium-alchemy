@@ -52,7 +52,7 @@ class EtapiDriver(AttributeDriver):
 
         model = EtapiAttributeModel(
             note_id=self.attribute._note.note_id,
-            type=self.attribute.attribute_type,
+            type=self.attribute._attribute_type,
             name=self.attribute.name,
             **self.attribute._model._working,
         )
@@ -68,7 +68,7 @@ class EtapiDriver(AttributeDriver):
     def flush_update(self, sorter: TopologicalSorter):
         # check if relation and target changed
         relation_update = (
-            self.attribute.attribute_type == "relation"
+            self.attribute._attribute_type == "relation"
             and self.attribute._model.is_field_changed("value")
         )
 
@@ -101,11 +101,8 @@ class FileDriver(AttributeDriver):
 
 class AttributeModel(BaseEntityModel):
     etapi_model = EtapiAttributeModel
-
     etapi_driver_cls = EtapiDriver
-
     file_driver_cls = FileDriver
-
     field_entity_id = "attribute_id"
 
     fields_update = [
@@ -129,7 +126,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     concrete classes.
 
     Once instantiated, the attribute needs to be added to a {obj}`Note`.
-    See the documentation of {obj}`Note.attributes` for details.
+    See the documentation of {obj}`Note` for details.
 
     ```{note}
     Value is accessed differently depending on the concrete class:
@@ -139,23 +136,18 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     ```
     """
 
-    attribute_type: str
-    """
-    Type of attribute, either `"label"` or `"relation"`.
-    """
-
+    _attribute_type: str
     _model_cls = AttributeModel
-
     _position: int = FieldDescriptor("position")
 
     # name of attribute, ensuring only one name is assigned
-    _name: str = WriteOnceDescriptor("_name_")
-    _name_: str | None = None
+    _name: str = WriteOnceDescriptor("_name_obj")
+    _name_obj: str | None = None
 
     # note which owns this attribute, ensuring only one note is assigned
-    # may be None if not yet assigned to a note
-    _note: Note | None = WriteOnceDescriptor("_note_")
-    _note_: Note | None = None
+    # - or None if not yet assigned to a note
+    _note: Note | None = WriteOnceDescriptor("_note_obj")
+    _note_obj: Note | None = None
 
     def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
@@ -311,10 +303,10 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
 
         from ..note.note import Note
 
-        if self._note_ is None:
+        if self._note_obj is None:
             self._note = Note(note_id=model.note_id, session=self._session)
         else:
-            assert self._note_.note_id == model.note_id
+            assert self._note_obj.note_id == model.note_id
 
     def _delete(self):
         super()._delete()

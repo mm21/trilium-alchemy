@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ..entity.model import FieldDescriptor
 from ..session import Session
 from .attribute import BaseAttribute
 
@@ -13,14 +12,11 @@ class Label(BaseAttribute):
     """
     Encapsulates a label.
 
-    Once instantiated, the label needs to be added to a {obj}`Note`.
-    See the documentation of {obj}`Note.attributes` for details.
+    Once instantiated, the label needs to be added to a {obj}`Note`; see
+    {ref}`working-with-attributes` for details.
     """
 
-    value: str = FieldDescriptor("value")
-    """Label value, or empty string"""
-
-    attribute_type: str = "label"
+    _attribute_type: str = "label"
 
     def __init__(
         self,
@@ -50,6 +46,17 @@ class Label(BaseAttribute):
         # set value if not getting from database
         if model_backing is None:
             self.value = value
+
+    @property
+    def value(self) -> str:
+        """
+        Getter/setter for label value, which may be an empty string.
+        """
+        return self._model.get_field("value")
+
+    @value.setter
+    def value(self, val: str):
+        self._model.set_field("value", val)
 
     @property
     def _str_short(self):

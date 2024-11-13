@@ -4,34 +4,35 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-from typing import Any, Callable, Generator, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable
 
 from pydantic import BaseModel
 
 from ..exceptions import *
 from ..session import Session, SessionType
-from . import entity as entity_abc
 from .types import State
+
+if TYPE_CHECKING:
+    from .entity import BaseEntity
 
 
 class BaseDriver(ABC):
     """
-    Implements interface to backing note storage, either to Trilium itself
-    (through ETAPI) or a filesystem.
+    Implements interface to backing store for note, either to Trilium itself
+    (through ETAPI) or another mechanism like a filesystem.
     """
 
-    entity: entity_abc.BaseEntity = None
+    entity: BaseEntity
+    session: Session
 
-    session: Session = None
-
-    def __init__(self, entity):
+    def __init__(self, entity: BaseEntity):
         self.entity = entity
         self.session = entity.session
 
     @abstractmethod
     def fetch(self) -> BaseModel | None:
         """
-        Retrieve model from backing storage, or None if it doesn't exist.
+        Retrieve model from backing store, or None if it doesn't exist.
         """
         ...
 
@@ -65,46 +66,46 @@ class BaseEntityModel(ABC):
     """
 
     # pydantic model used in etapi
-    etapi_model: type[BaseModel] = None
+    etapi_model: type[BaseModel]
 
     # class to interface with ETAPI
-    etapi_driver_cls: type[BaseDriver] = None
+    etapi_driver_cls: type[BaseDriver]
 
     # class to interface with filesystem
-    file_driver_cls: type[BaseDriver] = None
+    file_driver_cls: type[BaseDriver]
 
     # mapping of alias to field name
-    fields_alias: dict[str, str] = None
+    fields_alias: dict[str, str] | None = None
 
     # fields allowed for user update
-    fields_update: list[str] = None
+    fields_update: list[str]
 
     # default values of fields
-    fields_default: dict[str, str] = None
+    fields_default: dict[str, str]
 
     # entity owning this object
-    entity: entity_abc.BaseEntity = None
+    entity: BaseEntity
 
-    # cached data fetched from backing storage
-    _backing: dict[str, str | int | bool] = None
+    # cached data fetched from backing store, or None if not fetched
+    _backing: dict[str, str | int | bool] | None = None
 
-    # locally modified or created data, not committed to backing storage
-    _working: dict[str, str | int | bool] = None
+    # locally modified or created data not yet committed to backing store,
+    # or None if not fetched
+    _working: dict[str, str | int | bool] | None = None
 
-    # whether model setup was completed (populating data from server)
+    # whether model setup was completed, populating model from server
     _setup_done: bool = False
 
-    # whether object exists in backing storage (None if unknown)
+    # whether object exists in backing store, or None if unknown
     _exists: bool | None = None
 
     # list of stateful extensions registered by subclass
-    _extensions: list[StatefulExtension] = None
+    _extensions: list[StatefulExtension]
 
-    # driver to interface with backing storage, or None
-    # if in-memory only (for VirtualSession)
-    _driver: BaseDriver | None = None
+    # driver to interface with backing store
+    _driver: BaseDriver
 
-    def __init__(self, entity: entity_abc.BaseEntity):
+    def __init__(self, entity: BaseEntity):
         self.entity = entity
         self._extensions = list()
 
@@ -112,10 +113,11 @@ class BaseEntityModel(ABC):
         driver_map = {
             SessionType.ETAPI: self.etapi_driver_cls,
             SessionType.FILE: self.file_driver_cls,
+            # SessionType.VIRTUAL: None (set self._driver as None)
         }
+        assert entity.session._type in driver_map
 
-        if entity.session._type in driver_map:
-            self._driver = driver_map[entity.session._type](entity)
+        self._driver = driver_map[entity.session._type](entity)
 
     def __str__(self):
         fields = list()
@@ -186,8 +188,6 @@ class BaseEntityModel(ABC):
         if self.entity._state in [State.CREATE, State.UPDATE]:
             # if creating or updating, invoke flush prep
             self.entity._flush_prep()
-
-        assert self._driver is not None
 
         # get flush method based on state
         func = {
@@ -356,7 +356,7 @@ class BaseEntityModel(ABC):
             for ext in self._extensions:
                 ext._setup(model_backing)
 
-    def get_field(self, field, bypass_model_setup=False):
+    def get_field(self, field: str, bypass_model_setup: bool = False):
         """
         Get field from model, with working state taking precedence over
         database state.
@@ -389,7 +389,7 @@ class BaseEntityModel(ABC):
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
 
-    def set_field(self, field, value, bypass_validate=False):
+    def set_field(self, field: str, value: Any, bypass_validate: bool = False):
         """
         Set field in working model.
         """
@@ -476,9 +476,9 @@ class Extension(ABC, ModelContainer):
     and routes setattr() via ExtensionDescriptor.
     """
 
-    _entity: entity_abc.BaseEntity = None
+    _entity: BaseEntity = None
 
-    def __init__(self, entity: entity_abc.BaseEntity):
+    def __init__(self, entity: BaseEntity):
         ModelContainer.__init__(self, entity._model)
         self._entity = entity
 
@@ -499,7 +499,7 @@ class StatefulExtension(Extension):
 
     # TODO: driver to handle fetch, flush
 
-    def __init__(self, entity: entity_abc.BaseEntity):
+    def __init__(self, entity: BaseEntity):
         super().__init__(entity)
         entity._model.register_extension(self)
 
@@ -537,7 +537,7 @@ class StatefulExtension(Extension):
 
 def require_setup(func):
     @wraps(func)
-    def wrapper(self, ent: entity_abc.BaseEntity, objtype=None):
+    def wrapper(self, ent: BaseEntity, objtype=None):
         ent._model.setup_check()
         return func(self, ent, objtype)
 
@@ -554,7 +554,7 @@ def require_setup_prop(func):
         return property(getter, setter, func.fdel, func.__doc__)
 
     @wraps(func)
-    def wrapper(self: entity_abc.BaseEntity, *args, **kwargs):
+    def wrapper(self: BaseEntity, *args, **kwargs):
         self._model.setup_check()
         return func(self, *args, **kwargs)
 
@@ -575,10 +575,10 @@ class FieldDescriptor:
     def __init__(self, field: str):
         self._field = field
 
-    def __get__(self, ent, objtype=None):
+    def __get__(self, ent: BaseEntity, objtype=None):
         return ent._model.get_field(self._field)
 
-    def __set__(self, ent, val):
+    def __set__(self, ent: BaseEntity, val: Any):
         ent._model.set_field(self._field, val)
 
 
@@ -618,7 +618,7 @@ class ReadOnlyDescriptor:
         self._allow_none = allow_none
 
     @require_setup
-    def __get__(self, ent: entity_abc.BaseEntity, objtype=None):
+    def __get__(self, ent: BaseEntity, objtype=None):
         # access value
         val = getattr(ent, self._attr)
 
@@ -634,7 +634,7 @@ class ReadOnlyDescriptor:
 
         return val
 
-    def __set__(self, ent: entity_abc.BaseEntity, val):
+    def __set__(self, ent: BaseEntity, val):
         raise ReadOnlyError(self._attr, ent)
 
 
@@ -659,10 +659,10 @@ class WriteThroughDescriptor:
         self._field = field
 
     @require_setup
-    def __get__(self, ent: entity_abc.BaseEntity, objtype=None) -> Any:
+    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
         return getattr(ent, self._attr)
 
-    def __set__(self, ent: entity_abc.BaseEntity, value: Any):
+    def __set__(self, ent: BaseEntity, value: Any):
         assert value is not None
 
         # set attr of entity
@@ -692,10 +692,10 @@ class WriteOnceDescriptor:
         self._validator = validator
 
     @require_setup
-    def __get__(self, ent: entity_abc.BaseEntity, objtype=None) -> Any:
+    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
         return getattr(ent, self._attr)
 
-    def __set__(self, ent: entity_abc.BaseEntity, value: Any):
+    def __set__(self, ent: BaseEntity, value: Any):
         assert value is not None
 
         value_current = getattr(ent, self._attr)

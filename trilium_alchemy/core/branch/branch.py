@@ -134,12 +134,12 @@ class Branch(OrderedEntity[BranchModel]):
     _model_cls = BranchModel
 
     _parent: Note | None = WriteOnceDescriptor(
-        "_parent_", validator="_validate"
+        "_parent_obj", validator="_validate"
     )
-    _parent_: Note | None = None
+    _parent_obj: Note | None = None
 
-    _child: Note = WriteOnceDescriptor("_child_", validator="_validate")
-    _child_: Note | None = None
+    _child: Note = WriteOnceDescriptor("_child_obj", validator="_validate")
+    _child_obj: Note | None = None
 
     _position: int = FieldDescriptor("note_position")
 
@@ -273,8 +273,8 @@ class Branch(OrderedEntity[BranchModel]):
 
     @property
     def _str_safe(self):
-        str_parent = self._parent_._str_safe if self._parent_ else None
-        str_child = self._child_._str_safe if self._child_ else None
+        str_parent = self._parent_obj._str_safe if self._parent_obj else None
+        str_child = self._child_obj._str_safe if self._child_obj else None
         return f"Branch(parent={str_parent}, child={str_child}, branch_id={self._entity_id}, id={id(self)})"
 
     @classmethod
@@ -320,7 +320,7 @@ class Branch(OrderedEntity[BranchModel]):
         # in Trilium, root note has a parent branch to a
         # non-existent note with id 'none'; handle this case here
         if model.parent_note_id == "none":
-            assert self._parent_ is None
+            assert self._parent_obj is None
             assert model.note_id == "root"
         else:
             self.parent = Note(
@@ -385,7 +385,7 @@ class Branch(OrderedEntity[BranchModel]):
         Ensure there isn't already a Branch between parent and child.
         """
 
-        if self._parent_ and self._child_:
+        if self._parent_obj and self._child_obj:
             # collect cached and newly created branches
             branches = {
                 entity
@@ -405,6 +405,6 @@ class Branch(OrderedEntity[BranchModel]):
                     continue
 
                 assert not (
-                    branch._parent_ is self._parent_
-                    and branch._child_ is self._child_
-                ), f"Multiple branches mapping parent {self._parent_._str_safe} to child {self._child_._str_safe}: {self._str_safe}, {branch._str_safe}"
+                    branch._parent_obj is self._parent_obj
+                    and branch._child_obj is self._child_obj
+                ), f"Multiple branches mapping parent {self._parent_obj._str_safe} to child {self._child_obj._str_safe}: {self._str_safe}, {branch._str_safe}"

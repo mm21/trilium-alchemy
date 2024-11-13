@@ -22,19 +22,14 @@ class Relation(BaseAttribute):
     """
     Encapsulates a relation.
 
-    Once instantiated, the relation needs to be added to a {obj}`Note`.
-    See the documentation of {obj}`Note.attributes` for details.
+    Once instantiated, the relation needs to be added to a {obj}`Note`; see
+    {ref}`working-with-attributes` for details.
     """
 
-    # set _target, then populate model's value with the target's note_id
-    target: Note = WriteThroughDescriptor("_target", "note_id", "value")
-    """
-    Target note of this relation.
-    """
+    _attribute_type: str = "relation"
 
-    attribute_type: str = "relation"
-
-    _target: Note | None = None
+    _target = WriteThroughDescriptor("_target_obj", "note_id", "value")
+    _target_obj: Note | None = None
 
     def __init__(
         self,
@@ -66,6 +61,26 @@ class Relation(BaseAttribute):
             self.target = target
 
     @property
+    def target(self) -> Note:
+        """
+        Getter/setter for target note, with getter validating that the target
+        has already been assigned.
+        """
+        assert self._target is not None
+        return self._target
+
+    @target.setter
+    def target(self, target: Note):
+        self._target = target
+
+    @property
+    def target_raw(self) -> Note | None:
+        """
+        Getter for target note, or `None` if not yet assigned.
+        """
+        return self._target
+
+    @property
     def _str_short(self):
         return f"Relation(~{self.name}, target={self.target}, attribute_id={self.attribute_id}, note={self.note}, position={self.position})"
 
@@ -82,15 +97,15 @@ class Relation(BaseAttribute):
         from ..note.note import Note
 
         # setup target
-        self._target = Note(note_id=model.value, session=self._session)
+        self._target_obj = Note(note_id=model.value, session=self._session)
 
     def _flush_check(self):
         from ..note.note import Note
 
         _assert_validate(
-            self._target is not None, f"Relation {self} has no target note"
+            self._target_obj is not None, f"Relation {self} has no target note"
         )
-        _assert_validate(isinstance(self._target, Note))
+        _assert_validate(isinstance(self._target_obj, Note))
 
     def _flush_prep(self):
         """
@@ -101,12 +116,15 @@ class Relation(BaseAttribute):
         automatically maintain dirty state correctly since any existing value
         can't be None.
         """
-        assert self._target.note_id is not None
+        assert self._target_obj is not None
+
+        target_note_id = self._target_obj.note_id
+        assert target_note_id is not None
 
         if not self._model.get_field("value"):
-            self._model.set_field("value", self._target.note_id)
+            self._model.set_field("value", target_note_id)
         else:
-            assert self._model.get_field("value") == self._target.note_id
+            assert self._model.get_field("value") == target_note_id
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
