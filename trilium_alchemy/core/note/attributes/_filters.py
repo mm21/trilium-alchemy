@@ -117,6 +117,7 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
+
 class BaseFilteredAttributes[AttributeT: BaseAttribute](
     AttributeListMixin[AttributeT]
 ):
@@ -132,51 +133,31 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](
         Set _filter_cls based on the type parameter.
         """
 
-        def recurse(
-            cls: type[BaseFilteredAttributes],
-        ) -> type[AttributeT] | None:
-            filter_cls: type[AttributeT] | None = None
-            orig_bases: tuple[type] | None = None
-
-            try:
-                orig_bases = cls.__orig_bases__
-            except AttributeError:
-                pass
-
-            if orig_bases is None:
-                return None
-
-            for base in orig_bases:
+        def get_filter_cls() -> type[AttributeT] | None:
+            for base in cls.__orig_bases__:
                 origin = get_origin(base)
 
                 if origin is None:
                     continue
 
-                if issubclass(origin, BaseFilteredAttributes):
-                    args = get_args(base)
-                    assert len(args) > 0
+                assert issubclass(origin, BaseFilteredAttributes)
 
-                    for arg in args:
-                        if isinstance(arg, TypeVar):
-                            # have a TypeVar, look up its bound
+                args = get_args(base)
+                assert len(args) > 0
 
-                            if arg.__bound__ is None:
-                                continue
+                for arg in args:
+                    if isinstance(arg, TypeVar):
+                        # have a TypeVar, look up its bound
+                        if issubclass(arg.__bound__, BaseAttribute):
+                            return arg.__bound__
 
-                            if issubclass(arg.__bound__, BaseAttribute):
-                                return arg.__bound__
+                    elif issubclass(arg, BaseAttribute):
+                        return arg
 
-                        elif issubclass(arg, BaseAttribute):
-                            return arg
-                else:
-                    filter_cls = recurse(base)
+        filter_cls = get_filter_cls()
+        assert filter_cls is not None
 
-                    if filter_cls:
-                        return filter_cls
-
-            return None
-
-        cls._filter_cls = recurse(cls)
+        cls._filter_cls = filter_cls
 
     def __iter__(self) -> Iterator[AttributeT]:
         return iter(self._attr_list)

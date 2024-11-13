@@ -81,9 +81,18 @@ def test_labels(session: Session, note: Note):
     assert len(note.labels.get_all("label2")) == 2
     assert note.labels.get_values("label2") == ["value3", "value4"]
 
-    note.labels.append_value("label2", "value5")
+    note.labels.set_values("label2", ["value5"])
 
-    assert note.labels.get_values("label2") == ["value3", "value4", "value5"]
+    assert label2 is note.labels.get("label2")
+    assert len(note.labels.get_all("label2")) == 1
+    assert note.labels.get_value("label2") == "value5"
+
+    note.labels.append_value("label2", "value6")
+
+    assert note.labels.get_values("label2") == ["value5", "value6"]
+
+    del note.labels.owned[0]
+    note.labels.owned[0] = note.labels.owned[0]
 
 
 def test_relations(session: Session, note: Note):
@@ -148,13 +157,21 @@ def test_relations(session: Session, note: Note):
     assert len(note.relations.get_all("relation2")) == 2
     assert note.relations.get_targets("relation2") == [session.root, note]
 
+    note.relations.set_targets("relation2", [session.root])
+
+    assert relation2 is note.relations.get("relation2")
+    assert len(note.relations.get_all("relation2")) == 1
+    assert note.relations.get_target("relation2") is session.root
+
     note.relations.append_target("relation2", session.root)
 
     assert note.relations.get_targets("relation2") == [
         session.root,
-        note,
         session.root,
     ]
+
+    del note.relations.owned[0]
+    note.relations.owned[0] = note.relations.owned[0]
 
 
 @mark.attribute("label1")
