@@ -70,29 +70,6 @@ def pytest_addoption(parser: Parser):
     )
 
 
-def pytest_collection_modifyitems(config, items):
-    """
-    Hook to tune the order of executed tests for specific cases:
-
-    - Move singleton tests to beginning
-        - This clobbers any existing notes, so do this first in case we want
-        to pass --skip-teardown for inspection
-    """
-
-    SINGLETON_TESTS = "test/declarative/test_singleton.py"
-
-    tests = [item.nodeid for item in items]
-
-    singleton_tests = [
-        test for test in tests if test.startswith(SINGLETON_TESTS)
-    ]
-
-    # insert at beginning in reverse order to preserve order
-    for test in reversed(singleton_tests):
-        index = [item.nodeid for item in items].index(test)
-        items.insert(0, items.pop(index))
-
-
 @fixture(autouse=True)
 def newline(request):
     """
