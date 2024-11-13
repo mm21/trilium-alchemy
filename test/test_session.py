@@ -1,6 +1,5 @@
 import datetime
 import os
-import zipfile
 
 from pytest import mark
 
@@ -11,7 +10,6 @@ from .conftest import (
     HOST,
     PASSWORD,
     TOKEN,
-    clean_note,
     create_attribute,
     create_note,
 )
@@ -133,40 +131,6 @@ def test_backup(session: Session):
     # perform backup and ensure it was written
     session.backup("test")
     assert os.path.exists(path_backup)
-
-
-@mark.note_title("test_root")
-@mark.attribute("label1")
-def test_export_import(session: Session, note: Note, tmp_path: str):
-    zip_path = os.path.join(tmp_path, "export.zip")
-
-    assert note.title == "test_root"
-    assert note["label1"] == ""
-
-    # invoke export API
-    note.export_zip(zip_path)
-
-    # verify export
-    with zipfile.ZipFile(zip_path, "r") as file:
-        file.extractall(tmp_path)
-
-    meta_json = os.path.join(tmp_path, "!!!meta.json")
-    note_html = os.path.join(tmp_path, f"{note.title}.html")
-
-    assert os.path.isfile(meta_json)
-    assert os.path.isfile(note_html)
-
-    # clean note in preparation for verifying import
-    clean_note(session.api, note.note_id)
-    note.invalidate()
-    assert note.title == ""
-    assert "label1" not in note
-
-    # invoke import API
-    note.import_zip(zip_path)
-
-    assert note.title == "test_root"
-    assert note["label1"] == ""
 
 
 @mark.attribute("label1")

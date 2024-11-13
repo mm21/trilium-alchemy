@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+from pathlib import Path
 from typing import Generator
 
 from dotenv import load_dotenv
@@ -290,18 +291,18 @@ def note_setup(request, session: Session):
 
 
 @fixture
-def temp_file(request, tmp_path: str):
+def temp_file(request, tmp_path: Path):
     marker = request.node.get_closest_marker("temp_file")
     content = marker.args[0] if marker else ""
 
-    file_path = f"{tmp_path}/temp.txt"
+    file_path = tmp_path / "temp.txt"
 
     if isinstance(content, str):
         mode = "w"
     else:
         mode = "wb"
 
-    with open(file_path, mode) as fh:
+    with file_path.open(mode) as fh:
         fh.write(content)
 
     print(f"Created temp file: {file_path}")
@@ -476,6 +477,9 @@ def clean_note(api: DefaultApi, note_id: str) -> None:
         # don't delete system branches
         if not branch.note_id.startswith("_"):
             delete_branch(api, branch_id)
+
+    # clean content
+    api.put_note_content_by_id(note_id, "")
 
 
 def change_note(api: DefaultApi, note_id: str) -> None:

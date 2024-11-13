@@ -46,7 +46,7 @@ class FileDescriptor:
 
 class BlobState:
     # note content in string or binary form
-    blob: str | bytes = None
+    blob: str | bytes | None = None
 
     # digest of blob, calculated locally or provided by server
     digest: str | None = None
@@ -86,11 +86,8 @@ class Content(NoteStatefulExtension):
     ````
     """
 
-    # in Note:
-    # file = FileDescriptor()
-
-    _backing: BlobState = None
-    _working: BlobState = None
+    _backing: BlobState
+    _working: BlobState
 
     def __init__(self, entity: BaseEntity):
         super().__init__(entity)

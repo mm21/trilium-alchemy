@@ -3,6 +3,8 @@ Test basic CRUD capability of notes.
 """
 
 import datetime
+import zipfile
+from pathlib import Path
 
 from pytest import mark
 
@@ -11,8 +13,11 @@ from trilium_alchemy import *
 from ..conftest import check_read_only, note_exists
 
 
-# Create new note as a child of provided note
 def test_create(session: Session, note: Note):
+    """
+    Create new note as a child of provided note.
+    """
+
     parent = note
 
     # generate title based on timestamp
@@ -123,8 +128,12 @@ def test_delete(session: Session, note: Note):
     assert not note_exists(session.api, note.note_id)
 
 
-# modify attributes/branches and ensure they get flushed when note is flushed
 def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
+    """
+    Modify attributes/branches and ensure they get flushed when note is
+    flushed.
+    """
+
     # make note and attributes/branches dirty
     note1.title = "title2"
     note1["label1"] = ""
@@ -153,8 +162,12 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     assert session.dirty_count == 0
 
 
-# Build note tree to ensure dependencies are handled correctly when flushing
 def test_flush_dependency(session: Session, note: Note):
+    """
+    Build note tree and ensure dependencies are handled correctly when
+    flushing.
+    """
+
     note2 = Note(session=session)
     note3 = Note(session=session)
     note4 = Note(session=session)
@@ -187,9 +200,12 @@ def test_flush_dependency(session: Session, note: Note):
     session.flush()
 
 
-# Create a simple hierarchy and then abandon the root note before it's created
-# (should get warnings, but no crash)
 def test_flush_orphan(session: Session):
+    """
+    Create a simple hierarchy and then abandon the root note before it's
+    created; should get warnings, but no crash.
+    """
+
     note = Note(parents=session.root, session=session)
     note.branches.parents[0].prefix = "Expected warning"
     note += Label("expectedWarning", session=session)
@@ -327,3 +343,62 @@ def test_copy(session: Session, note: Note, note2: Note):
     check_copy(copy_shallow, False, True)
 
     session.flush()
+
+
+@mark.note_title("Test note")
+@mark.attribute("label1")
+def test_export_import(note: Note, tmp_path: Path):
+    """
+    Verify export and import for both html and markdown.
+    """
+
+    CONTENT = "<p>Hello, world!</p>"
+
+    note.content = CONTENT
+    note.flush()
+
+    def check_note(note: Note):
+        assert note.title == "Test note"
+        assert note["label1"] == ""
+        assert CONTENT in note.content
+
+    def export_import(export_format: str, child_count: int):
+        export_tmp_path = tmp_path / export_format
+        export_tmp_path.mkdir(parents=True, exist_ok=True)
+
+        zip_path = export_tmp_path / "export.zip"
+
+        # sanity check
+        check_note(note)
+
+        # invoke export API
+        note.export_zip(zip_path, export_format=export_format)
+
+        # verify export
+        with zipfile.ZipFile(zip_path, "r") as file:
+            file.extractall(export_tmp_path)
+
+        extension = "html" if export_format == "html" else "md"
+
+        meta_json = export_tmp_path / "!!!meta.json"
+        note_content = export_tmp_path / f"{note.title}.{extension}"
+
+        assert meta_json.is_file()
+        assert note_content.is_file()
+
+        # invoke import API
+        child = note.import_zip(zip_path)
+
+        # exported note should have been added as the last child
+        assert len(note.children) == child_count + 1
+        assert note.children[-1] is child
+
+        check_note(child)
+
+    formats = [
+        "html",
+        "markdown",
+    ]
+
+    for i, export_format in enumerate(formats):
+        export_import(export_format, i)

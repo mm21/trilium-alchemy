@@ -5,9 +5,12 @@ import hashlib
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import IO, Any, Literal, Self, cast
 
+import requests
 from trilium_client.models.note import Note as EtapiNoteModel
+from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
@@ -671,7 +674,7 @@ class Note(BaseEntity[NoteModel]):
 
     def export_zip(
         self,
-        dest_path: str,
+        dest_path: Path,
         export_format: Literal["html", "markdown"] = "html",
     ):
         """
@@ -680,18 +683,79 @@ class Note(BaseEntity[NoteModel]):
         :param dest_path: Destination .zip file
         :param export_format: Format of exported HTML notes
         """
-        self._session.export_zip(self, dest_path, export_format=export_format)
+        assert (
+            self.note_id is not None
+        ), f"Source note {self.str_short} must have a note_id for export"
+
+        assert export_format in {"html", "markdown"}
+
+        dest_path = (
+            dest_path if isinstance(dest_path, Path) else Path(dest_path)
+        )
+
+        url = f"{self.session._base_path}/notes/{self.note_id}/export"
+        params = {"format": export_format}
+        response = requests.get(
+            url, headers=self.session._etapi_headers, params=params, stream=True
+        )
+
+        assert response.status_code == 200
+
+        zip_file: bytes = response.content
+        assert isinstance(zip_file, bytes)
+
+        with dest_path.open("wb") as fh:
+            for chunk in response.iter_content(chunk_size=8192):
+                fh.write(chunk)
 
     def import_zip(
         self,
-        src_path: str,
-    ):
+        src_path: Path,
+    ) -> Note:
         """
-        Import this note subtree from zip file.
+        Import note subtree from zip file, adding the imported root as a
+        child of this note and returning it.
 
         :param src_path: Source .zip file
         """
-        self._session.import_zip(self, src_path)
+
+        # flush any changes since we need to refresh later
+        self.flush()
+
+        src_path = src_path if isinstance(src_path, Path) else Path(src_path)
+
+        assert (
+            self.note_id is not None
+        ), f"Destination note {self.str_short} must have a note_id for import"
+
+        zip_file: bytes
+
+        # read input zip
+        with src_path.open("rb") as fh:
+            zip_file = fh.read()
+
+        headers = self._session._etapi_headers.copy()
+        headers["Content-Type"] = "application/octet-stream"
+        headers["Content-Transfer-Encoding"] = "binary"
+
+        url = f"{self.session._base_path}/notes/{self.note_id}/import"
+        response = requests.post(url, headers=headers, data=zip_file)
+
+        assert response.status_code == 201
+
+        # convert response to model
+        response_model = NoteWithBranch(**response.json())
+        assert response_model.note is not None
+
+        # refresh note since now it has another child
+        self.refresh()
+
+        # create imported note using response_model
+        imported_note = Note._from_model(
+            response_model.note, session=self.session
+        )
+
+        return imported_note
 
     def flush(self):
         """
@@ -758,11 +822,13 @@ class Note(BaseEntity[NoteModel]):
         return False
 
     @classmethod
-    def _from_id(cls, note_id: str, session: Session | None = None):
+    def _from_id(cls, note_id: str, session: Session | None = None) -> Note:
         return Note(note_id=note_id, session=session)
 
     @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None):
+    def _from_model(
+        cls, model: EtapiNoteModel, session: Session | None = None
+    ) -> Note:
         return Note(
             note_id=model.note_id, session=session, _model_backing=model
         )

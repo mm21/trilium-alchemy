@@ -294,12 +294,10 @@ class BaseEntity[ModelT: BaseEntityModel](
         else:
             assert self._entity_id == entity_id
 
-    # TODO: owned by model
     def _refresh_model(self, model: BaseModel):
         """
         Discard current model and update with new one.
         """
-        # TODO: invalidate note recursively
         self.invalidate()
         self._model.setup(model_backing=model, create=False)
 

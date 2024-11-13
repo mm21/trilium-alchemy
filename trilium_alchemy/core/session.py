@@ -23,7 +23,6 @@ from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.models.login201_response import Login201Response
 from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.note_with_branch import NoteWithBranch
 from trilium_client.models.search_response import SearchResponse
 
 from .cache import Cache
@@ -282,87 +281,6 @@ class Session:
         :param name: Name of backup to write
         """
         self.api.create_backup(name)
-
-    def export_zip(
-        self,
-        note: Note,
-        dest_path: str,
-        export_format: Literal["html", "markdown"] = "html",
-    ):
-        """
-        Export note subtree to zip file.
-
-        ```{note}
-        You can equivalently invoke {obj}`Note.export_zip`.
-        ```
-
-        :param note: Root of source subtree
-        :param dest_path: Destination .zip file
-        :param export_format: Format of exported HTML notes
-        """
-
-        assert (
-            note.note_id is not None
-        ), f"Source note {note.str_short} must have a note_id for export"
-
-        # TODO: support markdown
-        assert export_format == "html", f"Markdown format not yet supported"
-
-        zip_file: bytes
-
-        url = f"{self._base_path}/notes/{note.note_id}/export"
-        response = requests.get(url, headers=self._etapi_headers)
-
-        assert response.status_code == 200
-
-        zip_file = response.content
-        assert isinstance(zip_file, bytes)
-
-        with open(dest_path, "wb") as fh:
-            fh.write(zip_file)
-
-    def import_zip(
-        self,
-        note: Note,
-        src_path: str,
-    ):
-        """
-        Import note subtree from zip file, discarding its current state.
-
-        ```{note}
-        You can equivalently invoke {obj}`Note.import_zip
-        <trilium_alchemy.core.note.Note.import_zip>`.
-        ```
-
-        :param note: Root of destination subtree
-        :param src_path: Source .zip file
-        """
-
-        assert (
-            note.note_id is not None
-        ), f"Destination note {note.str_short} must have a note_id for import"
-
-        zip_file: bytes
-
-        # read input zip
-        with open(src_path, "rb") as fh:
-            zip_file = fh.read()
-
-        headers = self._etapi_headers.copy()
-        headers["Content-Type"] = "application/octet-stream"
-        headers["Content-Transfer-Encoding"] = "binary"
-
-        url = f"{self._base_path}/notes/{note.note_id}/import"
-        response = requests.post(url, headers=headers, data=zip_file)
-
-        assert response.status_code == 201
-
-        # convert response to model
-        response_model = NoteWithBranch(**response.json())
-        assert response_model.note is not None
-
-        # use returned note model to refresh note
-        note._refresh_model(response_model.note)
 
     def get_today_note(self) -> Note:
         """
