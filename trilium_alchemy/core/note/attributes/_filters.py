@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections.abc import MutableSequence, Sequence
 from typing import TYPE_CHECKING, Any, Iterator, TypeVar, get_args, get_origin
 
@@ -36,32 +37,11 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         return [a for a in self._attr_list if a.name == name]
 
     @property
-    def _attr_list(self) -> list[AttributeT]:
-        """
-        Overridden by subclass.
-        """
-        ...
-
-    @property
     def _writeable_attr_list(self) -> list[AttributeT]:
         """
         Attribute list which can be written to, i.e. owned attributes.
         """
         return self._attr_list
-
-    @property
-    def _note_getter(self) -> Note:
-        """
-        Overridden by subclass.
-        """
-        ...
-
-    def _create_attr(self, name: str) -> AttributeT:
-        """
-        Overridden by subclass to create an attribute of the respective type,
-        already bound to this note.
-        """
-        ...
 
     def _get_writeable(self, name: str) -> AttributeT | None:
         """
@@ -113,6 +93,29 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         setattr(attr, self._value_name, val)
         attr.inheritable = inheritable
 
+    @property
+    @abstractmethod
+    def _attr_list(self) -> list[AttributeT]:
+        """
+        Overridden by subclass.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def _note_getter(self) -> Note:
+        """
+        Overridden by subclass.
+        """
+        ...
+
+    @abstractmethod
+    def _create_attr(self, name: str) -> AttributeT:
+        """
+        Overridden by subclass to create an attribute of the respective type,
+        already bound to this note.
+        """
+        ...
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](
     AttributeListMixin[AttributeT]
