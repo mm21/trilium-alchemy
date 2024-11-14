@@ -91,7 +91,7 @@ with Session(HOST, token=TOKEN) as session:
 
 This project implements idiomatic interfaces for working with notes.
 
-### Simple attribute accessor
+### Single-valued label accessor
 
 Values of single-valued attributes can be accessed by indexing into the note itself. For example:
 
@@ -102,69 +102,53 @@ assert note["myLabel"] == "myValue"
 
 This creates the label `myLabel` if it doesn't already exist.
 
-The same approach works with relations. For example, to set `~template=Task`:
-
-```python
-# assumes you have a template with label #task
-task_template = session.search("#template #task")[0]
-
-task = Note(title="My task")
-task["template"] = task_template
-```
-
-The `~template` relation can be equivalently set during note creation itself:
-
-```python
-task = Note(title="My task", template=task_template)
-```
-
 ### Entity bind operator: `+=`
 
-Use `+=` to add a `Label`, `Relation`, or `Branch`.
+Use `+=` to add a `Label`, `Relation`, `Branch` (parent or child), or `Note` (parent or child).
 
-Add a label with an optional value:
+Add a label:
 
 ```python
-note += Label("myLabel", "myValue")
-assert note.attributes["myLabel"][0].value == "myValue"
+note += Label("myLabel")
+assert note.labels.get_value("myLabel") == ""
 ```
 
-Add a relation to root note:
+Add a relation:
 
 ```python
 note += Relation("myRelation", session.root)
-assert note.attributes.owned["myRelation"][0].target is session.root
+assert note.relations.get_target("myRelation") is session.root
 ```
 
-Add a child branch implicitly, with empty branch prefix:
+Add a child branch implicitly with empty prefix:
 
 ```python
 note += Note(title="Child note")
 assert note.children[0].title == "Child note"
 ```
 
-Add a child branch with a branch prefix:
+Add a child branch implicitly with prefix specified as `tuple[Note, str]`:
+
+```python
+note += (Note(title="Child note"), "My prefix")
+assert note.children[0].title == "Child note"
+```
+
+Or equivalently, explicitly create a child branch:
 
 ```python
 child = Note(title="Child note")
-
 note += Branch(child=child, prefix="My prefix")
+
 assert note.branches.children[0].prefix == "My prefix"
+assert note.children[0] is child
 ```
 
-Add a parent branch, using the root note as the parent:
+Similarly, explicitly create a parent branch:
 
 ```python
 note += Branch(parent=session.root, prefix="My prefix")
 assert note.branches.parents[0].prefix == "My prefix"
-```
-
-Alternatively, pass a `tuple` of (`Note`, `str`) to set the branch prefix:
-
-```python
-child = Note(title="Child note")
-note += (child, "My prefix")
-assert note.branches.children[0].prefix == "My prefix"
 ```
 
 ### Clone operator: `^=`
@@ -182,11 +166,53 @@ assert note in today.children
 assert today in note.parents
 ```
 
-Pass a `tuple` of (`Note`, `str`) to set the branch prefix:
+Specify a branch prefix by passing a `tuple[Note, str]`:
 
 ```python
 note ^= (today, "My prefix")
-assert note.branches.parents[0].prefix == "My prefix"
+```
+
+### Content
+
+To access note content, get or set `Note.content`. Content type should be `str` if `Note.is_string` is `True`, and `bytes` otherwise.
+
+```python
+note = Note()
+note.content = "<p>Hello, world!</p>"
+
+assert note.content == "<p>Hello, world!</p>"
+```
+
+For type-safe access, use `Note.content_str` or `Note.content_bin`:
+
+```python
+note = Note()
+note.content_str = "<p>Hello, world!</p>"
+
+assert note.content_str == "<p>Hello, world!</p>"
+```
+
+Type-safe accessors will raise `ValueError` if the content is not of the expected type as determined by `Note.is_string`.
+
+### Custom attribute accessors
+
+Use a `Note` subclass to implement custom interfaces, for example attribute accessors:
+
+```python
+class MyNote(Note):
+    
+    @property
+    def my_label(self) -> str:
+        return self.labels.get_value("myLabel")
+    
+    @my_label.setter
+    def my_label(self, val: str):
+        self.labels.set_value("myLabel", val)
+
+note = MyNote(title="My note")
+
+note.my_label = "my_value"
+assert note.my_label == "my_value"
 ```
 
 ## Declarative notes: Notes as code
@@ -195,58 +221,52 @@ One of the goals of this project is to enable building, maintaining, and sharing
 
 The general idea of declarative programming is that you specify the desired end state, not the steps needed to reach it.
 
-For a fully-featured example of a note hierarchy designed using this approach, see [Event tracker](https://mm21.github.io/trilium-alchemy/sdk/examples/event-tracker.html).
+For a fully-featured example of a note hierarchy designed using this approach, see [Event tracker](https://mm21.github.io/trilium-alchemy/sdk/declarative-notes/event-tracker.html).
 
-### Note subclasses
+### Note classes
 
 The basic technique is to subclass `BaseDeclarativeNote`:
 
 ```python
 class MyNote(BaseDeclarativeNote):
-    title_ = "My note"
+    pass
 ```
 
-### Mixin subclasses
+When you subclass `BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
 
-Sometimes you want to logically group attributes and/or children together in a reusable way, but don't need a fully-featured `Note`. In those cases you can use a `BaseDeclarativeMixin`.
+### Icon helper
 
-The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
+To set an icon (label `#iconClass`), simply set the `icon` attribute:
 
 ```python
-class MyMixin(BaseDeclarativeMixin): pass
+class MyTask(BaseDeclarativeNote):
+    icon = "bx bx-task"
 ```
-
-`Note` inherits from `BaseDeclarativeMixin`, so the following semantics can be applied to `Note` subclasses and `BaseDeclarativeMixin` subclasses equally.
-
 
 ### Adding labels
 
-Use the decorator `label` to add a label to a `Note` or `BaseDeclarativeMixin` subclass:
+Use the decorator `label` to add a label:
 
 ```python
 @label("sorted")
-class SortedMixin(BaseDeclarativeMixin): pass
+class MySortedNote(BaseDeclarativeNote):
+    pass
+
+my_sorted_note = MySortedNote()
 ```
 
-Now you can simply inherit from this mixin if you want a note's children to be sorted:
+This is equivalent to the following imperative approach:
 
 ```python
-@label("iconClass", "bx bx-group")
-class Contacts(BaseDeclarativeNote, SortedMixin): pass
-```
-
-This approach enables reuse of groups of related attributes.
-
-The above is equivalent to the following imperative approach:
-
-```python
-contacts = Note(title="Contacts")
-contacts += [Label("iconClass", "bx bx-group"), Label("sorted")]
+my_sorted_note = Note()
+my_sorted_note += Label("sorted")
 ```
 
 ### Promoted attributes
 
 A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
+
+The following creates a workspace template with an icon and a few labels:
 
 ```python
 @label("person")
@@ -254,18 +274,39 @@ A special type of label is one which defines a [promoted attribute](https://gith
 @label_def("birthday", value_type="date")
 @relation_def("livesAt")
 @relation_def("livedAt", multi=True)
-class Person(WorkspaceTemplate):
+class Person(BaseWorkspaceTemplateNote):
     icon = "bx bxs-user-circle"
+```
+
+### Mixin classes
+
+Sometimes you want to logically group and reuse attributes and/or children, but don't need a fully-featured `BaseDeclarativeNote`. In those cases you can use a `BaseDeclarativeMixin`.
+
+The basic technique is to subclass `BaseDeclarativeMixin`:
+
+```python
+@label("sorted")
+class SortedMixin(BaseDeclarativeMixin):
+    pass
+```
+
+Now you can simply inherit from this mixin if you want a note's children to be sorted:
+
+```python
+class MySortedNote(BaseDeclarativeNote, SortedMixin):
+    pass
 ```
 
 ## Setting fields
 
-You can set the corresponding fields on `Note` by setting attribute values:
+Set the corresponding `Note` fields upon instantiation by setting attributes suffixed with `_`:
 
 - `title_`
 - `note_type_`
 - `mime_`
 - `content_`
+
+For example:
 
 ```python
 class MyNote(BaseDeclarativeNote):
@@ -277,10 +318,10 @@ class MyNote(BaseDeclarativeNote):
 
 ## Setting content from file
 
-Set note content from a file by setting `Note.content_file`:
+Set note content from a file by setting `content_file`:
 
 ```python
-class MyFrontendScript(Note):
+class MyFrontendScript(BaseDeclarativeNote):
     note_type = "code"
     mime = "application/javascript;env=frontend"
     content_file = "assets/myFrontendScript.js"
