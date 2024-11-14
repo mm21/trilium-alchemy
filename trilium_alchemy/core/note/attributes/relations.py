@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "Relations",
+    "OwnedRelations",
+    "InheritedRelations",
 ]
 
 
