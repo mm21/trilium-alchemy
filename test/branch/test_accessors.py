@@ -1,3 +1,5 @@
+from pytest import raises
+
 from trilium_alchemy import *
 
 
@@ -44,8 +46,11 @@ def test_parent_add_alt(session: Session, note1: Note, note2: Note):
     note4 = Note(parents={root}, session=session)
 
     note2 ^= (note3, "My prefix")
-    branch = note2.branches.lookup(note3)
+    branch = note2.branches.lookup_branch(note3)
     assert branch.prefix == "My prefix"
+
+    with raises(ValueError):
+        note1.branches.lookup_branch(note3)
 
     note2 += Branch(parent=note4, session=session)
 
@@ -195,4 +200,27 @@ def test_child_extend(session: Session, note: Note):
     session.flush()
 
 
-# TODO: test_parent_extend
+def test_lookup_note(session: Session, note: Note):
+    note.title = "Parent note"
+
+    child1 = Note(title="Child 1", session=session)
+    child2 = Note(title="Child 2", session=session)
+
+    note += [child1, child2]
+
+    child1_lookup = note.children.lookup_note("Child 1")
+    child2_lookup = note.children.lookup_note("Child 2")
+
+    assert child1_lookup is not None
+    assert child2_lookup is not None
+
+    assert child1_lookup is child1
+    assert child2_lookup is child2
+
+    parent_lookup = child1_lookup.parents.lookup_note("Parent note")
+
+    assert parent_lookup is not None
+    assert parent_lookup is note
+
+    assert note.children.lookup_note("Nonexistent") is None
+    assert child1_lookup.parents.lookup_note("Nonexistent") is None

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableSequence, MutableSet
-from typing import TYPE_CHECKING, Iterable, Iterator, cast
+from typing import TYPE_CHECKING, Iterable, Iterator
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -38,27 +38,50 @@ def normalize_tuple(
     return (note, prefix)
 
 
-class BranchLookup:
+class BranchLookupMixin:
     """
     Enables looking up a branch given a related Note, either parent or child.
     """
 
-    def lookup(self, note: Note) -> Branch:
+    def __iter__(self) -> Iterator[Branch]:
+        ...
+
+    def lookup_branch(self, note: Note) -> Branch:
         """
         Lookup a branch given a related {obj}`Note`, either parent or child.
 
         :raises ValueError: If note is not a parent or child of any branch
         """
-        assert note is not None
 
-        for branch in cast(Iterable[Branch], self):
+        for branch in self:
             if note in {branch.parent, branch.child}:
                 return branch
 
-        raise ValueError(f"Note {note} not in parents or children of {self}")
+        raise ValueError(f"Note {note} not found in {self}")
 
 
-class ParentBranches(BaseEntitySet[Branch], BranchLookup):
+class NoteLookupMixin:
+    """
+    Enables looking up a note given a title, either parent or child.
+    """
+
+    def __iter__(self) -> Iterator[Note]:
+        ...
+
+    def lookup_note(self, title: str) -> Note | None:
+        """
+        Lookup a parent or child note given a title, or `None` if no such
+        note exists.
+        """
+
+        for note in self:
+            if note.title == title:
+                return note
+
+        return None
+
+
+class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
     """
     Interface to a note's parent branches.
     """
@@ -123,7 +146,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
 
         if parent in self._note.parents:
             # already in parents
-            branch_obj = self._note.branches.parents.lookup(parent)
+            branch_obj = self._note.branches.parents.lookup_branch(parent)
         else:
             # create a new branch
             branch_obj = Branch(
@@ -136,7 +159,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
         return branch_obj
 
 
-class ChildBranches(BaseEntityList[Branch], BranchLookup):
+class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
     """
     Interface to a note's child branches.
     """
@@ -198,7 +221,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookup):
 
         if child in self._note.children:
             # already in children
-            branch_obj = self._note.branches.children.lookup(child)
+            branch_obj = self._note.branches.children.lookup_branch(child)
         else:
             # create a new branch
             branch_obj = Branch(
@@ -219,7 +242,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookup):
         return super()._get_position(index, base=base)
 
 
-class Branches(NoteExtension, BranchLookup):
+class Branches(NoteExtension, BranchLookupMixin):
     """
     Interface to a note's parent and child branches.
 
@@ -273,7 +296,7 @@ class Branches(NoteExtension, BranchLookup):
         )
 
 
-class ParentNotes(NoteExtension, MutableSet):
+class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
     """
     Interface to a note's parent notes.
 
@@ -328,7 +351,7 @@ class ParentNotes(NoteExtension, MutableSet):
         self._note.branches.parents = val
 
 
-class ChildNotes(NoteExtension, MutableSequence):
+class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     """
     Interface to a note's child notes.
 
