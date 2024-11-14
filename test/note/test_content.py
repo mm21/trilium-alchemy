@@ -22,8 +22,8 @@ def test_text(session: Session, note: Note):
     assert note._is_update
     assert note.content == TEXT
 
-    note.content = ""
-    assert note.content == ""
+    note.content_str = ""
+    assert note.content_str == ""
     assert note._is_clean
 
     note.content = TEXT
@@ -74,8 +74,8 @@ def test_bin(session: Session, note: Note):
     assert note._is_update
     assert note.content == BLOB
 
-    note.content = b"{BLOB}_2"
-    assert note.content == b"{BLOB}_2"
+    note.content_bin = b"{BLOB}_2"
+    assert note.content_bin == b"{BLOB}_2"
 
     note.content = BLOB
     note.flush()

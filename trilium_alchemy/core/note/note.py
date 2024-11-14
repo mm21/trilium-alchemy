@@ -549,7 +549,7 @@ class Note(BaseEntity[NoteModel]):
     @property
     def content_str(self) -> str:
         """
-        Type-safe getter for text note content.
+        Type-safe getter/setter for text note content.
         """
         content = self.content
 
@@ -560,10 +560,14 @@ class Note(BaseEntity[NoteModel]):
 
         return content
 
+    @content_str.setter
+    def content_str(self, val: str):
+        self.content = val
+
     @property
     def content_bin(self) -> bytes:
         """
-        Type-safe getter for binary note content.
+        Type-safe getter/setter for binary note content.
         """
         content = self.content
 
@@ -573,6 +577,10 @@ class Note(BaseEntity[NoteModel]):
             )
 
         return content
+
+    @content_bin.setter
+    def content_bin(self, val: bytes):
+        self.content = val
 
     @property
     def blob_id(self) -> str:
