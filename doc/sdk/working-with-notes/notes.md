@@ -40,7 +40,7 @@ The remaining examples assume that you will place the newly created note in your
 
 ## Entity bind operator: `+=`
 
-Use `+=`{l=python} to add a {obj}`Label`, {obj}`Relation`, {obj}`Branch` (parent or child), or another {obj}`Note` (parent or child).
+Use `+=`{l=python} to add a {obj}`Label`, {obj}`Relation`, {obj}`Branch` (parent or child), or child {obj}`Note`.
 
 Add a label:
 

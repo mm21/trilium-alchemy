@@ -104,7 +104,7 @@ This creates the label `myLabel` if it doesn't already exist.
 
 ### Entity bind operator: `+=`
 
-Use `+=` to add a `Label`, `Relation`, `Branch` (parent or child), or `Note` (parent or child).
+Use `+=` to add a `Label`, `Relation`, `Branch` (parent or child), or child `Note`.
 
 Add a label:
 
@@ -322,8 +322,8 @@ Set note content from a file by setting `content_file`:
 
 ```python
 class MyFrontendScript(BaseDeclarativeNote):
-    note_type = "code"
-    mime = "application/javascript;env=frontend"
+    note_type_ = "code"
+    mime_ = "application/javascript;env=frontend"
     content_file = "assets/myFrontendScript.js"
 ```
 
