@@ -46,7 +46,6 @@ Add a label:
 
 ```python
 note += Label("myLabel")
-
 assert note.labels.get_value("myLabel") == ""
 ```
 
@@ -54,34 +53,38 @@ Add a relation:
 
 ```python
 note += Relation("myRelation", session.root)
-
 assert note.relations.get_target("myRelation") is session.root
 ```
 
-Add a child branch with prefix:
-
-```python
-child = Note(title="Child note")
-
-note += Branch(child=child, prefix="My prefix")
-
-assert note.branches.children[0].prefix == "My prefix"
-```
-
-Add a parent branch with prefix:
-
-```python
-note += Branch(parent=session.root, prefix="My prefix")
-
-assert note.branches.parents[0].prefix == "My prefix"
-```
-
-Add a child branch implicitly:
+Add a child branch implicitly with empty prefix:
 
 ```python
 note += Note(title="Child note")
-
 assert note.children[0].title == "Child note"
+```
+
+Add a child branch implicitly with prefix specified as `tuple[Note, str]`:
+
+```python
+note += (Note(title="Child note"), "My prefix")
+assert note.children[0].title == "Child note"
+```
+
+Or equivalently, explicitly create a {obj}`Branch`:
+
+```python
+child = Note(title="Child note")
+note += Branch(child=child, prefix="My prefix")
+
+assert note.branches.children[0].prefix == "My prefix"
+assert note.children[0] is child
+```
+
+Similarly, explicitly create a parent branch:
+
+```python
+note += Branch(parent=session.root, prefix="My prefix")
+assert note.branches.parents[0].prefix == "My prefix"
 ```
 
 ## Clone operator: `^=`
@@ -94,6 +97,12 @@ today = session.get_today_note()
 
 # clone to today
 note ^= today
+```
+
+Specify a branch prefix by passing a `tuple[Note, str]`:
+
+```python
+note ^= (today, "My prefix")
 ```
 
 ## Content
@@ -111,7 +120,7 @@ For type-safe access, use {obj}`Note.content_str` or {obj}`Note.content_bin`:
 
 ```python
 note = Note()
-note.content = "<p>Hello, world!</p>"
+note.content_str = "<p>Hello, world!</p>"
 
 assert note.content_str == "<p>Hello, world!</p>"
 ```
