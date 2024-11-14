@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Any, Generator, Self, Type, cast, overload
+from typing import Any, Generator, Self, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
@@ -497,10 +497,12 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", ent)
 
 
-def normalize_entities(
+def normalize_entities[
+    CollectionT: Iterable
+](
     entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
-    collection_cls: Type[Iterable] = list,
-) -> Iterable[BaseEntity]:
+    collection_cls: type[CollectionT] = list,
+) -> CollectionT:
     """
     Take an entity or iterable of entities and return an iterable.
     Also supports tuples, e.g. (child, "prefix")
@@ -512,7 +514,7 @@ def normalize_entities(
         and not isinstance(entities, BaseEntity)
     ):
         # have iterable
-        return entities
+        return collection_cls(entities)
 
     # have single entity, but put in list first since Note is iterable
     return collection_cls([entities])

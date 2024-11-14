@@ -97,11 +97,16 @@ class Session:
     Access using Session._root_position_base.
     """
 
-    _logout_pending = False
+    _logout_pending: bool = False
     """
     Indicates if this session was created using a password rather than API
     token. In that case, the Session will automatically logout when exiting
     a context, and logout() will invoke the logout API.
+    """
+
+    _root: Note
+    """
+    Root note.
     """
 
     def __init__(
@@ -120,6 +125,8 @@ class Session:
         :param password: Trilium password, if no token provided
         :param default: Register this as the default session; in this case, `session` may be omitted from entity constructors
         """
+
+        from .note.note import Note
 
         # ensure no existing default session, if requested to use as default
         if default:
@@ -165,6 +172,9 @@ class Session:
                 f"Failed to connect to Trilium server using token={self._token}"
             )
             raise
+
+        # set root note
+        self._root = Note(note_id="root", session=self)
 
     def __enter__(self):
         logging.debug(f"Entering context: {self}")
@@ -436,13 +446,16 @@ class Session:
         """
         Helper to lookup root note.
         """
-        from .note.note import Note
-
-        return Note(note_id="root", session=self)
+        return self._root
 
     @root.setter
-    def root(self, obj: Note):
-        assert obj is self.root
+    def root(self, note: Note):
+        """
+        Needed to enable operations like:
+
+        session.root += my_note
+        """
+        assert note is self._root
 
     @property
     def dirty_count(self) -> int:

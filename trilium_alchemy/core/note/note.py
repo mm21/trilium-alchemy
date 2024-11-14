@@ -341,7 +341,7 @@ class Note(BaseEntity[NoteModel]):
         child ^= [parent1, parent2]
         """
 
-        # iterate and add individually for repeatability
+        # iterate and add as parent
         for p in normalize_entities(parent):
             self.branches.parents.add(p)
 

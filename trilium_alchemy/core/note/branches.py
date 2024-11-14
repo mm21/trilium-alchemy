@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableSequence, MutableSet
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import TYPE_CHECKING, Iterable, Iterator, cast
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -46,11 +46,16 @@ class BranchLookup:
     def lookup(self, note: Note) -> Branch:
         """
         Lookup a branch given a related {obj}`Note`, either parent or child.
+
+        :raises ValueError: If note is not a parent or child of any branch
         """
         assert note is not None
-        for branch in list(self):
+
+        for branch in cast(Iterable[Branch], self):
             if note in {branch.parent, branch.child}:
                 return branch
+
+        raise ValueError(f"Note {note} not in parents or children of {self}")
 
 
 class ParentBranches(BaseEntitySet[Branch], BranchLookup):
@@ -85,7 +90,6 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
         return sorted(self._entity_set, key=lambda branch: id(branch))[key]
 
     def _setup(self, model: EtapiNoteModel | None):
-        # TODO: handle refresh
         if self._entity_set is None:
             self._entity_set = set()
 
@@ -93,7 +97,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
                 # populate set of parent branches
                 for branch_id in model.parent_branch_ids:
                     self._entity_set.add(
-                        Branch._from_id(branch_id, session=self._note._session)
+                        Branch._from_id(branch_id, session=self._note.session)
                     )
 
     def _bind_entity(self, parent_branch: Branch):
@@ -108,7 +112,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
         if parent_branch not in parent_branch.parent.branches.children:
             parent_branch.parent.branches.children.append(parent_branch)
 
-    def _normalize(self, parent: Branch | Note) -> Branch:
+    def _normalize(self, parent: Note) -> Branch:
         from .note import Note
 
         parent, prefix = normalize_tuple(parent)
@@ -123,10 +127,10 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookup):
         else:
             # create a new branch
             branch_obj = Branch(
-                parent=parent, child=self._note, session=self._note._session
+                parent=parent, child=self._note, session=self._note.session
             )
 
-        if prefix:
+        if prefix is not None:
             branch_obj.prefix = prefix
 
         return branch_obj
@@ -164,7 +168,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookup):
                     if not branch_id.startswith("root__"):
                         self._entity_list.append(
                             Branch._from_id(
-                                branch_id, session=self._note._session
+                                branch_id, session=self._note.session
                             )
                         )
 
@@ -198,17 +202,17 @@ class ChildBranches(BaseEntityList[Branch], BranchLookup):
         else:
             # create a new branch
             branch_obj = Branch(
-                parent=self._note, child=child, session=self._note._session
+                parent=self._note, child=child, session=self._note.session
             )
 
-        if prefix:
+        if prefix is not None:
             branch_obj.prefix = prefix
 
         return branch_obj
 
     def _get_position(self, index: int) -> int:
         if self._note.note_id == "root":
-            base = self._note._session._root_position_base
+            base = self._note.session._root_position_base
         else:
             base = 0
 
@@ -283,34 +287,32 @@ class ParentNotes(NoteExtension, MutableSet):
     ) -> ParentNotes:
         """
         Implement helper:
+
         note.parents += branch_spec
         """
-
-        parents = normalize_entities(parent, collection_cls=set)
-
-        self._note.branches.parents |= parents
-
+        self._note.branches.parents |= normalize_entities(
+            parent, collection_cls=set
+        )
         return self
 
     def __contains__(self, val: Note):
         """
         Implement helper:
+
         note2 in note1.parents
         """
         return val in self._note.branches.parents
 
     def __iter__(self) -> Iterator[Note]:
-        parents = []
-        for branch in self._note.branches.parents:
-            if branch.parent is not None:
-                parents.append(branch.parent)
-        return iter(parents)
+        return iter([b.parent for b in self._note.branches.parents if b.parent])
 
     def __len__(self):
         return len(self._note.branches.parents)
 
     def __getitem__(self, key: int) -> Note:
-        """Return parent Note of Branch given by index."""
+        """
+        Return parent Note of Branch given by index.
+        """
         return self._note.branches.parents[key].parent
 
     def add(self, value: Note):
@@ -340,21 +342,14 @@ class ChildNotes(NoteExtension, MutableSequence):
     ) -> ChildNotes:
         """
         Implement helper:
+
         note.children += branch_spec
         """
-
-        children = normalize_entities(child)
-
-        self._note.branches.children += children
-
+        self._note.branches.children += normalize_entities(child)
         return self
 
     def __iter__(self) -> Iterator[Note]:
-        children = []
-        for branch in self._note.branches.children:
-            if branch.child is not None:
-                children.append(branch.child)
-        return iter(children)
+        return iter([b.child for b in self._note.branches.children if b.child])
 
     def __contains__(self, val: Note) -> bool:
         """
