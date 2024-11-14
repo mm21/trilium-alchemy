@@ -16,7 +16,7 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 name = "trilium-alchemy"
 packages = [{include = "trilium_alchemy"}]
 readme = "README.pypi.md"
-version = "0.3.0"
+version = "0.3.1"
 
 [tool.poetry.dependencies]
 pydantic = "^2"
