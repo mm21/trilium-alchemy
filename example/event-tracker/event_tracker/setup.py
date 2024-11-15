@@ -85,30 +85,32 @@ def setup_notes(session: Session):
 
     moria = Note(title="Moria", parents=misty_mountains, template=City)
 
-    # create rest of notes using Template.instance() helper, effectively same
+    # create rest of notes using Template.new_instance() helper, effectively same
     # as passing template arg
-    bagginses = Group.instance(title="Bagginses", parents=groups)
-    fellowship = Group.instance(title="The Fellowship", parents=groups)
-    allies = Group.instance(title="Allies of The Fellowship", parents=groups)
+    bagginses = Group.new_instance(title="Bagginses", parents=groups)
+    fellowship = Group.new_instance(title="The Fellowship", parents=groups)
+    allies = Group.new_instance(
+        title="Allies of The Fellowship", parents=groups
+    )
 
-    bilbo = Person.instance(title="Bilbo Baggins", parents=bagginses)
+    bilbo = Person.new_instance(title="Bilbo Baggins", parents=bagginses)
     bilbo["birthday"] = "2890-09-22"
     bilbo += Relation("livedAt", bag_end)
 
-    frodo = Person.instance(
+    frodo = Person.new_instance(
         title="Frodo Baggins", parents={bagginses, fellowship}
     )
     frodo["birthday"] = "2968-09-22"
     frodo += Relation("livedAt", bag_end)
 
-    sam = Person.instance(title="Samwise Gamgee", parents=fellowship)
-    merry = Person.instance(title="Meriadoc Brandybuck", parents=fellowship)
-    pippin = Person.instance(title="Peregrin Took", parents=fellowship)
-    gandalf = Person.instance(title="Gandalf", parents=fellowship)
-    aragorn = Person.instance(title="Aragorn", parents=fellowship)
-    legolas = Person.instance(title="Legolas", parents=fellowship)
-    gimli = Person.instance(title="Gimli", parents=fellowship)
-    boromir = Person.instance(title="Boromir", parents=fellowship)
+    sam = Person.new_instance(title="Samwise Gamgee", parents=fellowship)
+    merry = Person.new_instance(title="Meriadoc Brandybuck", parents=fellowship)
+    pippin = Person.new_instance(title="Peregrin Took", parents=fellowship)
+    gandalf = Person.new_instance(title="Gandalf", parents=fellowship)
+    aragorn = Person.new_instance(title="Aragorn", parents=fellowship)
+    legolas = Person.new_instance(title="Legolas", parents=fellowship)
+    gimli = Person.new_instance(title="Gimli", parents=fellowship)
+    boromir = Person.new_instance(title="Boromir", parents=fellowship)
 
     # Gandalf and Aragorn have a lot of names, so add them more concisely
 
@@ -133,7 +135,7 @@ def setup_notes(session: Session):
     for name in aragorn_names:
         aragorn += Label("altName", name)
 
-    elrond = Person.instance(title="Elrond", parents=allies)
+    elrond = Person.new_instance(title="Elrond", parents=allies)
     elrond += [
         Label("altName", "Peredhil"),
         Relation("livesAt", last_homely_house),

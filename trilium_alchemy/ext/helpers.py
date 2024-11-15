@@ -66,7 +66,7 @@ class _BaseTemplateNote(BaseDeclarativeNote):
     _force_leaf = True
 
     @classmethod
-    def instance(cls, *args, **kwargs):
+    def new_instance(cls, *args, **kwargs):
         """
         Create new note with `~template` relation to this note, passing through
         constructor args.
