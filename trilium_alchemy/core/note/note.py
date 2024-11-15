@@ -635,14 +635,13 @@ class Note(BaseEntity[NoteModel]):
             " > ".join([note.title for note in path]) for path in self.paths
         ]
 
-    def get(self, name: str, default: Any = None) -> str | None:
+    def get(self, name: str, default: str | None = None) -> str | None:
         """
-        Get value of first attribute with provided name.
+        Get value of first label with provided name, or `None` if no such
+        label exists.
         """
         attr = self.labels.get(name)
-        if attr is None:
-            return default
-        return attr.value
+        return default if attr is None else attr.value
 
     def copy(self, deep: bool = False, content: bool = False) -> Note:
         """
