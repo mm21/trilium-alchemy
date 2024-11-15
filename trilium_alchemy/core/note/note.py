@@ -659,54 +659,76 @@ class Note(BaseEntity[NoteModel]):
         ```
         """
 
-        # create note
-        note_copy = Note(
-            title=self.title,
-            note_type=self.note_type,
-            mime=self.mime,
-            session=self.session,
-        )
+        # keep a mapping of (destination note's id) -> (new Note object)
+        # to handle clones
+        # - use id() since note_id may not exist yet, and there cannot be
+        # multiple Note instances with same note_id
+        note_map: dict[int, Note] = {}
 
-        # copy content if indicated
-        if content:
-            note_copy.content = self.content
+        def recurse(note: Note) -> Note:
+            note_copy: Note
 
-        # copy attributes
-        for attr in self.attributes.owned:
-            assert isinstance(attr, Label) or isinstance(attr, Relation)
-
-            if isinstance(attr, Label):
-                note_copy += Label(
-                    attr.name,
-                    value=attr.value,
-                    inheritable=attr.inheritable,
-                    session=self.session,
-                )
+            # check if we need to use an existing note
+            if id(note) in note_map:
+                # reuse note since it's cloned
+                note_copy = note_map[id(note)]
             else:
-                note_copy += Relation(
-                    attr.name,
-                    attr.target,
-                    inheritable=attr.inheritable,
-                    session=self.session,
+                # create new note
+                note_copy = Note(
+                    title=note.title,
+                    note_type=note.note_type,
+                    mime=note.mime,
+                    session=note.session,
                 )
 
-        # copy children
-        for branch in self.branches.children:
-            # copy or clone this child
-            child = (
-                branch.child.copy(deep=deep, content=content)
-                if deep
-                else branch.child
-            )
+                # add to map
+                note_map[id(note)] = note_copy
 
-            # create new branch with same prefix
-            note_copy += Branch(
-                child=child,
-                prefix=branch.prefix,
-                session=self.session,
-            )
+                do_copy(note, note_copy)
 
-        return note_copy
+            return note_copy
+
+        def do_copy(src: Note, dest: Note):
+            # copy content if indicated
+            if content:
+                dest.content = src.content
+
+            # copy attributes
+            for attr in src.attributes.owned:
+                assert isinstance(attr, Label) or isinstance(attr, Relation)
+
+                attr_copy: BaseAttribute
+
+                if isinstance(attr, Label):
+                    attr_copy = Label(
+                        attr.name,
+                        value=attr.value,
+                        inheritable=attr.inheritable,
+                        session=src.session,
+                    )
+                else:
+                    attr_copy = Relation(
+                        attr.name,
+                        target=attr.target,
+                        inheritable=attr.inheritable,
+                        session=src.session,
+                    )
+
+                dest += attr_copy
+
+            # copy children
+            for branch in src.branches.children:
+                # copy or clone this child
+                child = recurse(branch.child) if deep else branch.child
+
+                # create new branch with same prefix
+                dest += Branch(
+                    child=child,
+                    prefix=branch.prefix,
+                    session=src.session,
+                )
+
+        return recurse(self)
 
     def transmute[NoteT: Note](self, note_cls: type[NoteT]) -> NoteT:
         """

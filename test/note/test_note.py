@@ -280,8 +280,12 @@ def test_copy(session: Session, note: Note, note2: Note):
 
     child1 = Note(title="Test child 1", session=session)
     child2 = Note(title="Test child 2", session=session)
+    child3 = Note(title="Test child 3", session=session)
 
-    # add children
+    # clone to top-level children
+    child3 ^= [child1, child2]
+
+    # add top-level children
     note += [
         Branch(
             child=child1,
@@ -328,6 +332,15 @@ def test_copy(session: Session, note: Note, note2: Note):
 
         assert branch2.prefix == ""
         assert branch2.parent is note_copy
+
+        assert len(note_copy.children) == 2
+        child1, child2 = note_copy.children
+
+        assert len(child1.children) == 1
+        assert len(child2.children) == 1
+
+        # ensure cloned child is preserved
+        assert child1.children[0] is child2.children[0]
 
         if deep:
             assert branch1.child is not note.children[0]
