@@ -453,6 +453,13 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         ...
 
+    @property
+    def _cleanup_entities(self) -> list[BaseEntity]:
+        """
+        Return entities to be removed from cache after deleting this entity.
+        """
+        return []
+
 
 class PositionMixin:
     """
