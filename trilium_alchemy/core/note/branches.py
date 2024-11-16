@@ -381,6 +381,7 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         """
         return val in self._note.branches.children
 
+    # TODO: handle slice
     def __getitem__(self, i: int) -> Note:
         """
         Accessor for child note.
