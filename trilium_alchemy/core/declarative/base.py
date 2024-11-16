@@ -327,9 +327,7 @@ class BaseDeclarativeMixin(
             branch = self.create_declarative_child(child_cls)
         else:
             # have Note or Branch
-            assert isinstance(child_spec, Note) or isinstance(
-                child_spec, Branch
-            )
+            assert isinstance(child_spec, (Note, Branch))
             branch = self._normalize_child(child_spec)
 
         # set branch kwargs

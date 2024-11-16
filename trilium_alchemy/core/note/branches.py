@@ -97,12 +97,12 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
 
         from .note import Note
 
+        assert isinstance(val, (Branch, Note))
+
         if isinstance(val, Branch):
             return val in self._entity_set
-        elif isinstance(val, Note):
-            return val in {branch.parent for branch in self._entity_set}
         else:
-            raise ValueError(f"Unexpected type: {val}")
+            return val in {branch.parent for branch in self._entity_set}
 
     def __getitem__(self, key: int) -> Branch:
         """
@@ -167,19 +167,19 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
     _child_cls = Branch
     _owner_field = "_parent"
 
-    def __contains__(self, val: Branch | Note):
+    def __contains__(self, val: Branch | Note) -> bool:
         """
         Implement helper:
         note2 in note1.branches.children
         """
         from .note import Note
 
+        assert isinstance(val, (Branch, Note))
+
         if isinstance(val, Branch):
             return val in self._entity_list
-        elif isinstance(val, Note):
-            return val in {branch.child for branch in self._entity_list}
         else:
-            raise ValueError(f"Unexpected type: {val}")
+            return val in {branch.child for branch in self._entity_list}
 
     def _setup(self, model: EtapiNoteModel | None):
         if self._entity_list is None:
@@ -318,7 +318,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
         )
         return self
 
-    def __contains__(self, val: Note):
+    def __contains__(self, val: Note) -> bool:
         """
         Implement helper:
 
@@ -391,7 +391,7 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         self._note.branches.children[i] = value
 
     def __delitem__(self, i: int):
-        del self._note.branches.children[i].child
+        del self._note.branches.children[i]
 
     def __len__(self):
         return len(self._note.branches.children)
