@@ -1,5 +1,3 @@
-from pytest import raises
-
 from trilium_alchemy import *
 
 
@@ -47,10 +45,10 @@ def test_parent_add_alt(session: Session, note1: Note, note2: Note):
 
     note2 ^= (note3, "My prefix")
     branch = note2.branches.lookup_branch(note3)
+    assert branch is not None
     assert branch.prefix == "My prefix"
 
-    with raises(ValueError):
-        note1.branches.lookup_branch(note3)
+    assert note1.branches.lookup_branch(note3) is None
 
     note2 += Branch(parent=note4, session=session)
 

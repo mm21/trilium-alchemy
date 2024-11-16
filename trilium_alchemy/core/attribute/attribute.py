@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING, Self
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
-import trilium_alchemy
-
 from ..entity.entity import BaseEntity, OrderedEntity, State
 from ..entity.model import (
     BaseDriver,
@@ -21,6 +19,8 @@ from ..session import Session, normalize_session
 
 if TYPE_CHECKING:
     from ..note.note import Note
+    from .label import Label
+    from .relation import Relation
 
 __all__ = [
     "BaseAttribute",
@@ -241,7 +241,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     @classmethod
     def _from_id(
         cls, attribute_id: str, session: Session | None = None
-    ) -> trilium_alchemy.Label | trilium_alchemy.Relation:
+    ) -> Label | Relation:
         """
         Get instance of appropriate concrete class given an `attributeId`.
         """

@@ -46,18 +46,16 @@ class BranchLookupMixin:
     def __iter__(self) -> Iterator[Branch]:
         ...
 
-    def lookup_branch(self, note: Note) -> Branch:
+    def lookup_branch(self, note: Note) -> Branch | None:
         """
         Lookup a branch given a related {obj}`Note`, either parent or child.
-
-        :raises ValueError: If note is not a parent or child of any branch
         """
 
         for branch in self:
             if note in {branch.parent, branch.child}:
                 return branch
 
-        raise ValueError(f"Note {note} not found in {self}")
+        return None
 
 
 class NoteLookupMixin:
@@ -147,6 +145,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         if parent in self._note.parents:
             # already in parents
             branch_obj = self._note.branches.parents.lookup_branch(parent)
+            assert branch_obj is not None
         else:
             # create a new branch
             branch_obj = Branch(
@@ -222,6 +221,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
         if child in self._note.children:
             # already in children
             branch_obj = self._note.branches.children.lookup_branch(child)
+            assert branch_obj is not None
         else:
             # create a new branch
             branch_obj = Branch(
