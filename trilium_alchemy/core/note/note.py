@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 from abc import ABCMeta
 from collections.abc import Iterable
@@ -192,13 +193,6 @@ class Note(BaseEntity[NoteModel]):
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
-        # normalize args
-        parents_iter: Iterable[Note | Branch] | None = None
-        if parents is not None:
-            parents_iter = cast(
-                Iterable[Note | Branch], normalize_entities(parents)
-            )
-
         init_done = self._init_done
 
         # invoke Entity init
@@ -209,19 +203,34 @@ class Note(BaseEntity[NoteModel]):
         )
 
         if init_done:
+            assert note_id is not None
             assert self.note_id == note_id
+
+            # ensure not attempting to set fields when already initialized
+            fields_check = {
+                "title": title,
+                "note_type": note_type,
+                "mime": mime,
+                "parents": parents,
+                "children": children,
+                "attributes": attributes,
+                "content": content,
+                "template": template,
+            }
+            fields_err = [k for k, v in fields_check.items() if v is not None]
+            assert (
+                len(fields_err) == 0
+            ), f"Attempt to set fields when note already initialized: {fields_err}"
+
             return
 
         def combine_lists[T](*lists: list[T] | None) -> list[T] | None:
             result: list[T] | None = None
-
             for lst in lists:
                 if lst is not None:
                     if result is None:
                         result = []
-
                     result += lst
-
             return result
 
         # get container from any subclass
@@ -229,60 +238,52 @@ class Note(BaseEntity[NoteModel]):
             note_id, note_id_seed_final, force_leaf
         )
 
-        all_attributes = combine_lists(attributes, init_container.attributes)
-        all_children = combine_lists(children, init_container.children)
+        # aggregate fields to set
+        title_set = title or init_container.title
+        note_type_set = note_type or init_container.note_type
+        mime_set = mime or init_container.mime
+        content_set = content or init_container.content
+        attributes_set = combine_lists(attributes, init_container.attributes)
+        parents_set: Iterable[Note | Branch] | None = (
+            None
+            if parents is None
+            else cast(Iterable[Note | Branch], normalize_entities(parents))
+        )
+        children_set = combine_lists(children, init_container.children)
 
-        # assign template if provided
         if template is not None:
-            template_obj: Note
-            template_cls: type[Note] = get_cls(template)
+            # create and append new relation
+            template_relation = _normalize_template(template, session)
 
-            if isinstance(template, ABCMeta):
-                # have class
-
-                assert (
-                    template_cls._is_singleton()
-                ), "Template target must be singleton class"
-
-                # instantiate target
-                template_obj = template_cls(session=session)
+            if attributes_set is None:
+                attributes_set = [template_relation]
             else:
-                # have instance
-                template_obj = cast(Note, template)
+                attributes_set.append(template_relation)
 
-            assert isinstance(
-                template_obj, Note
-            ), f"Template target must be a Note, have {type(template_obj)}"
+        # set fields
 
-            relation = Relation("template", template_obj, session=session)
-
-            if all_attributes is None:
-                all_attributes = [relation]
-            else:
-                all_attributes.append(relation)
-
-        if (title_set := title or init_container.title) is not None:
+        if title_set is not None:
             self.title = title_set
 
-        if (note_type_set := note_type or init_container.note_type) is not None:
+        if note_type_set is not None:
             self.note_type = note_type_set
 
-        if (mime_set := mime or init_container.mime) is not None:
+        if mime_set is not None:
             self.mime = mime_set
 
-        # set after type/mime to determine expected content type
+        # set content after type/mime to determine expected content type
         # (text or binary)
-        if (content_set := content or init_container.content) is not None:
+        if content_set is not None:
             self.content = content_set
 
-        if all_attributes is not None:
-            self.attributes = all_attributes
+        if attributes_set is not None:
+            self.attributes.owned = attributes_set
 
-        if all_children is not None:
-            self.children = all_children
+        if parents_set is not None:
+            self.parents = parents_set
 
-        if parents_iter is not None:
-            self.parents = parents_iter
+        if children_set is not None:
+            self.children = children_set
 
     def __iadd__(
         self,
@@ -379,7 +380,7 @@ class Note(BaseEntity[NoteModel]):
         ), f"Invalid type for label value: {value} ({type(value)})"
         self.labels.owned.set_value(name, value)
 
-    def __contains__(self, label: str):
+    def __contains__(self, label: str) -> bool:
         return self.labels.owned.get(label) is not None
 
     def __hash__(self) -> int:
@@ -643,10 +644,10 @@ class Note(BaseEntity[NoteModel]):
         attr = self.labels.get(name)
         return default if attr is None else attr.value
 
-    def copy(self, deep: bool = False, content: bool = False) -> Note:
+    def copy(self, deep: bool = False) -> Note:
         """
         Return a copy of this note, including its title, type, MIME,
-        attributes, and optionally content.
+        attributes, and content.
 
         If `deep` is `False`{l=python}, child notes are cloned to the
         returned copy. Otherwise, child notes are recursively deep copied.
@@ -657,77 +658,40 @@ class Note(BaseEntity[NoteModel]):
         is invoked.
         ```
         """
+        return CopyContext().copy(self, deep=deep)
 
-        # keep a mapping of (destination note's id) -> (new Note object)
-        # to handle clones
-        # - use id() since note_id may not exist yet, and there cannot be
-        # multiple Note instances with same note_id
-        note_map: dict[int, Note] = {}
+    def sync_template(self, template: Note):
+        """
+        Update this note to match the provided template:
 
-        def recurse(note: Note) -> Note:
-            note_copy: Note
+        - Set note type and MIME
+        - Set content if empty
+        - Recursively deep copy missing child notes, matched by title
+        """
 
-            # check if we need to use an existing note
-            if id(note) in note_map:
-                # reuse note since it's cloned
-                note_copy = note_map[id(note)]
-            else:
-                # create new note
-                note_copy = Note(
-                    title=note.title,
-                    note_type=note.note_type,
-                    mime=note.mime,
-                    session=note.session,
-                )
+        copy_context = CopyContext()
 
-                # add to map
-                note_map[id(note)] = note_copy
+        def find_child(child: Note, dest: Note) -> Note | None:
+            """
+            Find child by title.
+            """
+            for dest_child in dest.children:
+                if child.title == dest_child.title:
+                    return dest_child
+            return None
 
-                do_copy(note, note_copy)
+        def recurse(src: Note, dest: Note):
+            for src_child in src.children:
+                dest_child = find_child(src_child, dest)
 
-            return note_copy
+                if dest_child is not None:
+                    copy_context.add_mapping(src_child, dest_child)
+                    recurse(src_child, dest_child)
 
-        def do_copy(src: Note, dest: Note):
-            # copy content if indicated
-            if content:
-                dest.content = src.content
+        # first, recursively populate copy context with all matched notes
+        recurse(template, self)
 
-            # copy attributes
-            for attr in src.attributes.owned:
-                assert isinstance(attr, Label) or isinstance(attr, Relation)
-
-                attr_copy: BaseAttribute
-
-                if isinstance(attr, Label):
-                    attr_copy = Label(
-                        attr.name,
-                        value=attr.value,
-                        inheritable=attr.inheritable,
-                        session=src.session,
-                    )
-                else:
-                    attr_copy = Relation(
-                        attr.name,
-                        target=attr.target,
-                        inheritable=attr.inheritable,
-                        session=src.session,
-                    )
-
-                dest += attr_copy
-
-            # copy children
-            for branch in src.branches.children:
-                # copy or clone this child
-                child = recurse(branch.child) if deep else branch.child
-
-                # create new branch with same prefix
-                dest += Branch(
-                    child=child,
-                    prefix=branch.prefix,
-                    session=src.session,
-                )
-
-        return recurse(self)
+        self._sync_subtree(template, copy_context)
 
     def transmute[NoteT: Note](self, note_cls: type[NoteT]) -> NoteT:
         """
@@ -879,6 +843,10 @@ class Note(BaseEntity[NoteModel]):
         return deps
 
     @property
+    def _cleanup_entities(self) -> list[BaseEntity]:
+        return list(self.branches) + list(self.attributes.owned)
+
+    @property
     def _str_short(self):
         return f"Note(title={self.title}, note_id={self.note_id})"
 
@@ -927,6 +895,58 @@ class Note(BaseEntity[NoteModel]):
         for branch in self.branches.children:
             _assert_validate(branch.parent is self)
 
+    def _sync_subtree(self, src: Note, copy_context: CopyContext):
+        """
+        Recursively sync this note with source, deep copying new notes as
+        necessary.
+        """
+
+        self.note_type = src.note_type
+        self.mime = src.mime
+
+        existing_children: list[Branch] = [b for b in self.branches.children]
+        new_children: list[Branch] = []
+
+        def find_child(src_child: Note) -> Branch | None:
+            """
+            Find child by title and pop from existing children list.
+            """
+            for i, branch in enumerate(existing_children):
+                if src_child.title == branch.child.title:
+                    return existing_children.pop(i)
+            return None
+
+        # traverse children and identify which ones to copy
+        for branch in src.branches.children:
+            # check if a child note with this title already exists, and use it
+            # if so
+            existing_branch = find_child(branch.child)
+            add_branch: Branch
+
+            if existing_branch is None:
+                child_copy = copy_context.copy(branch.child, deep=True)
+                child_branch = self.branches.children.lookup_branch(child_copy)
+
+                # use existing branch or create new
+                add_branch = child_branch or Branch(
+                    self, child_copy, prefix=branch.prefix, session=self.session
+                )
+            else:
+                add_branch = existing_branch
+                add_branch.child._sync_subtree(branch.child, copy_context)
+
+            new_children.append(add_branch)
+
+        # append any remaining children at end
+        new_children += existing_children
+
+        # assign new children
+        self.branches.children = new_children
+
+        # assign content if empty
+        if len(self.content) == 0:
+            self.content = src.content
+
 
 @dataclass
 class InitContainer:
@@ -936,3 +956,126 @@ class InitContainer:
     attributes: list[BaseAttribute] | None = None
     children: list[Note] | None = None
     content: str | bytes | IO | None = None
+
+
+class CopyContext:
+    """
+    Maintain a mapping of (destination note's id) -> (new Note)
+    to properly recreate any clones.
+
+    Use id() since note_id may not exist yet, and there cannot be
+    multiple Note instances with same note_id.
+    """
+
+    note_map: dict[int, Note]
+
+    def __init__(self):
+        self.note_map = dict()
+
+    def copy(self, note: Note, deep: bool = False) -> Note:
+        # check if we already made a copy of this note
+        if id(note) in self.note_map:
+            # reuse note since it's cloned
+            note_copy = self.note_map[id(note)]
+        else:
+            # create new note
+            note_copy = Note(
+                title=note.title,
+                note_type=note.note_type,
+                mime=note.mime,
+                session=note.session,
+            )
+
+            # add to map
+            self.note_map[id(note)] = note_copy
+
+            # do copy
+            self._do_copy(note, note_copy, deep)
+
+        return note_copy
+
+    def add_mapping(self, src: Note, dest: Note):
+        if id(src) in self.note_map:
+            assert self.note_map[id(src)] is dest
+        else:
+            self.note_map[id(src)] = dest
+
+    def _do_copy(self, src: Note, dest: Note, deep: bool):
+        # copy fields
+        dest.title = src.title
+        dest.note_type = src.note_type
+        dest.mime = src.mime
+
+        # copy attributes
+        self._copy_attributes(src, dest)
+
+        # copy children
+        for branch in src.branches.children:
+            # copy or clone this child
+            child = self.copy(branch.child) if deep else branch.child
+
+            # create new branch with same prefix
+            dest += Branch(
+                child=child,
+                prefix=branch.prefix,
+                session=src.session,
+            )
+
+        # copy content
+        dest.content = copy.copy(src.content)
+
+    def _copy_attributes(self, src: Note, dest: Note):
+        """
+        Copy owned attributes from source to destination.
+        """
+
+        for attr in src.attributes.owned:
+            assert isinstance(attr, (Label, Relation))
+            attr_copy: BaseAttribute
+
+            if isinstance(attr, Label):
+                attr_copy = Label(
+                    attr.name,
+                    value=attr.value,
+                    inheritable=attr.inheritable,
+                    session=src.session,
+                )
+            else:
+                attr_copy = Relation(
+                    attr.name,
+                    target=attr.target,
+                    inheritable=attr.inheritable,
+                    session=src.session,
+                )
+
+            dest += attr_copy
+
+
+def _normalize_template(
+    template: Note | type[Note], session: Session | None
+) -> Relation:
+    target: Note
+    template_cls: type[Note] = get_cls(template)
+
+    if isinstance(template, ABCMeta):
+        # have class
+
+        assert (
+            template_cls._is_singleton()
+        ), "Template target must be singleton class"
+
+        # instantiate target
+        target = template_cls(session=session)
+    else:
+        # have instance
+        target = cast(Note, template)
+
+    assert isinstance(
+        target, Note
+    ), f"Template target must be a Note, have {type(target)}"
+
+    return Relation(
+        "template",
+        target,
+        session=session,
+    )

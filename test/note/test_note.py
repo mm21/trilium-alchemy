@@ -300,15 +300,12 @@ def test_copy(session: Session, note: Note, note2: Note):
 
     session.flush()
 
-    def check_copy(note_copy: Note, deep: bool, content: bool):
+    def check_copy(note_copy: Note, deep: bool):
         assert note_copy.title == "Test note"
         assert note_copy.note_type == "code"
         assert note_copy.mime == "text/css"
 
-        if content:
-            assert note_copy.content == "Test CSS"
-        else:
-            assert note_copy.content == ""
+        assert note_copy.content == "Test CSS"
 
         assert len(note_copy.attributes.owned) == 2
 
@@ -353,7 +350,7 @@ def test_copy(session: Session, note: Note, note2: Note):
     copy_deep = note.copy(deep=True)
 
     # create shallow copy w/content
-    copy_shallow = note.copy(content=True)
+    copy_shallow = note.copy()
 
     # place as children of second note
     note2 += [
@@ -362,8 +359,8 @@ def test_copy(session: Session, note: Note, note2: Note):
     ]
 
     # verify
-    check_copy(copy_deep, True, False)
-    check_copy(copy_shallow, False, True)
+    check_copy(copy_deep, True)
+    check_copy(copy_shallow, False)
 
     session.flush()
 
@@ -459,3 +456,110 @@ def test_transmute(note1: Note, note2: Note):
 
     check_subclass(note1, note_subclass, NoteSubclass)
     check_subclass(note2, decl_note_subclass, DeclarativeNoteSubclass)
+
+
+def test_template(session: Session, note1: Note, note2: Note):
+    # note cloned to template and first child of template
+    @label("childLabel2", "childLabelValue2")
+    class TemplateChild2(BaseDeclarativeNote):
+        content_ = "Test content 2"
+        singleton = True
+
+    @label("childLabel1", "childLabelValue1")
+    @children(TemplateChild2)
+    class TemplateChild1(BaseDeclarativeNote):
+        content_ = "Test content 1"
+
+    @label("templateLabel")
+    @children(TemplateChild1, TemplateChild2)
+    class TemplateTest(BaseTemplateNote):
+        content_ = "Test content"
+
+    @relation("template", TemplateTest)
+    class TemplateInstanceTest(BaseDeclarativeNote):
+        pass
+
+    # create template
+    template = TemplateTest(session=session)
+    template ^= note1
+    session.flush()
+
+    def check_instance(note: Note, expect_children: int = 2):
+        assert note.title == "Instance"
+        assert note.labels.inherited.get_value("templateLabel") == ""
+        assert note.content == "Test content"
+        assert "template" not in note.labels
+        assert "template" in note.relations
+
+        assert len(note.children) == expect_children
+        child1, child2 = list(note.children)[:2]
+
+        assert child1.title == "TemplateChild1"
+        assert child1["childLabel1"] == "childLabelValue1"
+        assert child1.content == "Test content 1"
+        assert len(child1.children) == 1
+        assert child1.children[0] is child2
+
+        assert child2.title == "TemplateChild2"
+        assert child2["childLabel2"] == "childLabelValue2"
+        assert child2.content == "Test content 2"
+        assert len(child2.children) == 0
+
+    # create with template
+    inst1 = Note(
+        title="Instance", session=session, parents=note2, template=template
+    )
+
+    # explicitly add ~template
+    inst2 = Note(title="Instance", session=session, parents=note2)
+    inst2.relations.append_target("template", template)
+
+    # declaratively added template
+    inst3 = TemplateInstanceTest(
+        title="Instance", parents=note2, session=session
+    )
+
+    session.flush()
+
+    # refresh to get inherited attributes
+    inst1.refresh()
+    inst2.refresh()
+    inst3.refresh()
+
+    check_instance(inst1)
+    check_instance(inst2)
+    check_instance(inst3)
+
+    # modify instances and ensure they get re-synced
+
+    del inst1.children[0]
+    del inst2.children[1]
+    inst3.children = [inst3.children[1], inst3.children[0]]
+
+    session.flush()
+
+    inst1.sync_template(template)
+    inst2.sync_template(template)
+    inst3.sync_template(template)
+
+    check_instance(inst1)
+    check_instance(inst2)
+    check_instance(inst3)
+
+    del inst1.children[0].children[0]
+    inst1.children[1].content = ""
+
+    session.flush()
+
+    inst1.sync_template(template)
+    check_instance(inst1)
+
+    inst1.children.insert(1, Note(title="Test child 3", session=session))
+    assert inst1.children[1].title == "Test child 3"
+
+    session.flush()
+
+    inst1.sync_template(template)
+    check_instance(inst1, expect_children=3)
+
+    assert inst1.children[2].title == "Test child 3"
