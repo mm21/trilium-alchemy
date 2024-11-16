@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, MutableSet
 from functools import wraps
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Type, overload
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, overload
 
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
@@ -38,7 +38,7 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
     """
 
     # class of element of this collection
-    _child_cls: Type[EntityT]
+    _child_cls: type[EntityT]
 
     # name of attribute to associate with owner of collection
     # should be 'note_id' (attrs) or 'parent_note_id' (child branches)

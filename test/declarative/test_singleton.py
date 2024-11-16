@@ -13,7 +13,7 @@ from ..conftest import create_session, delete_note, note_exists
 TODO:
 
 - test passing in note_id when instantiating root non-singleton note
-  (example/event-tracker covers this)
+  (examples/event-tracker covers this)
     - sets child ids based on provided id
 
 - leaf = True

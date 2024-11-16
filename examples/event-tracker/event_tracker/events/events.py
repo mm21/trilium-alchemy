@@ -63,20 +63,20 @@ class System(BaseSystemNote):
 
 
 @label("iconClass", "bx bx-calendar")
-class Type(BaseDeclarativeNote):
+class BaseEvents(BaseDeclarativeNote):
     singleton = True
     leaf = True
 
 
-class Birthdays(Type):
+class Birthdays(BaseEvents):
     pass
 
 
-class Meetings(Type):
+class Meetings(BaseEvents):
     pass
 
 
-class Battles(Type):
+class Battles(BaseEvents):
     pass
 
 

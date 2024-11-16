@@ -1,6 +1,7 @@
 """
-Defines basic note types used in extensions.
+Defines basic note types.
 """
+from __future__ import annotations
 
 from ..core.declarative import BaseDeclarativeNote
 
