@@ -1,26 +1,7 @@
 """
 This module implements ORM access to Trilium and fundamental note capabilities.
 
-Examples in this module assume you have created a {obj}`Session`
-and that you will either invoke {obj}`Session.flush` or use a context manager
-to commit the changes.
-
-For example:
-
-```
-session = Session(HOST, token=TOKEN)
-
-...
-
-session.flush()
-```
-
-Or:
-
-```
-with Session(HOST, token=TOKEN) as session:
-    ...
-```
+See the {ref}`user-guide` for a detailed walkthrough with examples.
 """
 
 from pyrollup import rollup

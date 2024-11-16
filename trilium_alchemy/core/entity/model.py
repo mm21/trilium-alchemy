@@ -246,7 +246,7 @@ class BaseEntityModel(ABC):
     def setup_done(self) -> bool:
         return self._setup_done
 
-    def teardown(self) -> None:
+    def teardown(self):
         self._backing = None
         self._working = None
         self._setup_done = False
@@ -409,7 +409,7 @@ class BaseEntityModel(ABC):
         # set as dirty/clean if needed
         self.entity._check_state()
 
-    def register_extension(self, extension: StatefulExtension) -> None:
+    def register_extension(self, extension: StatefulExtension):
         """
         Register extension to receive model updates and handle teardown().
         Only stateful extensions are registered.
@@ -459,14 +459,14 @@ class Extension(ABC, ModelContainer):
     and routes setattr() via ExtensionDescriptor.
     """
 
-    _entity: BaseEntity = None
+    _entity: BaseEntity
 
     def __init__(self, entity: BaseEntity):
         ModelContainer.__init__(self, entity._model)
         self._entity = entity
 
     @abstractmethod
-    def _setattr(self, val: Any) -> None:
+    def _setattr(self, val: Any):
         """
         Invoked when an attribute mapped by ExtensionDescriptor is set by the
         user.
@@ -487,14 +487,14 @@ class StatefulExtension(Extension):
         entity._model.register_extension(self)
 
     @abstractmethod
-    def _setup(self, model: BaseModel | None) -> None:
+    def _setup(self, model: BaseModel | None):
         """
         Invoked after model is initially setup, or if a model is refreshed.
         """
         ...
 
     @abstractmethod
-    def _teardown(self) -> None:
+    def _teardown(self):
         """
         Reset current state.
         """

@@ -52,7 +52,7 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
         ...
 
     @abstractmethod
-    def _validate(self) -> None:
+    def _validate(self):
         """
         Ensure container is in a valid state, e.g. with no duplicates.
         """
@@ -241,7 +241,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         assert self._entity_list is not None
         return entity in self._entity_list
 
-    def _validate(self) -> None:
+    def _validate(self):
         """
         Ensure list is in a valid state.
         """

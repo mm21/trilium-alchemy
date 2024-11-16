@@ -2,7 +2,7 @@
 
 ## Parent branches
 
-Parent branches are accessed as: {obj}`ParentBranches <Note.branches.parents>`.
+Parent branches are accessed as: {obj}`Note.branches.parents <trilium_alchemy.core.note.branches.ParentBranches>`.
 
 Modeled as a {obj}`set` as parent branches are not inherently ordered, but serialized by {obj}`id() <id>` when iterated.
 
@@ -10,7 +10,7 @@ When a {obj}`Note` is added to the set, a parent {obj}`Branch` is automatically 
 
 ## Child branches
 
-Child branches are accessed as: {obj}`ChildBranches <Note.branches.children>`.
+Child branches are accessed as: {obj}`Note.branches.children <trilium_alchemy.core.note.branches.ChildBranches>`.
 
 Modeled as a {obj}`list` of branches ordered by {obj}`Branch.position`. Position is maintained automatically; you can simply reorder the list itself as desired.
 

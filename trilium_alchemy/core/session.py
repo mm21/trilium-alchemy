@@ -348,7 +348,7 @@ class Session:
         app_info: AppInfo = self.api.get_app_info()
         return app_info
 
-    def refresh_note_ordering(self, note: Note) -> None:
+    def refresh_note_ordering(self, note: Note):
         """
         Refresh ordering of provided note's children for any connected clients.
 

@@ -1,3 +1,4 @@
+(user-guide)=
 # User guide
 
 ```{toctree}

@@ -50,8 +50,8 @@ assert note.labels.get_values("myLabel") == ["myValue1"]
 
 To filter by owned vs inherited, use:
 
-- {obj}`OwnedLabels <Note.labels.owned>`
-- {obj}`InheritedLabels <Note.labels.inherited>`
+- {obj}`Note.labels.owned <trilium_alchemy.core.note.attributes.OwnedLabels>`
+- {obj}`Note.labels.inherited <trilium_alchemy.core.note.attributes.InheritedLabels>`
 
 ## Relations
 
@@ -76,8 +76,8 @@ assert note.relations.get_targets("myRelation") == [other_note]
 
 To filter by owned vs inherited, use:
 
-- {obj}`OwnedRelations <Note.relations.owned>`
-- {obj}`InheritedRelations <Note.relations.inherited>`
+- {obj}`Note.relations.owned <trilium_alchemy.core.note.attributes.OwnedRelations>`
+- {obj}`Note.relations.inherited <trilium_alchemy.core.note.attributes.InheritedRelations>`
 
 ## Combined labels and relations
 
@@ -85,9 +85,9 @@ The combined list of labels and relations is accessed as: {obj}`Note.attributes`
 
 To filter by owned vs inherited, use:
 
-- {obj}`OwnedAttributes <Note.attributes.owned>`
-- {obj}`InheritedAttributes <Note.attributes.inherited>`
+- {obj}`Note.attributes.owned <trilium_alchemy.core.note.attributes.OwnedAttributes>`
+- {obj}`Note.attributes.inherited <trilium_alchemy.core.note.attributes.InheritedAttributes>`
 
 ```{note}
-Implementation detail: The latter two objects constitute the source of truth for attributes; all other interfaces simply map to these while enforcing type correctness.
+Implementation detail: The latter two objects constitute the source of truth for attributes; all other interfaces simply map to these while providing type correctness.
 ```

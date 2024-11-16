@@ -1,6 +1,6 @@
 # Trilium extensions
 
-A number of helper classes are provided for facilitating development of extensions. See {obj}`trilium_alchemy.ext` for a full list.
+A number of helper classes are provided for facilitating development of extensions. See {obj}`trilium_alchemy.lib.extension_types` for a full list.
 
 For example, to create a template called `Task`:
 

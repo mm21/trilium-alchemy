@@ -236,13 +236,13 @@ class BaseEntity[ModelT: BaseEntityModel](
             dep._is_abandoned or dep._is_delete for dep in self._dependencies
         )
 
-    def flush(self) -> None:
+    def flush(self):
         """
         Commit changes to Trilium for this entity and its dependencies.
         """
         self._session._cache.flush({self})
 
-    def invalidate(self) -> None:
+    def invalidate(self):
         """
         Discard cached contents and user-provided data for this object.
         Upon next access, data will be fetched from Trilium.
@@ -252,7 +252,7 @@ class BaseEntity[ModelT: BaseEntityModel](
             if entity._is_dirty:
                 entity._set_clean()
 
-    def delete(self) -> None:
+    def delete(self):
         """
         Mark this entity for pending delete.
         """
@@ -298,7 +298,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         self.invalidate()
         self._model.setup(model_backing=model, create=False)
 
-    def _flush(self, sorter: TopologicalSorter) -> None:
+    def _flush(self, sorter: TopologicalSorter):
         """
         Commit changes to Trilium database for this object.
         """
@@ -414,7 +414,7 @@ class BaseEntity[ModelT: BaseEntityModel](
     # To be implemented by subclass
     # --------------------------------------------------------------------------
 
-    def _init(self) -> None:
+    def _init(self):
         """
         Register model extensions or any other init needed before model setup.
         """
@@ -427,7 +427,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         ...
 
     @abstractmethod
-    def _flush_check(self) -> None:
+    def _flush_check(self):
         """
         Check if this object is in a valid state to be committed to database.
 
@@ -436,7 +436,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         ...
 
-    def _flush_prep(self) -> None:
+    def _flush_prep(self):
         """
         Propagate any values to fields if needed before flush.
         """

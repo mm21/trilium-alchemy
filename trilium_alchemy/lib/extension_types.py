@@ -68,7 +68,7 @@ class BaseThemeNote(CssNote):
 
     singleton = True
 
-    theme_name: str = None
+    theme_name: str | None = None
     """
     Name of theme, or `None`{l=python} to use class name
     """

@@ -373,7 +373,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
                 self._note.branches.parents.discard(branch)
                 break
 
-    def _setattr(self, val: set[Note]) -> None:
+    def _setattr(self, val: set[Note]):
         self._note.branches.parents = val
 
 
@@ -455,5 +455,5 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     ):
         self._note.branches.children.insert(i, val)
 
-    def _setattr(self, val: list[Note]) -> None:
+    def _setattr(self, val: list[Note]):
         self._note.branches.children = val

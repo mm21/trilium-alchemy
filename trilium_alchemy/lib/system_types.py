@@ -1,7 +1,7 @@
 """
 A common note structure is to create "system" notes which hold templates,
 scripts, etc. This module facilitates maintenance of such a system, with a 
-{obj}`BaseSystem` class to hold such notes.
+{obj}`BaseSystemNote` class to hold such notes.
 
 The root system {obj}`BaseRootSystemNote` additionally holds themes and a
 built-in stylesheet which hides the "Create child note" button in the UI
@@ -46,7 +46,7 @@ class BaseWorkspaceNote(BaseDeclarativeNote):
     Defines a workspace root.
 
     - Adds `#workspace` label
-    - Adds {obj}`BaseSystem` child note, if attribute `system` is set
+    - Adds {obj}`BaseSystemNote` child note, if attribute `system` is set
     """
 
     singleton = True
@@ -106,7 +106,7 @@ class BaseSystemNote(BaseDeclarativeNote):
     Base class for a "system" note, a collection of various types of
     infrastructure notes.
 
-    Attributes such as {obj}`BaseSystem.templates` from any base classes
+    Attributes such as {obj}`BaseSystemNote.templates` from any base classes
     are appended.
     """
 
