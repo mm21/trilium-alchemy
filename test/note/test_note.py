@@ -492,7 +492,7 @@ def test_template(session: Session, note1: Note, note2: Note):
         assert "template" in note.relations
 
         assert len(note.children) == expect_children
-        child1, child2 = list(note.children)[:2]
+        child1, child2 = note.children[:2]
 
         assert child1.title == "TemplateChild1"
         assert child1["childLabel1"] == "childLabelValue1"

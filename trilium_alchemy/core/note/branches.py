@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableSequence, MutableSet
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import TYPE_CHECKING, Iterable, Iterator, overload
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -102,13 +102,21 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         else:
             return val in {branch.parent for branch in self._entity_set}
 
-    def __getitem__(self, key: int) -> Branch:
+    @overload
+    def __getitem__(self, i: int) -> Branch:
+        ...
+
+    @overload
+    def __getitem__(self, i: slice) -> list[Branch]:
+        ...
+
+    def __getitem__(self, i: int | slice) -> Branch | list[Branch]:
         """
         Parent branches are inherently unsorted, but sort set by object id
         so traversal by index is deterministic.
         We can't use parent note_id since it may not be known yet.
         """
-        return sorted(self._entity_set, key=lambda branch: id(branch))[key]
+        return sorted(self._entity_set, key=lambda branch: id(branch))[i]
 
     def _setup(self, model: EtapiNoteModel | None):
         if self._entity_set is None:
@@ -263,8 +271,16 @@ class Branches(NoteExtension, BranchLookupMixin):
     def __iter__(self) -> Iterator[Branch]:
         return iter(list(self.parents) + list(self.children))
 
-    def __getitem__(self, key: int) -> Branch:
-        return list(self)[key]
+    @overload
+    def __getitem__(self, i: int) -> Branch:
+        ...
+
+    @overload
+    def __getitem__(self, i: slice) -> list[Branch]:
+        ...
+
+    def __getitem__(self, i: int | slice) -> Branch | list[Branch]:
+        return list(self)[i]
 
     @require_setup_prop
     @property
@@ -332,11 +348,21 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
     def __len__(self):
         return len(self._note.branches.parents)
 
-    def __getitem__(self, key: int) -> Note:
+    @overload
+    def __getitem__(self, i: int) -> Note:
+        ...
+
+    @overload
+    def __getitem__(self, i: slice) -> list[Note]:
+        ...
+
+    def __getitem__(self, i: int | slice) -> Note | list[Note]:
         """
-        Return parent Note of Branch given by index.
+        Return parent Note of Branch given by index. Not required for a set,
+        but used to access the provided index of the serialized parent
+        branches.
         """
-        return self._note.branches.parents[key].parent
+        return self._note.branches.parents[i].parent
 
     def add(self, value: Note):
         self._note.branches.parents.add(value)
@@ -381,17 +407,42 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         """
         return val in self._note.branches.children
 
-    # TODO: handle slice
+    @overload
     def __getitem__(self, i: int) -> Note:
-        """
-        Accessor for child note.
-        """
-        return self._note.branches.children[i].child
+        ...
 
+    @overload
+    def __getitem__(self, i: slice) -> list[Note]:
+        ...
+
+    def __getitem__(self, i: int | slice) -> Note | list[Note]:
+        assert isinstance(i, (int, slice))
+
+        if isinstance(i, int):
+            return self._note.branches.children[i].child
+        else:
+            return [b.child for b in self._note.branches.children[i]]
+
+    @overload
     def __setitem__(self, i: int, value: Note):
+        ...
+
+    @overload
+    def __setitem__(self, i: slice, value: Iterable[Note]):
+        ...
+
+    def __setitem__(self, i: int | slice, value: Note | Iterable[Note]):
         self._note.branches.children[i] = value
 
+    @overload
     def __delitem__(self, i: int):
+        ...
+
+    @overload
+    def __delitem__(self, i: slice):
+        ...
+
+    def __delitem__(self, i: int | slice):
         del self._note.branches.children[i]
 
     def __len__(self):

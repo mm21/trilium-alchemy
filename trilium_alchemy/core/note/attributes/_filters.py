@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, Iterator, TypeVar, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterator,
+    TypeVar,
+    get_args,
+    get_origin,
+    overload,
+)
 
 from ...attribute.attribute import BaseAttribute
 
@@ -165,7 +173,15 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](
     def __len__(self) -> int:
         return len(self._attr_list)
 
+    @overload
     def __getitem__(self, i: int) -> AttributeT:
+        ...
+
+    @overload
+    def __getitem__(self, i: slice) -> list[AttributeT]:
+        ...
+
+    def __getitem__(self, i: int | slice) -> AttributeT | list[AttributeT]:
         return self._attr_list[i]
 
     def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:

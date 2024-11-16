@@ -168,24 +168,22 @@ class BaseEntityList[EntityT: OrderedEntity](
         ...
 
     @overload
-    def __getitem__(self, i: slice) -> MutableSequence[EntityT]:
+    def __getitem__(self, i: slice) -> list[EntityT]:
         ...
 
-    def __getitem__(self, i: int | slice) -> EntityT | MutableSequence[EntityT]:
+    def __getitem__(self, i: int | slice) -> EntityT | list[EntityT]:
         assert self._entity_list is not None
         return self._entity_list[i]
 
     @overload
-    def __setitem__(self, i: int, value: EntityT) -> None:
+    def __setitem__(self, i: int, value: EntityT):
         ...
 
     @overload
-    def __setitem__(self, i: slice, value: Iterable[EntityT]) -> None:
+    def __setitem__(self, i: slice, value: Iterable[EntityT]):
         ...
 
-    def __setitem__(
-        self, i: int | slice, value: EntityT | Iterable[EntityT]
-    ) -> None:
+    def __setitem__(self, i: int | slice, value: EntityT | Iterable[EntityT]):
         assert self._entity_list is not None
 
         s: slice
@@ -207,11 +205,11 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._validate()
 
     @overload
-    def __delitem__(self, i: int) -> None:
+    def __delitem__(self, i: int):
         ...
 
     @overload
-    def __delitem__(self, i: slice) -> None:
+    def __delitem__(self, i: slice):
         ...
 
     def __delitem__(self, i: int | slice):
