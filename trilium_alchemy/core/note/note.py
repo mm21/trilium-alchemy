@@ -843,7 +843,7 @@ class Note(BaseEntity[NoteModel]):
         return deps
 
     @property
-    def _cleanup_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> list[BaseEntity]:
         return list(self.branches) + list(self.attributes.owned)
 
     @property

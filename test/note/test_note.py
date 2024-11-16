@@ -7,6 +7,8 @@ import zipfile
 from pathlib import Path
 
 from pytest import mark
+from trilium_client.models.attribute import Attribute as EtapiAttributeModel
+from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from trilium_alchemy import *
 
@@ -243,6 +245,32 @@ def test_lazy(session: Session, note1: Note, note2: Note, branch: Branch):
 
     branch.child.title
     assert note2._model._setup_done
+
+
+@mark.attribute("label1", "value1")
+def test_refresh(session: Session, note: Note):
+    branch = note.branches.parents[0]
+    label1 = note.labels.owned[0]
+
+    assert branch.prefix == ""
+    assert label1.value == "value1"
+
+    # modify branch/label using ETAPI directly
+    session.api.patch_branch_by_id(
+        branch.branch_id, EtapiBranchModel(prefix="prefix2")
+    )
+    session.api.patch_attribute_by_id(
+        label1.attribute_id, EtapiAttributeModel(value="value2")
+    )
+
+    # modify working models
+    branch.prefix = "prefix1"
+    label1.value = "value1-2"
+
+    note.refresh()
+
+    assert branch.prefix == "prefix2"
+    assert label1.value == "value2"
 
 
 def test_paths(session: Session):

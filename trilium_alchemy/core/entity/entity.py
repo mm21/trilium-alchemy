@@ -51,8 +51,6 @@ class BaseEntity[ModelT: BaseEntityModel](
     """
 
     # unique id
-    # TODO: use WriteOnceDescriptor subclass with automatic invocation
-    # of session._cache.add()
     _entity_id: str | None = None
 
     # init state
@@ -244,15 +242,15 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         self._session._cache.flush({self})
 
-    # TODO: override for Note, include attributes
     def invalidate(self) -> None:
         """
         Discard cached contents and user-provided data for this object.
         Upon next access, data will be fetched from Trilium.
         """
-        self._model.teardown()
-        if self._is_dirty:
-            self._set_clean()
+        for entity in [self] + self._associated_entities:
+            entity._model.teardown()
+            if entity._is_dirty:
+                entity._set_clean()
 
     def delete(self) -> None:
         """
@@ -281,7 +279,6 @@ class BaseEntity[ModelT: BaseEntityModel](
                 # set attribute on self
                 setattr(self, attr, val)
 
-    # TODO: use subclassed WriteOnceDescriptor to also add to cache
     def _set_entity_id(self, entity_id: str):
         """
         Set entity id and add to cache.
@@ -454,9 +451,9 @@ class BaseEntity[ModelT: BaseEntityModel](
         ...
 
     @property
-    def _cleanup_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> list[BaseEntity]:
         """
-        Return entities to be removed from cache after deleting this entity.
+        Return entities to be refreshed/cleaned up along with this one.
         """
         return []
 

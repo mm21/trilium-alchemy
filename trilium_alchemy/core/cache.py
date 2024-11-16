@@ -112,7 +112,7 @@ class Cache:
 
                     # remove entity and associated entities from map
                     if do_cleanup:
-                        for e in [entity] + entity._cleanup_entities:
+                        for e in [entity] + entity._associated_entities:
                             if e._entity_id in self.entity_map:
                                 del self.entity_map[e._entity_id]
 
