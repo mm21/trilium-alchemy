@@ -7,7 +7,27 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Downloads](https://static.pepy.tech/badge/trilium-alchemy)](https://pepy.tech/project/trilium-alchemy)
 
-Python SDK for [Trilium Notes](https://github.com/zadam/trilium). More features are planned, such as a CLI toolkit with advanced synchronization capability.
+Python SDK for [Trilium Notes](https://github.com/zadam/trilium). More features are planned, such as a CLI toolkit for extension management, exporting/importing, and more.
+
+- [TriliumAlchemy](#triliumalchemy)
+  - [Documentation](#documentation)
+  - [Getting started](#getting-started)
+  - [Working with notes](#working-with-notes)
+  - [Pythonic note interfaces](#pythonic-note-interfaces)
+    - [Single-valued label accessor](#single-valued-label-accessor)
+    - [Entity bind operator: `+=`](#entity-bind-operator-)
+    - [Clone operator: `^=`](#clone-operator-)
+    - [Content](#content)
+    - [Custom attribute accessors](#custom-attribute-accessors)
+  - [Declarative notes: Notes as code](#declarative-notes-notes-as-code)
+    - [Note subclasses](#note-subclasses)
+    - [Setting fields](#setting-fields)
+    - [Adding attributes](#adding-attributes)
+      - [Icon helper](#icon-helper)
+      - [Promoted attributes](#promoted-attributes)
+    - [Adding children](#adding-children)
+    - [Mixin subclasses](#mixin-subclasses)
+  - [Setting content from file](#setting-content-from-file)
 
 ## Documentation
 
@@ -223,7 +243,7 @@ The general idea of declarative programming is that you specify the desired end 
 
 For a fully-featured example of a note hierarchy designed using this approach, see [Event tracker](https://mm21.github.io/trilium-alchemy/sdk/declarative-notes/event-tracker.html).
 
-### Note classes
+### Note subclasses
 
 The basic technique is to subclass `BaseDeclarativeNote`:
 
@@ -232,72 +252,9 @@ class MyNote(BaseDeclarativeNote):
     pass
 ```
 
-When you subclass `BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
+When you subclass {obj}`BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
 
-### Icon helper
-
-To set an icon (label `#iconClass`), simply set the `icon` attribute:
-
-```python
-class MyTask(BaseDeclarativeNote):
-    icon = "bx bx-task"
-```
-
-### Adding labels
-
-Use the decorator `label` to add a label:
-
-```python
-@label("sorted")
-class MySortedNote(BaseDeclarativeNote):
-    pass
-
-my_sorted_note = MySortedNote()
-```
-
-This is equivalent to the following imperative approach:
-
-```python
-my_sorted_note = Note()
-my_sorted_note += Label("sorted")
-```
-
-### Promoted attributes
-
-A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
-
-The following creates a workspace template with an icon and a few labels:
-
-```python
-@label("person")
-@label_def("altName", multi=True)
-@label_def("birthday", value_type="date")
-@relation_def("livesAt")
-@relation_def("livedAt", multi=True)
-class Person(BaseWorkspaceTemplateNote):
-    icon = "bx bxs-user-circle"
-```
-
-### Mixin classes
-
-Sometimes you want to logically group and reuse attributes and/or children, but don't need a fully-featured `BaseDeclarativeNote`. In those cases you can use a `BaseDeclarativeMixin`.
-
-The basic technique is to subclass `BaseDeclarativeMixin`:
-
-```python
-@label("sorted")
-class SortedMixin(BaseDeclarativeMixin):
-    pass
-```
-
-Now you can simply inherit from this mixin if you want a note's children to be sorted:
-
-```python
-class MySortedNote(BaseDeclarativeNote, SortedMixin):
-    pass
-```
-
-## Setting fields
+### Setting fields
 
 Set the corresponding `Note` fields upon instantiation by setting attributes suffixed with `_`:
 
@@ -314,6 +271,92 @@ class MyNote(BaseDeclarativeNote):
     note_type_ = "text"
     mime_ = "text/html"
     content_ = "<p>Hello, world!</p>"
+```
+
+### Adding attributes
+
+To add attributes, use the decorators `label` and `relation`:
+
+```python
+class Root(BaseDeclarativeNote):
+    note_id_ = "root"
+
+@label("myLabel")
+@relation("myRelation", Root)
+class MyNote(BaseDeclarativeNote):
+    pass
+
+my_note = MyNote()
+```
+
+This is equivalent to the following imperative approach:
+
+```python
+my_note = Note()
+my_note += [
+    Label("myLabel"),
+    Relation("myRelation", Note(note_id="root")),
+]
+```
+
+#### Icon helper
+
+To set an icon (label `#iconClass`), simply set the `icon` attribute:
+
+```python
+class MyTask(BaseDeclarativeNote):
+    icon = "bx bx-task"
+```
+
+#### Promoted attributes
+
+A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
+
+The following creates a workspace template with an icon and a few promoted attributes:
+
+```python
+@label("person")
+@label_def("altName", multi=True)
+@label_def("birthday", value_type="date")
+@relation_def("livesAt")
+@relation_def("livedAt", multi=True)
+class Person(BaseWorkspaceTemplateNote):
+    icon = "bx bxs-user-circle"
+```
+
+![Screenshot](doc/sdk/declarative-notes/images/template-screenshot.png)
+
+### Adding children
+
+Use `children` or `child` to add children:
+
+```python
+class Child1(BaseDeclarativeNote): pass
+class Child2(BaseDeclarativeNote): pass
+class Child3(BaseDeclarativeNote): pass
+
+@children(Child1, Child2) # add children with no branch prefix
+@child(Child3, prefix="My prefix") # add child with branch prefix
+class Parent(BaseDeclarativeNote): pass
+```
+
+### Mixin subclasses
+
+Sometimes you want to logically group and reuse attributes and/or children, but don't need a fully-featured `BaseDeclarativeNote`. In those cases you can use a `BaseDeclarativeMixin`.
+
+The basic technique is to subclass `BaseDeclarativeMixin`:
+
+```python
+@label("sorted")
+class SortedMixin(BaseDeclarativeMixin):
+    pass
+```
+
+Now you can simply inherit from this mixin if you want a note's children to be sorted:
+
+```python
+class MySortedNote(BaseDeclarativeNote, SortedMixin):
+    pass
 ```
 
 ## Setting content from file

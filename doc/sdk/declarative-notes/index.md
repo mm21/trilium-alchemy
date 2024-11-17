@@ -14,7 +14,7 @@ The general idea of declarative programming is that you specify the desired end 
 
 For a fully-featured example of a note hierarchy designed using this approach, see {ref}`event-tracker`.
 
-## Note classes
+## Note subclasses
 
 The basic technique is to subclass {obj}`BaseDeclarativeNote`:
 
@@ -24,69 +24,6 @@ class MyNote(BaseDeclarativeNote):
 ```
 
 When you subclass {obj}`BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
-
-### Icon helper
-
-To set an icon (label `#iconClass`), simply set the `icon` attribute:
-
-```python
-class MyTask(BaseDeclarativeNote):
-    icon = "bx bx-task"
-```
-
-## Adding labels
-
-Use the decorator {obj}`label` to add a label:
-
-```python
-@label("sorted")
-class MySortedNote(BaseDeclarativeNote):
-    pass
-
-my_sorted_note = MySortedNote()
-```
-
-This is equivalent to the following imperative approach:
-
-```python
-my_sorted_note = Note()
-my_sorted_note += Label("sorted")
-```
-
-### Promoted attributes
-
-A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators {obj}`label_def` and {obj}`relation_def` are provided for convenience.
-
-The following creates a workspace template with an icon and a few labels:
-
-```python
-@label("person")
-@label_def("altName", multi=True)
-@label_def("birthday", value_type="date")
-@relation_def("livesAt")
-@relation_def("livedAt", multi=True)
-class Person(BaseWorkspaceTemplateNote):
-    icon = "bx bxs-user-circle"
-```
-
-## Mixin classes
-
-Sometimes you want to logically group and reuse attributes and/or children, but don't need a fully-featured {obj}`BaseDeclarativeNote`. In those cases you can use a {obj}`BaseDeclarativeMixin`.
-
-The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
-
-```python
-@label("sorted")
-class SortedMixin(BaseDeclarativeMixin):
-    pass
-```
-
-Now you can simply inherit from this mixin if you want a note's children to be sorted:
-
-```python
-class MySortedNote(BaseDeclarativeNote, SortedMixin):
-    pass
-```
 
 ## Setting fields
 
@@ -105,6 +42,92 @@ class MyNote(BaseDeclarativeNote):
     note_type_ = "text"
     mime_ = "text/html"
     content_ = "<p>Hello, world!</p>"
+```
+
+## Adding attributes
+
+To add attributes, use the decorators {obj}`label` and {obj}`relation`:
+
+```python
+class Root(BaseDeclarativeNote):
+    note_id_ = "root"
+
+@label("myLabel")
+@relation("myRelation", Root)
+class MyNote(BaseDeclarativeNote):
+    pass
+
+my_note = MyNote()
+```
+
+This is equivalent to the following imperative approach:
+
+```python
+my_note = Note()
+my_note += [
+    Label("myLabel"),
+    Relation("myRelation", Note(note_id="root")),
+]
+```
+
+### Icon helper
+
+To set an icon (label `#iconClass`), simply set the `icon` attribute:
+
+```python
+class MyTask(BaseDeclarativeNote):
+    icon = "bx bx-task"
+```
+
+### Promoted attributes
+
+A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators {obj}`label_def` and {obj}`relation_def` are provided for convenience.
+
+The following creates a workspace template with an icon and a few promoted attributes:
+
+```python
+@label("person")
+@label_def("altName", multi=True)
+@label_def("birthday", value_type="date")
+@relation_def("livesAt")
+@relation_def("livedAt", multi=True)
+class Person(BaseWorkspaceTemplateNote):
+    icon = "bx bxs-user-circle"
+```
+
+![Screenshot](images/template-screenshot.png)
+
+## Adding children
+
+Use {obj}`children` or {obj}`child` to add children:
+
+```python
+class Child1(BaseDeclarativeNote): pass
+class Child2(BaseDeclarativeNote): pass
+class Child3(BaseDeclarativeNote): pass
+
+@children(Child1, Child2) # add children with no branch prefix
+@child(Child3, prefix="My prefix") # add child with branch prefix
+class Parent(BaseDeclarativeNote): pass
+```
+
+## Mixin subclasses
+
+Sometimes you want to logically group and reuse attributes and/or children, but don't need a fully-featured {obj}`BaseDeclarativeNote`. In those cases you can use a {obj}`BaseDeclarativeMixin`.
+
+The basic technique is to subclass {obj}`BaseDeclarativeMixin`:
+
+```python
+@label("sorted")
+class SortedMixin(BaseDeclarativeMixin):
+    pass
+```
+
+Now you can simply inherit from this mixin if you want a note's children to be sorted:
+
+```python
+class MySortedNote(BaseDeclarativeNote, SortedMixin):
+    pass
 ```
 
 ## Setting content from file
@@ -209,20 +232,6 @@ Now you can create a task by simply instantiating `TaskInstance`, and it will au
 my_task = TaskInstance()
 
 assert my_task.relations.get_target("template") is Task()
-```
-
-## Adding children
-
-Use {obj}`children` or {obj}`child` to add children:
-
-```python
-class Child1(BaseDeclarativeNote): pass
-class Child2(BaseDeclarativeNote): pass
-class Child3(BaseDeclarativeNote): pass
-
-@children(Child1, Child2) # add children with no branch prefix
-@child(Child3, prefix="My prefix") # add child with branch prefix
-class Parent(BaseDeclarativeNote): pass
 ```
 
 ## Custom initializer to add attributes and children
