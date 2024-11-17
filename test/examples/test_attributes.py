@@ -54,7 +54,7 @@ def test_assign(note: Note):
 
     # assign a new list of attributes
     label2 = Label("myLabel2")
-    note.attributes = [label2]
+    note.attributes.owned = [label2]
 
     print(f"label1.state: {label1.state}")
     print(f"label2.state: {label2.state}")

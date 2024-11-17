@@ -7,7 +7,7 @@ from trilium_client.models.note import Note as EtapiNoteModel
 
 from ...attribute.attribute import BaseAttribute
 from ...entity.model import require_setup_prop
-from ...exceptions import *
+from ...exceptions import ReadOnlyError
 from ..extension import BaseEntityList, NoteExtension, NoteStatefulExtension
 from ._filters import BaseFilteredAttributes
 
@@ -100,9 +100,7 @@ class InheritedAttributes(
         return self._note
 
     def _setattr(self, value: Any):
-        raise ReadOnlyError(
-            f"Attempt to set inherited attributes of {self._note}"
-        )
+        raise ReadOnlyError
 
     def _setup(self, model: EtapiNoteModel | None):
         # init list every time: unlike owned attributes, no need to preserve
@@ -166,6 +164,8 @@ class Attributes(
     for owned and inherited attributes respectively.
 
     For type-safe accesses, use {obj}`Note.labels` or {obj}`Note.relations`.
+
+    :raises ReadOnlyError: Upon attempt to modify
     """
 
     _owned: OwnedAttributes
@@ -206,5 +206,4 @@ class Attributes(
         return list(self._owned) + list(self._inherited)
 
     def _setattr(self, val: list[BaseAttribute]):
-        # invoke _setattr of owned
-        self.owned = val
+        raise ReadOnlyError

@@ -27,7 +27,7 @@ def test_labels(session: Session, note: Note):
     assert "label1" not in note.labels.inherited
 
     # create list of attributes
-    note.attributes = [Label("label1", "value1", session=session)]
+    note.attributes.owned = [Label("label1", "value1", session=session)]
 
     assert "label1" in note.attributes
     assert "label1" in note.labels
@@ -102,7 +102,9 @@ def test_relations(session: Session, note: Note):
     assert "relation1" not in note.relations.inherited
 
     # create list of attributes
-    note.attributes = [Relation("relation1", session.root, session=session)]
+    note.attributes.owned = [
+        Relation("relation1", session.root, session=session)
+    ]
 
     assert "relation1" in note.attributes
     assert "relation1" in note.relations

@@ -475,10 +475,6 @@ class Note(BaseEntity[NoteModel]):
         """
         return self._attributes
 
-    @attributes.setter
-    def attributes(self, val: list[BaseAttribute]):
-        self._attributes._setattr(val)
-
     @property
     def labels(self) -> Labels:
         """
