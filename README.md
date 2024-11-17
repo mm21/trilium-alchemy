@@ -292,7 +292,7 @@ my_note = MyNote()
 This is equivalent to the following imperative approach:
 
 ```python
-my_note = Note()
+my_note = Note(title="MyNote")
 my_note += [
     Label("myLabel"),
     Relation("myRelation", Note(note_id="root")),
@@ -338,6 +338,19 @@ class Child3(BaseDeclarativeNote): pass
 @children(Child1, Child2) # add children with no branch prefix
 @child(Child3, prefix="My prefix") # add child with branch prefix
 class Parent(BaseDeclarativeNote): pass
+
+my_note = Parent()
+```
+
+This is equivalent to the following imperative approach:
+
+```python
+my_note = Note(title="Parent")
+my_note += [
+    Note(title="Child1"),
+    Note(title="Child2"),
+    Branch(child=Note("Child3"), prefix="My prefix"),
+]
 ```
 
 ### Mixin subclasses
