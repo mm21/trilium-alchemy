@@ -12,7 +12,9 @@ Planned commands:
     - Re-sync notes with a given template, useful to apply template changes
     to existing notes with that template
 - `export`/`import`
-    - Export/import zip file
+    - Export/import (zip file by default)
+    - Custom exporter/importer:
+        - `export --exporter my_pkg.my_exporter path/to/destination`
 - `backup`
     - Create backup in provided path
 - `test`
