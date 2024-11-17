@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="doc/_static/logo-light.svg" alt="Logo" />
+</p>
+
 # TriliumAlchemy
 
 [![Python versions](https://img.shields.io/pypi/pyversions/trilium-alchemy.svg)](https://pypi.org/project/trilium-alchemy)
