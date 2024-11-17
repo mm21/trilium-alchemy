@@ -31,7 +31,7 @@ Python SDK for [Trilium Notes](https://github.com/zadam/trilium). More features 
       - [Promoted attributes](#promoted-attributes)
     - [Adding children](#adding-children)
     - [Mixin subclasses](#mixin-subclasses)
-  - [Setting content from file](#setting-content-from-file)
+    - [Setting content from file](#setting-content-from-file)
 
 ## Documentation
 
@@ -376,7 +376,7 @@ class MySortedNote(BaseDeclarativeNote, SortedMixin):
     pass
 ```
 
-## Setting content from file
+### Setting content from file
 
 Set note content from a file by setting `content_file`:
 
