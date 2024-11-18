@@ -86,7 +86,7 @@ with Session(HOST, token=TOKEN) as session:
 
 ## Working with notes
 
-See the full documentation here: <https://mm21.github.io/trilium-alchemy/sdk/guide/working-with-notes/index.html>
+See the full documentation here: <https://mm21.github.io/trilium-alchemy/sdk/working-with-notes/index.html>
 
 There are 3 kinds of objects in Trilium, represented in TriliumAlchemy as the following classes:
 
