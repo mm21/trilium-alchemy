@@ -1,9 +1,5 @@
 """
 Implementation of session functionality.
-
-Eventually will be generalized to accommodate different types of sessions:
-- Filesystem-based (yaml descriptors for note metadata)
-- Database-based (Apache couchdb?)
 """
 
 from __future__ import annotations

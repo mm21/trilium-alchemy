@@ -1,22 +1,15 @@
 """
 Decorators to add attributes and children declaratively.
-
-```{todo}
-Configuration of `Session` to ignore changes to 
-`Branch.expanded` as this is mostly a UI concept. It can be clobbered
-as children of `BaseDeclarativeNote` subclasses force setting 
-`Branch.expanded`.
-```
 """
 
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Iterable, Literal, cast
+from typing import Literal
 
 from ..attribute import BaseAttribute
-from ..note.note import BranchSpecT, Note
-from .base import BaseDeclarativeMixin, BaseDeclarativeNote
+from ..note.note import Note
+from .base import BaseDeclarativeMixin, BaseDeclarativeNote, BranchSpecT
 
 __all__ = [
     "label",
@@ -55,13 +48,14 @@ def label(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Label` to a {obj}`Note` or {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Label` to a {obj}`BaseDeclarativeNote` or
+    {obj}`BaseDeclarativeMixin` subclass.
 
     Example:
 
     ```
     @label("sorted")
-    class MyNote(Note): pass
+    class MyNote(BaseDeclarativeNote): pass
     ```
 
     :param name: Label name
@@ -94,24 +88,25 @@ def label(
 
 def relation(
     name: str,
-    target_cls: type[Note],
+    target_cls: type[BaseDeclarativeNote],
     inheritable: bool = False,
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Relation` to a {obj}`Note` or {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Relation` to a {obj}`BaseDeclarativeNote` or
+    {obj}`BaseDeclarativeMixin` subclass.
 
     Example:
 
     ```
     # define a task template
     @label("task")
-    class Task(Template):
+    class Task(BaseTemplateNote):
         icon = "bx bx-task"
 
     # define a note with ~template=Task
     @relation("template", Task)
-    class TaskNote(Note): pass
+    class TaskNote(BaseDeclarativeNote): pass
 
     # create a task
     task = TaskNote()
@@ -137,7 +132,7 @@ def relation(
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
 
         # instantiate target first
-        target: Note = target_cls(session=self._session)
+        target: BaseDeclarativeNote = target_cls(session=self._session)
 
         attributes.append(
             self.create_declarative_relation(
@@ -160,8 +155,8 @@ def label_def(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Label` definition (promoted label) to a {obj}`Note` or
-    {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Label` definition (promoted label) to a
+    {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin` subclass.
 
     Example:
 
@@ -170,10 +165,6 @@ def label_def(
     @label_def("priority", value_type="number")
     class Task(Template):
         icon = "bx bx-task"
-
-    # buy cookies with high priority
-    task = Note(title="Buy cookies", template=Task)
-    task["priority"] = 10
     ```
 
     :param name: Label name
@@ -211,8 +202,8 @@ def relation_def(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Relation` definition (promoted relation) to a {obj}`Note` or
-    {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Relation` definition (promoted relation) to a
+    {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin` subclass.
 
     Example:
 
@@ -251,69 +242,71 @@ def relation_def(
     return label(name, value, inheritable=inheritable, accumulate=accumulate)
 
 
-def children(*children: type[Note] | tuple[type[Note], dict[str, Any]]):
+def children(*children: type[BaseDeclarativeNote]):
     """
-    Add {obj}`Note` subclasses as children, implicitly creating a {obj}`Branch`.
-
-    Children may be provided as a class or tuple of `(cls, dict)`{l=python},
-    with the `dict`{l=python} being used to set fields on the resulting branch.
+    Add {obj}`BaseDeclarativeNote` subclasses as children, implicitly
+    creating a {obj}`Branch`.
 
     Example:
 
     ```
-    class Child1(Note): pass
-    class Child2(Note): pass
+    class Child1(BaseDeclarativeNote):
+        pass
 
-    # create Child1 with no Branch args, set prefix for Child2
-    @children(Child1, (Child2, {"prefix": "My prefix"}))
-    class Parent(Note): pass
+    class Child2(BaseDeclarativeNote):
+        pass
+
+    @children(Child1, Child2)
+    class Parent(BaseDeclarativeNote):
+        pass
     ```
 
-    :param children: Tuple of `type[Note]`{l=python} or `(type[Note], dict)`{l=python}
+    :param children: Classes to add as children
     """
 
     def init(
         self: BaseDeclarativeNote,
-        attributes: list[BaseAttribute],
+        _: list[BaseAttribute],
         children_: list[BranchSpecT],
     ):
         assert isinstance(self, BaseDeclarativeNote)
-
-        children_ += list(cast(Iterable[BranchSpecT], children))
+        children_ += [
+            self.create_declarative_child(child_cls) for child_cls in children
+        ]
 
     return _patch_init_decl(init)
 
 
-def child(child: type[Note], prefix: str = "", expanded: bool = False):
+def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
     """
-    Instantiate provided class and add as child, implicitly creating
-    a {obj}`Branch` and setting provided kwargs.
+    Instantiate provided class and add as child, creating a
+    {obj}`Branch` and setting provided kwargs.
 
     Example:
 
     ```
-    class Child(Note): pass
+    class Child(BaseDeclarativeNote):
+        pass
 
     @child(Child, prefix="My prefix")
-    class Parent(Note): pass
+    class Parent(BaseDeclarativeNote):
+        pass
     ```
 
     :param child: Subclass of {obj}`Note`
     :param prefix: Branch specific title prefix for child note
-    :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
+    :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI; `None{l=python}` to preserve existing value
     """
 
     def init(
         self: BaseDeclarativeNote,
-        attributes: list[BaseAttribute],
+        _: list[BaseAttribute],
         children: list[BranchSpecT],
     ):
         assert isinstance(self, BaseDeclarativeNote)
-
         children.append(
-            cast(
-                BranchSpecT,
-                (child, {"prefix": prefix, "expanded": expanded}),
+            self.create_declarative_child(
+                child, prefix=prefix, expanded=expanded
             )
         )
 
