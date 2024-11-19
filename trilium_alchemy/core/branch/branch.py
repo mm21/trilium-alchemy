@@ -170,6 +170,7 @@ class Branch(OrderedEntity[BranchModel]):
 
         branch_id = kwargs.pop("_branch_id", None)
         create = kwargs.pop("_create", None)
+        ignore_expanded = kwargs.pop("_ignore_expanded", False)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
 
@@ -193,7 +194,12 @@ class Branch(OrderedEntity[BranchModel]):
         """
         if create is not False:
             # set model fields for newly created or declarative definition
-            self._set_attrs(prefix=prefix, expanded=expanded)
+
+            attrs = {"prefix": prefix}
+            if not ignore_expanded:
+                attrs["expanded"] = expanded
+
+            self._set_attrs(**attrs)
 
     @property
     def branch_id(self) -> str | None:

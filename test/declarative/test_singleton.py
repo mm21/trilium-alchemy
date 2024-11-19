@@ -49,9 +49,13 @@ class SegmentTestParent(BaseDeclarativeNote):
     note_id_seed = "Parent"
 
 
-def check_child1(branch: Branch):
+def check_child1(branch: Branch, state: State):
     assert branch.prefix == ""
-    assert branch.expanded is False
+
+    if state is State.UPDATE:
+        assert branch.expanded is True
+    else:
+        assert branch.expanded is False
 
     note = branch.child
 
@@ -83,9 +87,13 @@ class TemplateChild2(BaseDeclarativeNote):
     leaf = True
 
 
-def check_child2(branch: Branch):
+def check_child2(branch: Branch, state: State):
     assert branch.prefix == ""
-    assert branch.expanded is False
+
+    if state is State.UPDATE:
+        assert branch.expanded is True
+    else:
+        assert branch.expanded is False
 
     note = branch.child
     assert isinstance(note, TemplateChild2)
@@ -130,9 +138,13 @@ def check_template_attributes(attributes: Iterable[BaseAttribute]):
     assert template.value == ""
 
 
-def check_template(branch: Branch):
+def check_template(branch: Branch, state: State):
     assert branch.prefix == ""
-    assert branch.expanded is False
+
+    if state is State.UPDATE:
+        assert branch.expanded is True
+    else:
+        assert branch.expanded is False
 
     note = branch.child
 
@@ -145,19 +157,15 @@ def check_template(branch: Branch):
     check_template_attributes(note.attributes.owned)
 
     assert len(note.branches.children) == 2
-    check_child1(note.branches.children[0])
-    check_child2(note.branches.children[1])
+    check_child1(note.branches.children[0], state)
+    check_child2(note.branches.children[1], state)
 
 
 class TemplateChild3(BaseDeclarativeNote):
     singleton = True
 
 
-class TemplateChild3_2(BaseDeclarativeNote):
-    singleton = True
-
-
-def check_child3(branch: Branch):
+def check_child3(branch: Branch, state: State):
     assert branch.prefix == "my_prefix"
     assert branch.expanded is True
 
@@ -178,17 +186,19 @@ def check_child3(branch: Branch):
     assert len(note.branches.parents) == 1
 
 
-# test both ways of adding children with branch args
 @label("label3")
-@children((TemplateChild3, {"prefix": "my_prefix", "expanded": True}))
-@child(TemplateChild3_2, prefix="my_prefix", expanded=True)
+@child(TemplateChild3, prefix="my_prefix", expanded=True)
 class TemplateSubclass(TemplateTest):
     pass
 
 
-def check_subclass(branch: Branch):
+def check_subclass(branch: Branch, state: State):
     assert branch.prefix == ""
-    assert branch.expanded is False
+
+    if state is State.UPDATE:
+        assert branch.expanded is True
+    else:
+        assert branch.expanded is False
 
     note = branch.child
 
@@ -206,11 +216,10 @@ def check_subclass(branch: Branch):
 
     check_template_attributes(note.attributes.owned[1:])
 
-    assert len(note.branches.children) == 4
-    check_child3(note.branches.children[0])
-    check_child3(note.branches.children[1])
-    check_child1(note.branches.children[2])
-    check_child2(note.branches.children[3])
+    assert len(note.branches.children) == 3
+    check_child3(note.branches.children[0], state)
+    check_child1(note.branches.children[1], state)
+    check_child2(note.branches.children[2], state)
 
 
 @label("hideChildrenOverview", inheritable=True)
@@ -266,8 +275,8 @@ def check_root(root: SingletonRoot, state: State):
     assert css_class.value == "triliumAlchemyDeclarative"
 
     assert len(root.branches.children) == 2
-    check_template(root.branches.children[0])
-    check_subclass(root.branches.children[1])
+    check_template(root.branches.children[0], state)
+    check_subclass(root.branches.children[1], state)
 
     assert root._session._root_position_base == 999999999
 

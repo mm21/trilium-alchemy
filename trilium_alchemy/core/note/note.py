@@ -7,7 +7,7 @@ from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Any, Literal, Self, cast
+from typing import IO, Literal, Self, cast
 
 import requests
 from trilium_client.models.note import Note as EtapiNoteModel
@@ -30,18 +30,6 @@ __all__ = [
     "Note",
 ]
 
-
-type BranchSpecT = "Note" | type["Note"] | Branch | tuple[
-    "Note" | type["Note"] | Branch, dict[str, Any]
-]
-"""
-Specifies a branch to be declaratively added as child. May be:
-
-- {obj}`Note` instance
-- {obj}`Note` subclass
-- {obj}`Branch` instance
-- Tuple of `(Note|type[Note]|Branch, dict[str, Any])`{l=python} with dict providing branch kwargs
-"""
 
 STRING_NOTE_TYPES = [
     "text",

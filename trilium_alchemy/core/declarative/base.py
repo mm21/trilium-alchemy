@@ -10,13 +10,22 @@ from typing import IO, Self, cast
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
 from ..entity import BaseEntity
-from ..note.note import BranchSpecT, InitContainer, Note, id_hash, is_string
+from ..note.note import InitContainer, Note, id_hash, is_string
 from ..session import SessionContainer
 
 __all__ = [
     "BaseDeclarativeNote",
     "BaseDeclarativeMixin",
 ]
+
+type BranchSpecT = BaseDeclarativeNote | type[BaseDeclarativeNote] | Branch
+"""
+Specifies a branch to be declaratively added as child. May be:
+
+- {obj}`BaseDeclarativeNote` instance
+- {obj}`BaseDeclarativeNote` subclass
+- {obj}`Branch` instance
+"""
 
 
 class DeclarativeMeta(ABCMeta):
@@ -83,7 +92,9 @@ class BaseDeclarativeMixin(
     def init(
         self,
         attributes: list[BaseAttribute],
-        children: list[Note | type[Note] | Branch],
+        children: list[
+            BaseDeclarativeNote | type[BaseDeclarativeNote] | Branch
+        ],
     ):
         """
         Can be overridden to add attributes and/or children during
@@ -151,11 +162,15 @@ class BaseDeclarativeMixin(
         )
 
     def create_declarative_child(
-        self, child_cls: type[BaseDeclarativeNote], **kwargs
+        self,
+        child_cls: type[BaseDeclarativeNote],
+        prefix: str = "",
+        expanded: bool | None = None,
+        **kwargs,
     ) -> Branch:
         """
-        Create a child {obj}`Note` with deterministic `note_id` and return a
-        {obj}`Branch`. Should be used in subclassed
+        Create a child {obj}`BaseDeclarativeNote` with deterministic
+        `note_id` and return a {obj}`Branch`. Should be used in subclassed
         {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init`
         to generate the same child `note_id` upon every instantiation.
 
@@ -168,6 +183,8 @@ class BaseDeclarativeMixin(
         every instantiation. This is the case for non-singleton subclasses.
 
         :param child_cls: Class of child to instantiate
+        :param prefix: Branch prefix
+        :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI; `None{l=python}` to preserve existing value
         :param kwargs: Additional note args passed to {obj}`Note`
         """
         child_decl_id: tuple[str, str | None] | None = child_cls._get_decl_id(
@@ -188,7 +205,7 @@ class BaseDeclarativeMixin(
             **kwargs,
         )
 
-        return self._normalize_child(child)
+        return self._normalize_child(child, prefix=prefix, expanded=expanded)
 
     def _init_decl_mixin(
         self,
@@ -275,17 +292,22 @@ class BaseDeclarativeMixin(
                     cls.init(
                         self,
                         attributes,
-                        cast(list[Note | type[Note] | Branch], children),
+                        cast(list[BranchSpecT], children),
                     )
 
         return attributes, children
 
-    def _normalize_child(self, child: Note | Branch) -> Branch:
+    def _normalize_child(
+        self,
+        child: BaseDeclarativeNote | Branch,
+        prefix: str = "",
+        expanded: bool | None = None,
+    ) -> Branch:
         """
         Take child as Note or Branch and return a Branch.
         """
 
-        if isinstance(child, Note):
+        if isinstance(child, BaseDeclarativeNote):
             # check if ids are known
             if self._note_id is not None:
                 # if ids are known at this point, also generate branch id
@@ -293,12 +315,19 @@ class BaseDeclarativeMixin(
             else:
                 branch_id = None
 
-            return Branch(
+            branch = Branch(
                 parent=self._note,
                 child=child,
+                prefix=prefix,
                 session=self._session,
                 _branch_id=branch_id,
+                _ignore_expanded=True,
             )
+
+            if expanded is not None:
+                branch.expanded = expanded
+
+            return branch
         else:
             # ensure we have a Branch
             assert isinstance(child, Branch)
@@ -309,30 +338,17 @@ class BaseDeclarativeMixin(
         Take child as BranchSpecT and return a Branch.
         """
         branch: Branch
-        child_spec: Note | type[Note] | Branch
-        branch_kwargs: dict
 
-        # extract branch args if provided
-        if isinstance(branch_spec, tuple):
-            child_spec, branch_kwargs = branch_spec
-        else:
-            child_spec = branch_spec
-            branch_kwargs = dict()
-
-        if issubclass(type(child_spec), DeclarativeMeta):
-            # have Note class
+        if issubclass(type(branch_spec), DeclarativeMeta):
+            # have BaseDeclarativeNote subclass
             child_cls: type[BaseDeclarativeNote] = cast(
-                type[BaseDeclarativeNote], child_spec
+                type[BaseDeclarativeNote], branch_spec
             )
             branch = self.create_declarative_child(child_cls)
         else:
-            # have Note or Branch
-            assert isinstance(child_spec, (Note, Branch))
-            branch = self._normalize_child(child_spec)
-
-        # set branch kwargs
-        for key, value in branch_kwargs.items():
-            setattr(branch, key, value)
+            # have BaseDeclarativeNote or Branch
+            assert isinstance(branch_spec, (BaseDeclarativeNote, Branch))
+            branch = self._normalize_child(branch_spec)
 
         return branch
 
