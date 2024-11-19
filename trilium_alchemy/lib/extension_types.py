@@ -62,7 +62,7 @@ class BaseThemeNote(CssNote):
 
     Use {obj}`BaseDeclarativeNote.content_file` to set content from file.
 
-    Adds label: `#appTheme=`{obj}`Theme.theme_name`
+    Adds label: `#appTheme=`{obj}`BaseThemeNote.theme_name`
     - If `None`{l=python}, defaults to class name
     """
 
@@ -70,16 +70,15 @@ class BaseThemeNote(CssNote):
 
     theme_name: str | None = None
     """
-    Name of theme, or `None`{l=python} to use class name
+    Name of theme, or `None`{l=python} to use class name.
     """
 
     def init(self, attributes: list[BaseAttribute], _):
         # default to class name if name not provided
-        if self.theme_name is None:
-            self.theme_name = type(self).__name__
-
         attributes.append(
-            self.create_declarative_label("appTheme", self.theme_name)
+            self.create_declarative_label(
+                "appTheme", self.theme_name or type(self).__name__
+            )
         )
 
 
