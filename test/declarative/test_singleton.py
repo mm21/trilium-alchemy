@@ -1,6 +1,6 @@
 from typing import Iterable, cast
 
-from pytest import fixture, mark
+from pytest import fixture, mark, raises
 
 from trilium_alchemy import *
 from trilium_alchemy.core.declarative import BaseDeclarativeNote
@@ -8,18 +8,6 @@ from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash
 
 from ..conftest import create_session, delete_note, note_exists
-
-"""
-TODO:
-
-- test passing in note_id when instantiating root non-singleton note
-  (examples/event-tracker covers this)
-    - sets child ids based on provided id
-
-- leaf = True
-    - can't declaratively have child notes, ensure exception raised
-    - ensure user-created children are preserved
-"""
 
 
 @fixture(autouse=True, scope="module")
@@ -390,3 +378,30 @@ def test_note_id_segment(session: Session):
     assert isinstance(child2, SegmentTestChild2)
     assert child2.note_id_seed_final == "Parent/Child1/SegmentTestChild2"
     assert child2.note_id == id_hash("Parent/Child1/SegmentTestChild2")
+
+
+def test_leaf(session: Session, note1: Note, note2: Note):
+    class LeafNote1(BaseDeclarativeNote):
+        leaf = True
+
+    # make note2 a child of note1
+    note1 += note2
+    assert len(note1.children) == 1
+    session.flush()
+
+    # ensure existing children are preserved
+    child2 = note1.transmute(LeafNote1)
+    session.flush()
+    assert len(child2.children) == 1
+    assert child2.children[0] is note2
+
+    class Child1(BaseDeclarativeNote):
+        pass
+
+    @children(Child1)
+    class LeafNote2(BaseDeclarativeNote):
+        leaf = True
+
+    # try to create a leaf note with declarative children
+    with raises(ValueError):
+        LeafNote2(session=session)

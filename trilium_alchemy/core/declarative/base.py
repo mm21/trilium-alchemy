@@ -519,11 +519,11 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
         if self.leaf:
             # leaf note: make sure there are no declarative children
-            # - leaf note means the user manually maintains children in UI
-            # or syncs from a folder
-            assert (
-                len(children) == 0
-            ), f"Attempt to declaratively update children of leaf note {self}, {type(self)}: {children}"
+            # - leaf note means the user maintains children in UI
+            if len(children):
+                raise ValueError(
+                    f"Attempt to declaratively update children of leaf note {self}, {type(self)}: {children}"
+                )
 
         # check if content is set by file
         if self.content_file is not None:
@@ -564,7 +564,9 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                 )
 
         container.attributes = attributes
-        container.children = self._normalize_children(children)
+
+        if not self.leaf:
+            container.children = self._normalize_children(children)
 
         return container
 
