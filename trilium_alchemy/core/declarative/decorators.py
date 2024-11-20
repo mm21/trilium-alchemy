@@ -8,8 +8,9 @@ from functools import wraps
 from typing import Literal
 
 from ..attribute import BaseAttribute
+from ..branch.branch import Branch
 from ..note.note import Note
-from .base import BaseDeclarativeMixin, BaseDeclarativeNote, BranchSpecT
+from .base import BaseDeclarativeMixin, BaseDeclarativeNote
 
 __all__ = [
     "label",
@@ -30,7 +31,9 @@ def check_name(name: str, accumulate=False):
     def _check_name(func):
         @wraps(func)
         def wrapper(
-            self, attributes: list[BaseAttribute], children: list[BranchSpecT]
+            self,
+            attributes: list[BaseAttribute],
+            children: list[Branch],
         ):
             if accumulate is False and any(name == a.name for a in attributes):
                 return
@@ -68,10 +71,8 @@ def label(
     def init(
         self: BaseDeclarativeNote,
         attributes: list[BaseAttribute],
-        children: list[BranchSpecT],
+        _: list[Branch],
     ):
-        assert isinstance(self, BaseDeclarativeNote)
-
         attributes.append(
             self.create_declarative_label(
                 name, value=value, inheritable=inheritable
@@ -124,9 +125,8 @@ def relation(
     def init(
         self: BaseDeclarativeMixin,
         attributes: list[BaseAttribute],
-        children: list[BranchSpecT],
+        _: list[Branch],
     ):
-        assert isinstance(self, BaseDeclarativeNote)
         assert (
             target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -242,10 +242,13 @@ def relation_def(
     return label(name, value, inheritable=inheritable, accumulate=accumulate)
 
 
-def children(*children: type[BaseDeclarativeNote]):
+def children(
+    *children: type[BaseDeclarativeNote] | tuple[type[BaseDeclarativeNote], str]
+):
     """
     Add {obj}`BaseDeclarativeNote` subclasses as children, implicitly
-    creating a {obj}`Branch`.
+    creating a {obj}`Branch`. May use a tuple of `(child_cls, prefix)` to
+    additionally set branch prefix.
 
     Example:
 
@@ -256,7 +259,10 @@ def children(*children: type[BaseDeclarativeNote]):
     class Child2(BaseDeclarativeNote):
         pass
 
-    @children(Child1, Child2)
+    @children(
+        Child1,
+        (Child2, "My prefix"),
+    )
     class Parent(BaseDeclarativeNote):
         pass
     ```
@@ -267,12 +273,23 @@ def children(*children: type[BaseDeclarativeNote]):
     def init(
         self: BaseDeclarativeNote,
         _: list[BaseAttribute],
-        children_: list[BranchSpecT],
+        children_: list[Branch],
     ):
-        assert isinstance(self, BaseDeclarativeNote)
-        children_ += [
-            self.create_declarative_child(child_cls) for child_cls in children
-        ]
+        for child in children:
+            child_cls: type[BaseDeclarativeNote]
+            prefix: str
+
+            if isinstance(child, tuple):
+                child_cls, prefix = child
+            else:
+                child_cls, prefix = child, ""
+
+            assert issubclass(
+                child_cls, BaseDeclarativeNote
+            ), f"Unexpected child type, must subclass BaseDeclarativeNote: {type(child_cls)}, {child_cls}"
+            children_.append(
+                self.create_declarative_child(child_cls, prefix=prefix)
+            )
 
     return _patch_init_decl(init)
 
@@ -301,9 +318,8 @@ def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
     def init(
         self: BaseDeclarativeNote,
         _: list[BaseAttribute],
-        children: list[BranchSpecT],
+        children: list[Branch],
     ):
-        assert isinstance(self, BaseDeclarativeNote)
         children.append(
             self.create_declarative_child(
                 child, prefix=prefix, expanded=expanded
@@ -321,6 +337,7 @@ def _patch_init_decl(init, doc: str | None = None):
     def init_decl_new[
         MixinT: BaseDeclarativeMixin
     ](cls: type[MixinT]) -> type[MixinT]:
+        assert issubclass(cls, BaseDeclarativeMixin)
         init_decl_old = cls._init_decl
 
         @wraps(init_decl_old)
@@ -328,7 +345,7 @@ def _patch_init_decl(init, doc: str | None = None):
             self,
             cls_decl,
             attributes: list[BaseAttribute],
-            children: list[BranchSpecT],
+            children: list[Branch],
         ):
             if cls is cls_decl:
                 # invoke init patch

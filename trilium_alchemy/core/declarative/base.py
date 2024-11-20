@@ -5,7 +5,7 @@ import inspect
 import os
 from abc import ABC, ABCMeta
 from types import ModuleType
-from typing import IO, Self, cast
+from typing import IO, Iterable, Self
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
@@ -17,15 +17,6 @@ __all__ = [
     "BaseDeclarativeNote",
     "BaseDeclarativeMixin",
 ]
-
-type BranchSpecT = BaseDeclarativeNote | type[BaseDeclarativeNote] | Branch
-"""
-Specifies a branch to be declaratively added as child. May be:
-
-- {obj}`BaseDeclarativeNote` instance
-- {obj}`BaseDeclarativeNote` subclass
-- {obj}`Branch` instance
-"""
 
 
 class DeclarativeMeta(ABCMeta):
@@ -92,9 +83,7 @@ class BaseDeclarativeMixin(
     def init(
         self,
         attributes: list[BaseAttribute],
-        children: list[
-            BaseDeclarativeNote | type[BaseDeclarativeNote] | Branch
-        ],
+        children: list[Branch],
     ):
         """
         Can be overridden to add attributes and/or children during
@@ -108,9 +97,13 @@ class BaseDeclarativeMixin(
         ```{note}
         User should **not** invoke `super().init()`{l=python}.
         To add attributes and children in an intuitive order,
-        TriliumAlchemy manually traverses a {obj}`Note` subclass's MRO and invokes
-        decorator-patched inits followed by {obj}`BaseDeclarativeMixin.init`.
+        TriliumAlchemy manually traverses a {obj}`BaseDeclarativeNote`
+        subclass's MRO and invokes decorator-patched inits followed by
+        {obj}`BaseDeclarativeMixin.init`.
         ```
+
+        :param attributes: List of attributes to which user can append using {obj}`BaseDeclarativeMixin.create_declarative_label` or {obj}`BaseDeclarativeMixin.create_declarative_relation`
+        :param children: List of children to which user can append using {obj}`BaseDeclarativeMixin.create_declarative_child`
         """
         if self.icon and all(a.name != "iconClass" for a in attributes):
             attributes.append(
@@ -164,28 +157,37 @@ class BaseDeclarativeMixin(
     def create_declarative_child(
         self,
         child_cls: type[BaseDeclarativeNote],
+        title: str | None = None,
+        note_type: str | None = None,
+        mime: str | None = None,
+        parents: Iterable[Note | Branch] | Note | Branch | None = None,
+        children: Iterable[Note | Branch] | None = None,
+        attributes: Iterable[BaseAttribute] | None = None,
+        content: str | bytes | IO | None = None,
+        template: Note | type[Note] | None = None,
         prefix: str = "",
         expanded: bool | None = None,
-        **kwargs,
     ) -> Branch:
         """
-        Create a child {obj}`BaseDeclarativeNote` with deterministic
-        `note_id` and return a {obj}`Branch`. Should be used in subclassed
+        Creates a child {obj}`BaseDeclarativeNote` with deterministic
+        `note_id` and returns a {obj}`Branch`. Should be used in subclassed
         {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init`
         to generate the same child `note_id` upon every instantiation.
 
-        Instantiate provided class as a declarative child of the current
+        Instantiates provided class as a declarative child of the current
         note by generating a deterministic id and returning the
         corresponding branch.
 
-        If the parent note's note_id is not set, the child note's may not be.
-        If the child's note_id is not set, a new note will be created upon
+        If the parent note's `note_id` set, the child note will be assigned
+        one so as to create the same `note_id` upon every instantiation.
+
+        If the child's `note_id` is not fixed, a new note will be created upon
         every instantiation. This is the case for non-singleton subclasses.
 
+        Params following `child_cls` are passed to the `Note` and `Branch`
+        initializers.
+
         :param child_cls: Class of child to instantiate
-        :param prefix: Branch prefix
-        :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI; `None{l=python}` to preserve existing value
-        :param kwargs: Additional note args passed to {obj}`Note`
         """
         child_decl_id: tuple[str, str | None] | None = child_cls._get_decl_id(
             self._note
@@ -200,12 +202,38 @@ class BaseDeclarativeMixin(
         child: Note = child_cls(
             note_id=child_note_id,
             session=self._session,
+            title=title,
+            note_type=note_type,
+            mime=mime,
+            parents=parents,
+            children=children,
+            attributes=attributes,
+            content=content,
+            template=template,
             _force_leaf=self._force_leaf,
             _note_id_seed_final=child_note_id_seed_final,
-            **kwargs,
         )
 
-        return self._normalize_child(child, prefix=prefix, expanded=expanded)
+        # check if ids are known
+        if self._note_id is not None:
+            # if ids are known at this point, also generate branch id
+            branch_id = f"{self._note_id}_{child.note_id}"
+        else:
+            branch_id = None
+
+        branch = Branch(
+            parent=self._note,
+            child=child,
+            prefix=prefix,
+            session=self._session,
+            _branch_id=branch_id,
+            _ignore_expanded=True,
+        )
+
+        if expanded is not None:
+            branch.expanded = expanded
+
+        return branch
 
     def _init_decl_mixin(
         self,
@@ -268,13 +296,15 @@ class BaseDeclarativeMixin(
 
         return None
 
-    def _init_mixin(self) -> tuple[list[BaseAttribute], list[BranchSpecT]]:
+    def _init_mixin(
+        self,
+    ) -> tuple[list[BaseAttribute], list[Branch]]:
         """
         Invoke declarative init and return tuple of attributes and children.
         """
 
         attributes: list[BaseAttribute] = []
-        children: list[BranchSpecT] = []
+        children: list[Branch] = []
 
         # traverse MRO to add attributes and children in an intuitive order.
         # for each class in the MRO:
@@ -292,78 +322,27 @@ class BaseDeclarativeMixin(
                     cls.init(
                         self,
                         attributes,
-                        cast(list[BranchSpecT], children),
+                        children,
                     )
 
+        # validate
+        for attr in attributes:
+            assert isinstance(
+                attr, (Label, Relation)
+            ), f"Got unexpected attribute type: {type(attr)}, {attr}"
+        for branch in children:
+            assert isinstance(
+                branch, Branch
+            ), f"Got unexpected child type: {type(branch)}, {branch}"
+
         return attributes, children
-
-    def _normalize_child(
-        self,
-        child: BaseDeclarativeNote | Branch,
-        prefix: str = "",
-        expanded: bool | None = None,
-    ) -> Branch:
-        """
-        Take child as Note or Branch and return a Branch.
-        """
-
-        if isinstance(child, BaseDeclarativeNote):
-            # check if ids are known
-            if self._note_id is not None:
-                # if ids are known at this point, also generate branch id
-                branch_id = f"{self._note_id}_{child.note_id}"
-            else:
-                branch_id = None
-
-            branch = Branch(
-                parent=self._note,
-                child=child,
-                prefix=prefix,
-                session=self._session,
-                _branch_id=branch_id,
-                _ignore_expanded=True,
-            )
-
-            if expanded is not None:
-                branch.expanded = expanded
-
-            return branch
-        else:
-            # ensure we have a Branch
-            assert isinstance(child, Branch)
-            return child
-
-    def _normalize_branch(self, branch_spec: BranchSpecT) -> Branch:
-        """
-        Take child as BranchSpecT and return a Branch.
-        """
-        branch: Branch
-
-        if issubclass(type(branch_spec), DeclarativeMeta):
-            # have BaseDeclarativeNote subclass
-            child_cls: type[BaseDeclarativeNote] = cast(
-                type[BaseDeclarativeNote], branch_spec
-            )
-            branch = self.create_declarative_child(child_cls)
-        else:
-            # have BaseDeclarativeNote or Branch
-            assert isinstance(branch_spec, (BaseDeclarativeNote, Branch))
-            branch = self._normalize_child(branch_spec)
-
-        return branch
-
-    def _normalize_children(self, children: list[BranchSpecT]) -> list[Branch]:
-        """
-        Instantiate any Note classes provided and normalize as child Branch.
-        """
-        return [self._normalize_branch(branch_spec) for branch_spec in children]
 
     # Base declarative init method which can be patched by decorators
     def _init_decl(
         self,
         cls_decl: type[BaseDeclarativeMixin],
         attributes: list[BaseAttribute],
-        children: list[BranchSpecT],
+        children: list[Branch],
     ):
         pass
 
@@ -582,7 +561,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         container.attributes = attributes
 
         if not self.leaf:
-            container.children = self._normalize_children(children)
+            container.children = children
 
         return container
 

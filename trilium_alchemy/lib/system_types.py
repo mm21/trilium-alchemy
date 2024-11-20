@@ -19,12 +19,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from ..core import BaseAttribute, Note, label
-from ..core.declarative.base import (
-    BaseDeclarativeNote,
-    BranchSpecT,
-    is_inherited,
-)
+from ..core import BaseAttribute, Branch, Note, label
+from ..core.declarative.base import BaseDeclarativeNote, is_inherited
 from .extension_types import (
     BaseAppCssNote,
     BaseBackendScriptNote,
@@ -55,7 +51,7 @@ class BaseWorkspaceNote(BaseDeclarativeNote):
     singleton = True
     system: type[BaseSystemNote] | None = None
 
-    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[Branch]):
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))
 
@@ -140,7 +136,7 @@ class BaseSystemNote(BaseDeclarativeNote):
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
 
-    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[Branch]):
         children.append(
             self.create_declarative_child(
                 Templates, children=self._collect_notes("templates")
@@ -231,7 +227,7 @@ class BaseRootSystemNote(BaseSystemNote):
     List of {obj}`Theme` subclasses
     """
 
-    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[Branch]):
         # add built-in system note
         children.append(self.create_declarative_child(TriliumAlchemySystemNote))
 
@@ -251,6 +247,6 @@ class BaseRootNote(BaseDeclarativeNote):
     title_ = "root"
     system: type[BaseRootSystemNote] | None = BaseRootSystemNote
 
-    def init(self, _: list[BaseAttribute], children: list[BranchSpecT]):
+    def init(self, _: list[BaseAttribute], children: list[Branch]):
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))

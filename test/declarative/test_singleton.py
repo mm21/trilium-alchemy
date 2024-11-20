@@ -88,7 +88,7 @@ class TemplateChild2(BaseDeclarativeNote):
 
 
 def check_child2(branch: Branch, state: State):
-    assert branch.prefix == ""
+    assert branch.prefix == "Prefix2"
 
     if state is State.UPDATE:
         assert branch.expanded is True
@@ -118,7 +118,7 @@ def check_child2(branch: Branch, state: State):
 
 @label_def("label1")
 @relation_def("relation1", multi=True, inverse="relation1inverse")
-@children(TemplateChild1, TemplateChild2)
+@children(TemplateChild1, (TemplateChild2, "Prefix2"))
 class TemplateTest(BaseTemplateNote):
     pass
 

@@ -520,5 +520,5 @@ def normalize_entities[
         # have iterable
         return collection_cls(entities)
 
-    # have single entity, but put in list first since Note is iterable
+    # have single entity
     return collection_cls([entities])

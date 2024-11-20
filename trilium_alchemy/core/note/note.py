@@ -938,7 +938,7 @@ class InitContainer:
     note_type: str | None = None
     mime: str | None = None
     attributes: list[BaseAttribute] | None = None
-    children: list[Note] | None = None
+    children: list[Note | Branch] | None = None
     content: str | bytes | IO | None = None
 
 
