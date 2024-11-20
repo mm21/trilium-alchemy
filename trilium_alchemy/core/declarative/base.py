@@ -174,10 +174,6 @@ class BaseDeclarativeMixin(
         {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init`
         to generate the same child `note_id` upon every instantiation.
 
-        Instantiates provided class as a declarative child of the current
-        note by generating a deterministic id and returning the
-        corresponding branch.
-
         If the parent note's `note_id` set, the child note will be assigned
         one so as to create the same `note_id` upon every instantiation.
 

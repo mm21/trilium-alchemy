@@ -308,4 +308,4 @@ class Contacts(BaseDeclarativeNote):
 
 Now, assuming it has been placed in your hierarchy, you can access your contact list by simply instantiating `Contacts`.
 
-If `False`{l=python} and `note_id` is deterministically generated (e.g. it's a singleton or child of a singleton), a label `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy. This enables hiding of the "Add child note" button in Trilium's UI via the {obj}`AppCss` note added by {obj}`BaseRootSystemNote`.
+If `leaf is False`{l=python} and `note_id` is deterministically generated (e.g. it's a singleton or child of a singleton), a label `#cssClass=triliumAlchemyDeclarative` is added by TriliumAlchemy. This enables hiding of the "Add child note" button in Trilium's UI via the {obj}`AppCss` note added by {obj}`BaseRootSystemNote`.
