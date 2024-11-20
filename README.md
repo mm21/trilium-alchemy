@@ -335,13 +335,20 @@ class Person(BaseWorkspaceTemplateNote):
 Use `children` or `child` to add children:
 
 ```python
-class Child1(BaseDeclarativeNote): pass
-class Child2(BaseDeclarativeNote): pass
-class Child3(BaseDeclarativeNote): pass
+class Child1(BaseDeclarativeNote):
+    pass
+class Child2(BaseDeclarativeNote):
+    pass
+class Child3(BaseDeclarativeNote):
+    pass
 
-@children(Child1, Child2) # add children with no branch prefix
-@child(Child3, prefix="My prefix") # add child with branch prefix
-class Parent(BaseDeclarativeNote): pass
+@children( # implicit branch prefix
+    Child1, 
+    (Child2, "My prefix"),
+) 
+@child(Child3, prefix="My prefix", expanded=True) # explicit branch params
+class Parent(BaseDeclarativeNote):
+    pass
 
 my_note = Parent()
 ```
@@ -352,8 +359,8 @@ This is equivalent to the following imperative approach:
 my_note = Note(title="Parent")
 my_note += [
     Note(title="Child1"),
-    Note(title="Child2"),
-    Branch(child=Note("Child3"), prefix="My prefix"),
+    (Note(title="Child2"), "My prefix"),
+    Branch(child=Note(title="Child3"), prefix="My prefix", expanded=True),
 ]
 ```
 
