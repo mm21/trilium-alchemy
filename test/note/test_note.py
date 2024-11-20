@@ -56,12 +56,34 @@ def test_create(session: Session, note: Note):
     assert note.utc_date_created is not None
     assert note.utc_date_modified is not None
 
-    print(f"Created note: {note}")
-
     # ensure exists
     assert note_exists(session.api, note.note_id)
 
-    # newly created note will be deleted when parent cleaned up
+    # create new note and populate with attributes
+    note2_child = Note(session=session)
+    note2 = Note(
+        title="Note2",
+        note_type="code",
+        mime="text/css",
+        parents=note,
+        children=[note2_child],
+        attributes=[
+            Label("label1", "value1", session=session),
+            Label("label1", session=session),
+        ],
+        content="/* Hello, world! */",
+        session=session,
+    )
+
+    session.flush()
+
+    assert note2.title == "Note2"
+    assert note2.note_type == "code"
+    assert note2.mime == "text/css"
+    assert note2.parents[0] is note
+    assert note2.children[0] is note2_child
+    assert note2.labels.get_values("label1") == ["value1", ""]
+    assert note2.content == "/* Hello, world! */"
 
 
 def test_update(session: Session, note: Note):

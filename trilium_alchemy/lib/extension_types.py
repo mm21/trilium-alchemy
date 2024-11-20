@@ -3,7 +3,7 @@ Defines more specific classes to assist in the development of extensions.
 """
 from __future__ import annotations
 
-from ..core import BaseAttribute, Note, label
+from ..core import BaseAttribute, Branch, Note, label
 from ..core.declarative.base import BaseDeclarativeNote
 from .note_types import CssNote, JsBackendNote, JsFrontendNote
 
@@ -73,7 +73,7 @@ class BaseThemeNote(CssNote):
     Name of theme, or `None`{l=python} to use class name.
     """
 
-    def init(self, attributes: list[BaseAttribute], _):
+    def init(self, attributes: list[BaseAttribute], _: list[Branch]):
         # default to class name if name not provided
         attributes.append(
             self.create_declarative_label(

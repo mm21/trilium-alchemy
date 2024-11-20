@@ -16,12 +16,12 @@ class Mixin3(BaseDeclarativeMixin):
 
 @label("labelm2")
 class Mixin2(Mixin3):
-    title = "Mixin2Title"  # shouldn't get set
+    pass
 
 
 @label("label1")
 class MixinTestNote(BaseDeclarativeNote, Mixin1, Mixin2):
-    def init(self, attributes, children):
+    def init(self, attributes: list[BaseAttribute], _: list[Branch]):
         attributes.append(self.create_declarative_label("label2"))
 
 
