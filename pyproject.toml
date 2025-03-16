@@ -1,5 +1,7 @@
-[tool.poetry]
-authors = ["mm21 <mm21.dev@gmail.com>"]
+[project]
+authors = [
+  {name = "mm21", email = "mm21.dev@gmail.com"}
+]
 classifiers = [
   # Get the list of trove classifiers here: https://pypi.org/classifiers/
   "Programming Language :: Python :: Implementation :: CPython",
@@ -11,12 +13,16 @@ classifiers = [
   "License :: OSI Approved :: GNU Affero General Public License v3"
 ]
 description = "Python SDK and CLI toolkit for Trilium Notes"
-documentation = "https://mm21.github.io/trilium-alchemy/"
-homepage = "https://github.com/mm21/trilium-alchemy"
 name = "trilium-alchemy"
-packages = [{include = "trilium_alchemy"}]
 readme = "README.pypi.md"
 version = "0.4.2"
+
+[project.urls]
+documentation = "https://mm21.github.io/trilium-alchemy/"
+homepage = "https://github.com/mm21/trilium-alchemy"
+
+[tool.poetry]
+packages = [{include = "trilium_alchemy"}]
 
 [tool.poetry.dependencies]
 pydantic = "^2"
