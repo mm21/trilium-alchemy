@@ -2,7 +2,7 @@
 version: '3'
 services:
   trilium:
-    image: zadam/trilium:0.63.7
+    image: triliumnext/notes:v0.91.6
     restart: always
     environment:
       - TRILIUM_DATA_DIR=/home/node/trilium-data

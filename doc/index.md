@@ -1,7 +1,6 @@
 # TriliumAlchemy
 
-
-TriliumAlchemy is a Python SDK and CLI toolkit for [Trilium Notes](https://github.com/zadam/trilium).
+TriliumAlchemy is a Python SDK and CLI toolkit for [TriliumNext Notes](https://github.com/TriliumNext/Notes), compatible with [Trilium Notes](https://github.com/zadam/trilium).
 
 This project is a work in progress, but the {ref}`api` should be generally stable. Issue reports and suggestions are welcome at: <https://github.com/mm21/trilium-alchemy/issues>
 
