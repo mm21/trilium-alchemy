@@ -10,7 +10,10 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Development Status :: 3 - Alpha",
   "Natural Language :: English",
-  "License :: OSI Approved :: GNU Affero General Public License v3"
+  "License :: OSI Approved :: GNU Affero General Public License v3",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
 ]
 description = "Python SDK and CLI toolkit for Trilium Notes"
 name = "trilium-alchemy"
@@ -50,6 +53,7 @@ sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
 toml-sort = "^0.23.1"
+tox = "^4.24.2"
 types-requests = "^2.31.0.8"
 
 [tool.pytest.ini_options]
