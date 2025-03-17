@@ -346,7 +346,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         if gen is not None:
             try:
                 next(gen)
-            except StopIteration as e:
+            except StopIteration:
                 pass
 
     def _check_state(self):

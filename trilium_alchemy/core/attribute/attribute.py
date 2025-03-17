@@ -41,7 +41,7 @@ class EtapiDriver(AttributeDriver):
             model = self.session.api.get_attribute_by_id(
                 self.attribute.attribute_id
             )
-        except NotFoundException as e:
+        except NotFoundException:
             model = None
 
         return model

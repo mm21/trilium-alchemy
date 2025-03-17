@@ -163,7 +163,7 @@ class Session:
         try:
             app_info: AppInfo = self.api.get_app_info()
             logging.debug(f"Got Trilium version: {app_info.app_version}")
-        except ApiException as e:
+        except ApiException:
             logging.error(
                 f"Failed to connect to Trilium server using token={self._token}"
             )

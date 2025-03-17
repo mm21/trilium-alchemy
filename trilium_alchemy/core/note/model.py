@@ -26,7 +26,7 @@ class EtapiDriver(NoteDriver):
 
         try:
             model = self.session.api.get_note_by_id(self.note.note_id)
-        except NotFoundException as e:
+        except NotFoundException:
             model = None
 
         return model
@@ -77,7 +77,7 @@ class EtapiDriver(NoteDriver):
         # the user called .flush() directly)
         try:
             sorter.done(parent_branch)
-        except ValueError as e:
+        except ValueError:
             pass
 
         # return note model for processing

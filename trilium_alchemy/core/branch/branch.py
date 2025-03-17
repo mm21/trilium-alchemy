@@ -46,7 +46,7 @@ class EtapiDriver(BranchDriver):
             if model.prefix is None:
                 model.prefix = ""
 
-        except NotFoundException as e:
+        except NotFoundException:
             model = None
 
         return model

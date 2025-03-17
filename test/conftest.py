@@ -489,7 +489,7 @@ def change_note(api: DefaultApi, note_id: str) -> None:
 def get_note(api: DefaultApi, note_id: str) -> EtapiNoteModel:
     try:
         model = api.get_note_by_id(note_id)
-    except NotFoundException as e:
+    except NotFoundException:
         model = None
 
     return model
@@ -581,7 +581,7 @@ def create_attribute(api: DefaultApi, **kwargs) -> EtapiAttributeModel:
 def get_attribute(api: DefaultApi, attribute_id: str) -> EtapiAttributeModel:
     try:
         model = api.get_attribute_by_id(attribute_id)
-    except NotFoundException as e:
+    except NotFoundException:
         model = None
 
     return model
@@ -615,7 +615,7 @@ def delete_branch(api: DefaultApi, branch_id: str) -> None:
 def get_branch(api: DefaultApi, branch_id: str) -> EtapiBranchModel | None:
     try:
         model = api.get_branch_by_id(branch_id)
-    except NotFoundException as e:
+    except NotFoundException:
         model = None
 
     return model

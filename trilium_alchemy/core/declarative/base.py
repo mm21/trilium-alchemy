@@ -663,7 +663,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                 importlib.resources.files(module_content) / basename
             )
 
-        except ModuleNotFoundError as e:
+        except ModuleNotFoundError:
             # not in a package context (e.g. test code, standalone script)
             path_folder = os.path.dirname(str(module.__file__))
             content_path = os.path.join(path_folder, self.content_file)

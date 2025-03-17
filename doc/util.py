@@ -73,7 +73,7 @@ class Symbol:
 
         try:
             self.phys_path = f"{self.py_obj.__module__}.{self.py_obj.__name__}"
-        except AttributeError as e:
+        except AttributeError:
             # is a module, so just use name
             self.phys_path = self.py_obj.__name__
 
@@ -276,18 +276,18 @@ class Module(Symbol):
         # get symbol lists
         try:
             all_ = self.py_obj.__all__
-        except AttributeError as e:
+        except AttributeError:
             # mod didn't define __all__
             all_ = []
 
         try:
             canonical_syms = self.py_obj.__canonical_syms__
-        except AttributeError as e:
+        except AttributeError:
             canonical_syms = []
 
         try:
             canonical_children = self.py_obj.__canonical_children__
-        except AttributeError as e:
+        except AttributeError:
             canonical_children = []
 
         # create symbols
@@ -426,7 +426,7 @@ class SymbolMap:
 
                 try:
                     py_obj = eval(full_name)
-                except (AttributeError, SyntaxError, NameError) as e:
+                except (AttributeError, SyntaxError, NameError):
                     py_obj = None
 
                 if py_obj:
