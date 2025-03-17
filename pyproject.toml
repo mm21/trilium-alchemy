@@ -27,12 +27,16 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 [tool.poetry]
 packages = [{include = "trilium_alchemy"}]
 
+[tool.poetry.scripts]
+trilium-alchemy = "trilium_alchemy.cli.main:run"
+
 [tool.poetry.dependencies]
 pydantic = "^2"
 pyrollup = "^0.1.0"
 python = "^3.12"
 requests = "^2.31.0"
 trilium-client = "^0.1.1"
+typer = "^0.15.2"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "^2.3.1"
