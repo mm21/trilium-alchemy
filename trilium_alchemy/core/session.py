@@ -160,12 +160,15 @@ class Session:
         self._cache = Cache(self)
 
         # test connection to trilium server
+        # TODO: hangs if DNS resolution fails; implement timeout manually
         try:
-            app_info: AppInfo = self.api.get_app_info()
+            app_info: AppInfo = self.api.get_app_info(
+                _request_timeout=(3.0, 3.0)
+            )
             logging.debug(f"Got Trilium version: {app_info.app_version}")
         except ApiException:
             logging.error(
-                f"Failed to connect to Trilium server using token={self._token}"
+                f"Failed to connect to Trilium server {host} using token={self._token}"
             )
             raise
 

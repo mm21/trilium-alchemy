@@ -23,98 +23,37 @@ Planned commands:
     both Trilium itself and TriliumAlchemy
 """
 
-from pathlib import Path
+import logging
 
-from click import Choice
-from typer import Argument, Option, Typer
+import dotenv
+from rich.console import Console
+from rich.logging import RichHandler
 
-kwargs = dict(
-    rich_markup_mode="rich",
-    no_args_is_help=True,
-    add_completion=False,
+from . import db, tree
+from ._utils import MainTyper
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[
+        RichHandler(
+            console=Console(),
+            rich_tracebacks=True,
+            show_level=True,
+            show_time=True,
+            show_path=False,
+        )
+    ],
 )
 
-# TODO: for top-level invocation, get connection info in order of priority:
-# - CLI args
-# - .yaml?
-#   - mapping of instance names to connection info
-#   - take instance name as arg
-# - .env / env vars
+dotenv.load_dotenv()
 
-app = Typer(
-    name="trilium-alchemy",
+app = MainTyper(
+    "trilium-alchemy",
     help="TriliumAlchemy CLI Toolkit",
-    **kwargs,
 )
-
-db_app = Typer(
-    name="db",
-    help="Database maintenance operations",
-    **kwargs,
-)
-app.add_typer(db_app)
-
-tree_app = Typer(
-    name="tree",
-    help="Tree maintenance operations",
-    **kwargs,
-)
-app.add_typer(tree_app)
-
-
-# TODO: for backup/restore: ensure trilium data dir set (normally optional)
-
-
-@db_app.command()
-def backup(
-    path: Path = Argument(
-        help="Destination database file or folder; if folder, filename will be generated using current datetime"
-    ),
-    force: bool = Option(
-        False, help="Whether to overwrite destination file if it already exists"
-    ),
-):
-    """
-    Backup database to file
-    """
-
-
-@db_app.command()
-def restore(path: Path = Argument(help="Source database file")):
-    """
-    Restore database from file
-    """
-
-
-# TODO: for export/import: take note spec (note id or label uniquely
-# identifying a note)
-
-
-@tree_app.command()
-def export(
-    path: Path = Argument(help="Destination .zip file"),
-    format: str = Option(
-        "html",
-        help="Export format",
-        show_choices=True,
-        click_type=Choice(["html", "markdown"]),
-    ),
-    force: bool = Option(
-        False, help="Whether to overwrite destination file if it already exists"
-    ),
-):
-    """
-    Export tree to a .zip file
-    """
-
-
-@tree_app.command(name="import")
-def import_(
-    path: Path = Argument(help="Source .zip file"),
-):
-    """
-    Import tree from a .zip file
-    """
+app.add_typer(db.app)
+app.add_typer(tree.app)
 
 
 def run():
