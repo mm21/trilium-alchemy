@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -12,8 +11,8 @@ from typer.models import CommandFunctionType
 
 from ..core import Session
 
-CONN_EPILOG = """
-    Trilium connection can be passed in the following order of precedence:
+OPERATION_EPILOG = """
+    Trilium options can be passed in the following order of precedence:
 
     * CLI options
 
@@ -22,46 +21,13 @@ CONN_EPILOG = """
     * .env file
     """
 """
-Epilog to show under command options.
+Epilog to show under operation command options.
 """
 
 OPTION_MSG = "Set via CLI option, environment variable, or .env file."
 """
 Message to show upon missing option.
 """
-
-
-class MainTyper(Typer):
-    """
-    Top-level app with preconfigured settings.
-    """
-
-    def __init__(self, name: str, *, help: str):
-        return super().__init__(
-            name=name,
-            help=help,
-            rich_markup_mode="markdown",
-            no_args_is_help=True,
-            add_completion=False,
-        )
-
-
-class TriliumTyper(MainTyper):
-    """
-    App which operates on trilium info.
-    """
-
-    def command(self) -> Callable[[CommandFunctionType], CommandFunctionType]:
-        return super().command(cls=TriliumCommand, epilog=CONN_EPILOG)
-
-
-class TriliumDataTyper(MainTyper):
-    """
-    App which operates on trilium info, including data dir.
-    """
-
-    def command(self) -> Callable[[CommandFunctionType], CommandFunctionType]:
-        return super().command(cls=TriliumDataCommand, epilog=CONN_EPILOG)
 
 
 MainOption = partial(TyperOption, show_envvar=True, show_default=True)
@@ -96,7 +62,34 @@ DATA_DIR_OPTION = MainOption(
 )
 
 
-class TriliumCommand(TyperCommand):
+class MainTyper(Typer):
+    """
+    Top-level app with preconfigured settings.
+    """
+
+    def __init__(self, name: str, *, help: str):
+        return super().__init__(
+            name=name,
+            help=help,
+            rich_markup_mode="markdown",
+            no_args_is_help=True,
+            add_completion=False,
+        )
+
+
+class OperationTyper(MainTyper):
+    """
+    App which operates on trilium info and optionally data dir.
+    """
+
+    def command(
+        self, *, require_data_dir: bool = False
+    ) -> Callable[[CommandFunctionType], CommandFunctionType]:
+        cls = DataOperationCommand if require_data_dir else OperationCommand
+        return super().command(cls=cls, epilog=OPERATION_EPILOG)
+
+
+class OperationCommand(TyperCommand):
     """
     Command which operates on Trilium info.
     """
@@ -125,7 +118,7 @@ class TriliumCommand(TyperCommand):
         return super().invoke(ctx)
 
 
-class TriliumDataCommand(TriliumCommand):
+class DataOperationCommand(OperationCommand):
     """
     Command which operates on Trilium info, including data dir.
     """
@@ -153,7 +146,7 @@ class TriliumOptions:
 
 
 @dataclass(kw_only=True)
-class TriliumContext:
+class OperationContext:
     """
     Encapsulates top-level Trilium context needed for commands.
     """
@@ -162,24 +155,24 @@ class TriliumContext:
     trilium_data_dir: Path | None
 
 
-def get_trilium_context(
-    ctx: Context, *, data_dir_required: bool = False
-) -> TriliumContext:
+def get_operation_context(ctx: Context) -> OperationContext:
     """
     Get trilium context from CLI options and/or environment variables.
     """
 
-    # get main options
+    cmd = ctx.command
+    assert isinstance(cmd, OperationCommand)
+
+    require_data_dir = isinstance(cmd, DataOperationCommand)
+
+    # get options
     opts = ctx.obj
     assert isinstance(opts, TriliumOptions)
 
-    # extract info from options and env
-    host = opts.host or os.environ.get("TRILIUM_HOST")
-    token = opts.token or os.environ.get("TRILIUM_TOKEN")
-    password = opts.password or os.environ.get("TRILIUM_PASSWORD")
+    host = opts.host
+    token = opts.token
+    password = opts.password
     trilium_data_dir = opts.trilium_data_dir
-    if not trilium_data_dir and (var := os.environ.get("TRILIUM_DATA_DIR")):
-        trilium_data_dir = Path(var)
 
     # validate args
     if not host:
@@ -188,10 +181,10 @@ def get_trilium_context(
         raise MissingParameter(
             message=OPTION_MSG,
             ctx=ctx,
-            param_type="option",
             param_hint=["token", "password"],
+            param_type="option",
         )
-    if data_dir_required and not trilium_data_dir:
+    if require_data_dir and not trilium_data_dir:
         raise MissingParameter(
             message=OPTION_MSG,
             ctx=ctx,
@@ -210,7 +203,7 @@ def get_trilium_context(
     except ApiException:
         raise Exit(1)
 
-    return TriliumContext(session=session, trilium_data_dir=trilium_data_dir)
+    return OperationContext(session=session, trilium_data_dir=trilium_data_dir)
 
 
 def _merge_params(

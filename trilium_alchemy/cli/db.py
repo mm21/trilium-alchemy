@@ -2,15 +2,15 @@ from pathlib import Path
 
 from typer import Argument, Context, Option
 
-from ._utils import TriliumDataTyper, get_trilium_context
+from ._utils import OperationTyper, get_operation_context
 
-app = TriliumDataTyper(
+app = OperationTyper(
     "db",
     help="Database maintenance operations",
 )
 
 
-@app.command()
+@app.command(require_data_dir=True)
 def backup(
     ctx: Context,
     path: Path = Argument(
@@ -23,14 +23,15 @@ def backup(
     """
     Backup database to file
     """
-
-    trilium_context = get_trilium_context(ctx, data_dir_required=True)
-
-    print(f"--- got trilium_context: {trilium_context}")
+    context = get_operation_context(ctx)
+    print(f"--- got context: {context}")
 
 
-@app.command()
-def restore(path: Path = Argument(help="Source database file")):
+@app.command(require_data_dir=True)
+def restore(
+    ctx: Context,
+    path: Path = Argument(help="Source database file"),
+):
     """
     Restore database from file
     """
