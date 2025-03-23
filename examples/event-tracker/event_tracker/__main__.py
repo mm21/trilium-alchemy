@@ -6,8 +6,9 @@ it with example notes imperatively.
 import argparse
 import logging
 import os
-import pathlib
 import sys
+
+import dotenv
 
 from trilium_alchemy import Note, Session
 
@@ -15,24 +16,7 @@ from .setup import setup_declarative, setup_notes
 
 logging.basicConfig(level=logging.INFO)
 
-# try to load secrets from .env
-try:
-    import dotenv
-except ModuleNotFoundError:
-    print(
-        'Warning: dotenv module missing. Install it with "pip install python-dotenv" or define environment variables specified in .env.example manually.'
-    )
-else:
-    # try .env in current folder (in case example is used outside
-    # trilium-alchemy tree)
-    found = dotenv.load_dotenv(dotenv_path=".env")
-
-    if not found:
-        # try trilium-alchemy root
-        cwd = pathlib.Path.cwd()
-        root = cwd.parent.parent
-
-        found = dotenv.load_dotenv(dotenv_path=os.path.join(root, ".env"))
+dotenv.load_dotenv()
 
 # ensure we have expected environment variables
 if not "TRILIUM_HOST" in os.environ:

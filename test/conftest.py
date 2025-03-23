@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Generator
 
-from dotenv import load_dotenv
+import dotenv
 from pytest import Config, Parser, fixture, raises
 from trilium_client import DefaultApi
 from trilium_client.exceptions import NotFoundException
@@ -25,7 +25,7 @@ from trilium_alchemy import (
 
 logging.basicConfig(level=logging.INFO)
 
-load_dotenv()
+dotenv.load_dotenv()
 
 # need all of these to run all tests
 assert "TRILIUM_HOST" in os.environ
