@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -79,36 +81,47 @@ class MainTyper(Typer):
 
 class OperationTyper(MainTyper):
     """
-    App which operates on trilium info and optionally data dir.
+    App which can operate on trilium session and/or data dir.
     """
 
     def command(
-        self, *, require_data_dir: bool = False
+        self, *, require_session: bool = False, require_data_dir: bool = False
     ) -> Callable[[CommandFunctionType], CommandFunctionType]:
-        cls = DataOperationCommand if require_data_dir else OperationCommand
-        return super().command(cls=cls, epilog=OPERATION_EPILOG)
+        cls = _get_command_cls(
+            require_session=require_session, require_data_dir=require_data_dir
+        )
+        epilog = (
+            OPERATION_EPILOG
+            if any([require_session, require_data_dir])
+            else None
+        )
+
+        return super().command(cls=cls, epilog=epilog)
 
 
-class OperationCommand(TyperCommand):
-    """
-    Command which operates on Trilium info.
-    """
+class BaseOperationCommand(TyperCommand):
+    require_trilium_session: bool
+    require_trilium_data_dir: bool
 
     @override
     def get_params(self, ctx: Context) -> list[Parameter]:
-        return _merge_params(
-            super().get_params(ctx),
-            [
+        params: list[Parameter] = []
+
+        if self.require_trilium_session:
+            params += [
                 HOST_OPTION,
                 TOKEN_OPTION,
                 PASSWORD_OPTION,
-            ],
-        )
+            ]
+        if self.require_trilium_data_dir:
+            params.append(DATA_DIR_OPTION)
+
+        return _merge_params(super().get_params(ctx), params)
 
     @override
     def invoke(self, ctx: Context):
         # extract trilium params into context
-        ctx.obj = TriliumOptions(
+        ctx.obj = OperationContext(
             host=ctx.params.pop("host", None),
             token=ctx.params.pop("token", None),
             password=ctx.params.pop("password", None),
@@ -118,25 +131,10 @@ class OperationCommand(TyperCommand):
         return super().invoke(ctx)
 
 
-class DataOperationCommand(OperationCommand):
-    """
-    Command which operates on Trilium info, including data dir.
-    """
-
-    @override
-    def get_params(self, ctx: Context) -> list[Parameter]:
-        return _merge_params(
-            super().get_params(ctx),
-            [
-                DATA_DIR_OPTION,
-            ],
-        )
-
-
 @dataclass(kw_only=True)
-class TriliumOptions:
+class OperationContext:
     """
-    Encapsulates top-level Trilium options from user.
+    Encapsulates raw Trilium options from user.
     """
 
     host: str | None
@@ -146,64 +144,90 @@ class TriliumOptions:
 
 
 @dataclass(kw_only=True)
-class OperationContext:
+class OperationParams:
     """
     Encapsulates top-level Trilium context needed for commands.
     """
 
-    session: Session
+    session: Session | None
     trilium_data_dir: Path | None
 
 
-def get_operation_context(ctx: Context) -> OperationContext:
+def get_operation_params(ctx: Context) -> OperationParams:
     """
-    Get trilium context from CLI options and/or environment variables.
+    Get trilium params from CLI options and/or environment variables.
     """
 
+    # lookup command
     cmd = ctx.command
-    assert isinstance(cmd, OperationCommand)
+    assert isinstance(cmd, BaseOperationCommand)
 
-    require_data_dir = isinstance(cmd, DataOperationCommand)
+    # lookup operation
+    operation = ctx.obj
+    assert isinstance(operation, OperationContext)
 
-    # get options
-    opts = ctx.obj
-    assert isinstance(opts, TriliumOptions)
-
-    host = opts.host
-    token = opts.token
-    password = opts.password
-    trilium_data_dir = opts.trilium_data_dir
+    session: Session | None = None
 
     # validate args
-    if not host:
-        raise MissingParameter(message=OPTION_MSG, ctx=ctx, param=HOST_OPTION)
-    if not (token or password):
-        raise MissingParameter(
-            message=OPTION_MSG,
-            ctx=ctx,
-            param_hint=["token", "password"],
-            param_type="option",
-        )
-    if require_data_dir and not trilium_data_dir:
-        raise MissingParameter(
-            message=OPTION_MSG,
-            ctx=ctx,
-            param=DATA_DIR_OPTION,
-        )
-    if trilium_data_dir and not trilium_data_dir.is_dir():
-        raise BadParameter(
-            f"Trilium data dir does not exist: {trilium_data_dir}",
-            ctx=ctx,
-            param=DATA_DIR_OPTION,
-        )
+    if cmd.require_trilium_session:
+        if not operation.host:
+            raise MissingParameter(
+                message=OPTION_MSG, ctx=ctx, param=HOST_OPTION
+            )
+        if not (operation.token or operation.password):
+            raise MissingParameter(
+                message=OPTION_MSG,
+                ctx=ctx,
+                param_hint=["token", "password"],
+                param_type="option",
+            )
 
-    # create a new session
-    try:
-        session = Session(host, token=token, password=password, default=False)
-    except ApiException:
-        raise Exit(1)
+    if cmd.require_trilium_data_dir:
+        if not operation.trilium_data_dir:
+            raise MissingParameter(
+                message=OPTION_MSG,
+                ctx=ctx,
+                param=DATA_DIR_OPTION,
+            )
+        if not operation.trilium_data_dir.is_dir():
+            raise BadParameter(
+                f"Trilium data dir does not exist: {operation.trilium_data_dir}",
+                ctx=ctx,
+                param=DATA_DIR_OPTION,
+            )
 
-    return OperationContext(session=session, trilium_data_dir=trilium_data_dir)
+    if cmd.require_trilium_session:
+        # create a new session after validating args
+        try:
+            session = Session(
+                operation.host,
+                token=operation.token,
+                password=operation.password,
+                default=False,
+            )
+        except ApiException:
+            raise Exit(1)
+
+    return OperationParams(
+        session=session, trilium_data_dir=operation.trilium_data_dir
+    )
+
+
+def _get_command_cls(
+    *, require_session: bool, require_data_dir: bool
+) -> type[BaseOperationCommand]:
+    """
+    Get a command class with required params.
+    """
+
+    # define a new class on-the-fly
+    # - allows for better scalability than a different class for each
+    # combination of params
+    class Command(BaseOperationCommand):
+        require_trilium_session = require_session
+        require_trilium_data_dir = require_data_dir
+
+    return Command
 
 
 def _merge_params(

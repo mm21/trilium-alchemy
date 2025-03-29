@@ -2,7 +2,7 @@ from pathlib import Path
 
 from typer import Argument, Context, Option
 
-from ._utils import OperationTyper, get_operation_context
+from ._utils import OperationTyper, get_operation_params
 
 app = OperationTyper(
     "db",
@@ -10,7 +10,7 @@ app = OperationTyper(
 )
 
 
-@app.command(require_data_dir=True)
+@app.command(require_session=True, require_data_dir=True)
 def backup(
     ctx: Context,
     path: Path = Argument(
@@ -23,8 +23,8 @@ def backup(
     """
     Backup database to file
     """
-    context = get_operation_context(ctx)
-    print(f"--- got context: {context}")
+    params = get_operation_params(ctx)
+    print(f"--- got params: {params}")
 
 
 @app.command(require_data_dir=True)
@@ -35,3 +35,5 @@ def restore(
     """
     Restore database from file
     """
+    params = get_operation_params(ctx)
+    print(f"--- got params: {params}")
