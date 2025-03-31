@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Callable, override
 
 from click import BadParameter, MissingParameter, Parameter
-from trilium_client.exceptions import ApiException
 from typer import Context, Exit, Typer
 from typer.core import TyperCommand, TyperOption
 from typer.models import CommandFunctionType
 
-from ..core import Session
+from ..core import Note, Session
 
 OPERATION_EPILOG = """
     Trilium options can be passed in the following order of precedence:
@@ -62,6 +62,12 @@ DATA_DIR_OPTION = MainOption(
     help="Directory containing Trilium database",
     envvar="TRILIUM_DATA_DIR",
 )
+LABEL_OPTION = MainOption(
+    param_decls=["--label"],
+    type=str,
+    default=None,
+    help="Select note uniquely identified by label",
+)
 
 
 class MainTyper(Typer):
@@ -85,10 +91,17 @@ class OperationTyper(MainTyper):
     """
 
     def command(
-        self, *, require_session: bool = False, require_data_dir: bool = False
+        self,
+        name: str | None = None,
+        *,
+        require_session: bool = False,
+        require_data_dir: bool = False,
+        require_note: bool = False,
     ) -> Callable[[CommandFunctionType], CommandFunctionType]:
         cls = _get_command_cls(
-            require_session=require_session, require_data_dir=require_data_dir
+            require_session=require_session,
+            require_data_dir=require_data_dir,
+            require_note=require_note,
         )
         epilog = (
             OPERATION_EPILOG
@@ -96,25 +109,28 @@ class OperationTyper(MainTyper):
             else None
         )
 
-        return super().command(cls=cls, epilog=epilog)
+        return super().command(name, cls=cls, epilog=epilog)
 
 
 class BaseOperationCommand(TyperCommand):
-    require_trilium_session: bool
-    require_trilium_data_dir: bool
+    trilium_require_session: bool
+    trilium_require_data_dir: bool
+    trilium_require_note: bool
 
     @override
     def get_params(self, ctx: Context) -> list[Parameter]:
         params: list[Parameter] = []
 
-        if self.require_trilium_session:
+        if self.trilium_require_session:
             params += [
                 HOST_OPTION,
                 TOKEN_OPTION,
                 PASSWORD_OPTION,
             ]
-        if self.require_trilium_data_dir:
+        if self.trilium_require_data_dir:
             params.append(DATA_DIR_OPTION)
+        if self.trilium_require_note:
+            params.append(LABEL_OPTION)
 
         return _merge_params(super().get_params(ctx), params)
 
@@ -126,6 +142,7 @@ class BaseOperationCommand(TyperCommand):
             token=ctx.params.pop("token", None),
             password=ctx.params.pop("password", None),
             trilium_data_dir=ctx.params.pop("trilium_data_dir", None),
+            label=ctx.params.pop("label", None),
         )
 
         return super().invoke(ctx)
@@ -137,10 +154,14 @@ class OperationContext:
     Encapsulates raw Trilium options from user.
     """
 
+    # trilium info
     host: str | None
     token: str | None
     password: str | None
     trilium_data_dir: Path | None
+
+    # note specification
+    label: str | None
 
 
 @dataclass(kw_only=True)
@@ -151,6 +172,7 @@ class OperationParams:
 
     session: Session | None
     trilium_data_dir: Path | None
+    note: Note | None
 
 
 def get_operation_params(ctx: Context) -> OperationParams:
@@ -167,9 +189,10 @@ def get_operation_params(ctx: Context) -> OperationParams:
     assert isinstance(operation, OperationContext)
 
     session: Session | None = None
+    note: Note | None = None
 
     # validate args
-    if cmd.require_trilium_session:
+    if cmd.trilium_require_session:
         if not operation.host:
             raise MissingParameter(
                 message=OPTION_MSG, ctx=ctx, param=HOST_OPTION
@@ -182,7 +205,7 @@ def get_operation_params(ctx: Context) -> OperationParams:
                 param_type="option",
             )
 
-    if cmd.require_trilium_data_dir:
+    if cmd.trilium_require_data_dir:
         if not operation.trilium_data_dir:
             raise MissingParameter(
                 message=OPTION_MSG,
@@ -196,7 +219,7 @@ def get_operation_params(ctx: Context) -> OperationParams:
                 param=DATA_DIR_OPTION,
             )
 
-    if cmd.require_trilium_session:
+    if cmd.trilium_require_session:
         # create a new session after validating args
         try:
             session = Session(
@@ -205,16 +228,43 @@ def get_operation_params(ctx: Context) -> OperationParams:
                 password=operation.password,
                 default=False,
             )
-        except ApiException:
+        except Exception as e:
+            logging.error(f"Failed to create session: {e}")
             raise Exit(1)
 
+    if cmd.trilium_require_note:
+        assert session
+
+        # lookup note
+        if not operation.label:
+            note = session.root
+        else:
+            # search for note with label
+            results = session.search(f"#{operation.label}")
+            if len(results) != 1:
+                raise BadParameter(
+                    f"Label {operation.label} does not uniquely identify a note: got {len(results)} results",
+                    ctx=ctx,
+                    param=LABEL_OPTION,
+                )
+            note = results[0]
+
     return OperationParams(
-        session=session, trilium_data_dir=operation.trilium_data_dir
+        session=session, trilium_data_dir=operation.trilium_data_dir, note=note
     )
 
 
+def lookup_param(ctx: Context, name: str) -> Parameter:
+    """
+    Lookup param by name.
+    """
+    param = next((p for p in ctx.command.params if p.name == name), None)
+    assert param
+    return param
+
+
 def _get_command_cls(
-    *, require_session: bool, require_data_dir: bool
+    *, require_session: bool, require_data_dir: bool, require_note: bool
 ) -> type[BaseOperationCommand]:
     """
     Get a command class with required params.
@@ -224,8 +274,9 @@ def _get_command_cls(
     # - allows for better scalability than a different class for each
     # combination of params
     class Command(BaseOperationCommand):
-        require_trilium_session = require_session
-        require_trilium_data_dir = require_data_dir
+        trilium_require_session = require_session
+        trilium_require_data_dir = require_data_dir
+        trilium_require_note = require_note
 
     return Command
 

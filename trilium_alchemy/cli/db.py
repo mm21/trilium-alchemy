@@ -7,9 +7,9 @@ from pathlib import Path
 from click import BadParameter, UsageError
 from typer import Argument, Context, Option
 
-from ._utils import OperationTyper, get_operation_params
+from ._utils import OperationTyper, get_operation_params, lookup_param
 
-MAX_BACKUP_TIME_DELTA = 10
+MAX_BACKUP_TIME_DELTA = 5
 """
 Maximum number of seconds within which the backup should have been created
 by Trilium.
@@ -50,7 +50,7 @@ def backup(
             raise BadParameter(
                 f"Destination '{path}' is neither a folder nor a child of an existing folder",
                 ctx=ctx,
-                param=ctx.params.get("path"),
+                param=lookup_param(ctx, "path"),
             )
 
     # get formatted current time
@@ -61,12 +61,11 @@ def backup(
     dst_path = path / f"backup-{now}.db" if path.is_dir() else path
 
     # ensure destination path is allowed to be overwritten if it exists
-    if dst_path.exists():
-        if not overwrite:
-            raise UsageError(
-                f"Destination '{dst_path}' exists and --overwrite was not passed",
-                ctx=ctx,
-            )
+    if dst_path.exists() and not overwrite:
+        raise UsageError(
+            f"Destination '{dst_path}' exists and --overwrite was not passed",
+            ctx=ctx,
+        )
 
     # create backup
     params.session.backup(name)
@@ -105,7 +104,7 @@ def restore(
         raise BadParameter(
             f"Source database '{path}' does not exist",
             ctx=ctx,
-            param=ctx.params.get("path"),
+            param=lookup_param(ctx, "path"),
         )
 
     dst_path = params.trilium_data_dir / "document.db"
