@@ -4,7 +4,7 @@ import os
 import shutil
 from pathlib import Path
 
-from click import Abort, BadParameter, UsageError
+from click import BadParameter, UsageError
 from typer import Argument, Context, Option
 
 from ._utils import OperationTyper, get_operation_params
@@ -61,13 +61,13 @@ def backup(
 
     # get source/destination path
     src_path = params.trilium_data_dir / "backup" / f"backup-{backup_name}.db"
-    dest_path = path / f"{now}.db" if path.is_dir() else path
+    dst_path = path / f"backup-{now}.db" if path.is_dir() else path
 
     # ensure destination path is allowed to be overwritten if it exists
-    if dest_path.exists():
+    if dst_path.exists():
         if not overwrite:
             raise UsageError(
-                f"Destination '{dest_path}' exists and --overwrite was not passed",
+                f"Destination '{dst_path}' exists and --overwrite was not passed",
                 ctx=ctx,
             )
 
@@ -75,23 +75,22 @@ def backup(
     params.session.backup(backup_name)
 
     # validate that trilium created the backup
-    if not src_path.is_file():
-        raise Abort(f"Trilium failed to create backup '{src_path}'")
+    assert (
+        src_path.is_file()
+    ), f"Trilium failed to create backup at '{src_path}'"
 
     mod_time = os.path.getmtime(src_path)
     mod_datetime = datetime.datetime.fromtimestamp(mod_time)
 
-    if (
-        delta := (datetime.datetime.now() - mod_datetime).seconds
-    ) > MAX_BACKUP_TIME_DELTA:
-        raise Abort(
-            f"Backup '{src_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
-        )
+    delta = (datetime.datetime.now() - mod_datetime).seconds
+    assert (
+        delta <= MAX_BACKUP_TIME_DELTA
+    ), f"Backup '{src_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
 
     # copy backup to destination
-    shutil.copyfile(src_path, dest_path)
+    shutil.copyfile(src_path, dst_path)
 
-    logging.info(f"Wrote backup to '{dest_path}'")
+    logging.info(f"Wrote backup: '{src_path}' -> '{dst_path}'")
 
 
 @app.command(require_data_dir=True)
@@ -103,4 +102,18 @@ def restore(
     Restore database from file
     """
     params = get_operation_params(ctx)
-    print(f"--- got params: {params}")
+    assert params.trilium_data_dir
+
+    if not path.is_file():
+        raise BadParameter(
+            f"Source database '{path}' does not exist",
+            ctx=ctx,
+            param=ctx.params.get("path"),
+        )
+
+    dst_path = params.trilium_data_dir / "document.db"
+
+    # copy backup to database in trilium data dir
+    shutil.copyfile(path, dst_path)
+
+    logging.info(f"Restored backup: '{path}' -> '{dst_path}'")
