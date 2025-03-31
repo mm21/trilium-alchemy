@@ -16,6 +16,8 @@ This is the recommended mechanism. Create a new token in the UI from Options &ra
 
 If you provide a password, a temporary token is created for you. This token is deleted when you invoke {obj}`Session.logout` or exit a context using `with`{l=python}.
 
-## Tool config (coming soon)
+## Tool configuration
+
+You can use a `.env` file to propagate Trilium connection info to the {typer}`trilium-alchemy` tool. See the example: [.env.example](https://github.com/mm21/trilium-alchemy/blob/main/.env.example)
 
 There will be a config file format and .env file support for configuring CLI tools.

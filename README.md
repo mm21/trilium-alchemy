@@ -15,6 +15,7 @@ Python SDK and CLI toolkit for [TriliumNext Notes](https://github.com/TriliumNex
 - [TriliumAlchemy](#triliumalchemy)
   - [Documentation](#documentation)
   - [Getting started](#getting-started)
+  - [CLI](#cli)
   - [Working with notes](#working-with-notes)
   - [Pythonic note interfaces](#pythonic-note-interfaces)
     - [Single-valued label accessor](#single-valued-label-accessor)
@@ -82,6 +83,10 @@ with Session(HOST, token=TOKEN) as session:
 
     # session.flush() will be invoked automatically
 ```
+
+## CLI
+
+Upon installation, you can use the `trilium-alchemy` CLI tool to manage Trilium. See the documentation for details: [CLI](https://mm21.github.io/trilium-alchemy/tools/index.html)
 
 ## Working with notes
 
