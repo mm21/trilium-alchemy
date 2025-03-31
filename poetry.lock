@@ -1587,7 +1587,7 @@ version = "13.9.4"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 optional = false
 python-versions = ">=3.8.0"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90"},
     {file = "rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098"},
@@ -1627,7 +1627,7 @@ version = "1.5.4"
 description = "Tool to Detect Surrounding Shell"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
@@ -1885,6 +1885,27 @@ standalone = ["Sphinx (>=5)"]
 test = ["pytest"]
 
 [[package]]
+name = "sphinxcontrib-typer"
+version = "0.5.1"
+description = "Auto generate docs for typer commands."
+optional = false
+python-versions = "<4.0,>=3.9"
+groups = ["dev"]
+files = [
+    {file = "sphinxcontrib_typer-0.5.1-py3-none-any.whl", hash = "sha256:74f1416392bfef39ea12c940f074383ff2fb27b3dc0388806012b87b8dae971c"},
+    {file = "sphinxcontrib_typer-0.5.1.tar.gz", hash = "sha256:b455664c5820e5e6748466707fbac63aa864abf2b7006857dff4006772d3bbbf"},
+]
+
+[package.dependencies]
+sphinx = ">=5.0.0"
+typer-slim = {version = ">=0.12.0,<1.0.0", extras = ["standard"]}
+
+[package.extras]
+html = ["selenium (>=4.0.0,<5.0.0)", "webdriver-manager (>=3.0.0,<5.0.0)"]
+pdf = ["cairosvg (>=2.7.0,<3.0.0)", "lxml (>=4.2.0,<6.0.0)"]
+png = ["pillow (>=8.0.0)", "selenium (>=4.0.0,<5.0.0)", "webdriver-manager (>=3.0.0,<5.0.0)"]
+
+[[package]]
 name = "toml-sort"
 version = "0.23.1"
 description = "Toml sorting library"
@@ -1972,6 +1993,27 @@ click = ">=8.0.0"
 rich = ">=10.11.0"
 shellingham = ">=1.3.0"
 typing-extensions = ">=3.7.4.3"
+
+[[package]]
+name = "typer-slim"
+version = "0.15.2"
+description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
+optional = false
+python-versions = ">=3.7"
+groups = ["dev"]
+files = [
+    {file = "typer_slim-0.15.2-py3-none-any.whl", hash = "sha256:4273014a3378b24367bffed45c2ce8dd3d85bd201a6f02e51ba6b19f336009be"},
+    {file = "typer_slim-0.15.2.tar.gz", hash = "sha256:4a666bb7839a88f51dd25d078d36dbc1d0f37c8c2696e184fbc1f3eaa314a91b"},
+]
+
+[package.dependencies]
+click = ">=8.0.0"
+rich = {version = ">=10.11.0", optional = true, markers = "extra == \"standard\""}
+shellingham = {version = ">=1.3.0", optional = true, markers = "extra == \"standard\""}
+typing-extensions = ">=3.7.4.3"
+
+[package.extras]
+standard = ["rich (>=10.11.0)", "shellingham (>=1.3.0)"]
 
 [[package]]
 name = "types-requests"
@@ -2062,4 +2104,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "d99c1bf0c03d256762ac5d129cca1aa513513eaa94bd6231bdf7a9d271eae72b"
+content-hash = "ce1f1d3dcb05b9d12d09fd6f517f4257b88c3f6f404659509b971ce60811185d"

@@ -57,6 +57,7 @@ sphinx = "^7.0.1"
 sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-plantuml = "^0.25"
+sphinxcontrib-typer = "^0.5.1"
 toml-sort = "^0.23.1"
 tox = "^4.24.2"
 types-requests = "^2.31.0.8"

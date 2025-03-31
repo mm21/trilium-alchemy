@@ -22,7 +22,7 @@ author = "mm21"
 with open(
     Path(os.path.abspath(__file__)).parent.parent / "pyproject.toml", "rb"
 ) as fh:
-    release = tomllib.load(fh)["tool"]["poetry"]["version"]
+    release = tomllib.load(fh)["project"]["version"]
 
 package = "trilium_alchemy"
 env = util.Env(package)
@@ -44,6 +44,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx_copybutton",
     "sphinxcontrib.plantuml",
+    "sphinxcontrib.typer",
 ]
 
 myst_enable_extensions = [
