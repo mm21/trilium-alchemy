@@ -28,12 +28,12 @@ def backup(
     path: Path = Argument(
         help="Destination database file or folder; if folder, filename will be generated using current datetime"
     ),
+    name: str = Option(
+        "now",
+        help="Name of backup in Trilum data dir to generate, e.g. 'now' will write 'backup-now.db'",
+    ),
     overwrite: bool = Option(
         False, help="Whether to overwrite destination file if it already exists"
-    ),
-    unique: bool = Option(
-        False,
-        help="Whether the backup in Trilium data dir should have a unique filename based on current timestamp instead of 'now.db'",
     ),
 ):
     """
@@ -56,11 +56,8 @@ def backup(
     # get formatted current time
     now = datetime.datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
 
-    # get name of backup file in trilium data dir
-    backup_name = now if unique else "now"
-
     # get source/destination path
-    src_path = params.trilium_data_dir / "backup" / f"backup-{backup_name}.db"
+    src_path = params.trilium_data_dir / "backup" / f"backup-{name}.db"
     dst_path = path / f"backup-{now}.db" if path.is_dir() else path
 
     # ensure destination path is allowed to be overwritten if it exists
@@ -72,7 +69,7 @@ def backup(
             )
 
     # create backup
-    params.session.backup(backup_name)
+    params.session.backup(name)
 
     # validate that trilium created the backup
     assert (
