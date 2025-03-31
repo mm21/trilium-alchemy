@@ -1,5 +1,4 @@
 import datetime
-import os
 
 from pytest import mark
 
@@ -120,17 +119,17 @@ def test_search_title(session: Session, note: Note):
 
 
 def test_backup(session: Session):
-    path_backup = os.path.join(DATA_DIR, "backup", "backup-test.db")
+    backup_path = DATA_DIR / "backup" / "backup-test.db"
 
     # remove backup if it exists
-    if os.path.exists(path_backup):
-        os.remove(path_backup)
+    if backup_path.exists():
+        backup_path.unlink()
 
-    assert not os.path.exists(path_backup)
+    assert not backup_path.exists()
 
     # perform backup and ensure it was written
     session.backup("test")
-    assert os.path.exists(path_backup)
+    assert backup_path.exists()
 
 
 @mark.attribute("label1")
