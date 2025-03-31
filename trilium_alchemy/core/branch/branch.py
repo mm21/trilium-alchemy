@@ -335,6 +335,13 @@ class Branch(OrderedEntity[BranchModel]):
 
         self.child = Note(note_id=model.note_id, session=self._session)
 
+    def _delete(self):
+        super()._delete()
+
+        if self in self.parent.branches.children:
+            # remove from parent so child list gets updated
+            self.parent.branches.children.remove(self)
+
     def _flush_check(self):
         _assert_validate(self.child is not None, "No child set")
 

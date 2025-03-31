@@ -151,6 +151,7 @@ def test_update(session: Session, note: Note):
 # inform note fixture to skip cleaning up note, will delete in test case
 @mark.skip_teardown
 def test_delete(session: Session, note: Note):
+    assert len(session.root.children) == 1
     assert note._is_clean
 
     note.delete()
@@ -160,6 +161,7 @@ def test_delete(session: Session, note: Note):
     assert note._is_clean
 
     assert not note_exists(session.api, note.note_id)
+    assert len(session.root.children) == 0
 
 
 def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):

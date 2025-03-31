@@ -697,18 +697,22 @@ class Note(BaseEntity[NoteModel]):
         self,
         dest_path: Path,
         export_format: Literal["html", "markdown"] = "html",
+        overwrite: bool = False,
     ):
         """
         Export this note subtree to zip file.
 
         :param dest_path: Destination .zip file
         :param export_format: Format of exported HTML notes
+        :param overwrite: Whether to overwrite destination path if it exists
         """
         assert (
             self.note_id is not None
         ), f"Source note {self.str_short} must have a note_id for export"
-
         assert export_format in {"html", "markdown"}
+
+        if dest_path.exists() and not overwrite:
+            raise ValueError(f"Path {dest_path} exists and overwrite=False")
 
         dest_path = (
             dest_path if isinstance(dest_path, Path) else Path(dest_path)
@@ -857,6 +861,13 @@ class Note(BaseEntity[NoteModel]):
         return Note(
             note_id=model.note_id, session=session, _model_backing=model
         )
+
+    def _delete(self):
+        super()._delete()
+
+        # also delete each parent branch so parents' child lists are updated
+        for branch in self.branches.parents:
+            branch.delete()
 
     def _flush_check(self):
         if not self._is_delete:
