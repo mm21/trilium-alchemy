@@ -28,7 +28,7 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 packages = [{include = "trilium_alchemy"}]
 
 [tool.poetry.scripts]
-trilium-alchemy = "trilium_alchemy.cli.main:run"
+trilium-alchemy = "trilium_alchemy.tools.cli.main:run"
 
 [tool.poetry.dependencies]
 pydantic = "^2"

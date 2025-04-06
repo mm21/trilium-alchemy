@@ -11,7 +11,7 @@ from typer import Context, Exit, Typer
 from typer.core import TyperCommand, TyperOption
 from typer.models import CommandFunctionType
 
-from ..core import Note, Session
+from ...core import Note, Session
 
 OPERATION_EPILOG = """
     Trilium options can be passed in the following order of precedence:
