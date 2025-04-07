@@ -71,12 +71,6 @@ INSTANCE_OPTION = MainOption(
     default=None,
     help="Instance name as configured in .yaml",
 )
-ALL_INSTANCES_OPTION = MainOption(
-    param_decls=["--all-instances"],
-    type=bool,
-    default=False,
-    help="Use all instances from .yaml",
-)
 CONFIG_FILE_OPTION = MainOption(
     param_decls=["--config-file"],
     type=str,
@@ -103,7 +97,6 @@ SINGLE_INSTANCE_OPTIONS = [
 
 MULTI_INSTANCE_OPTIONS = [
     INSTANCE_OPTION,
-    ALL_INSTANCES_OPTION,
     CONFIG_FILE_OPTION,
 ]
 
@@ -414,11 +407,8 @@ def _get_instance_from_config(ctx: Context, instance: str) -> InstanceContext:
     # get config from file
     config = get_config(config_file)
 
-    all_instances = bool(ctx.params.pop("all_instances", None))
-
-    # TODO: handle multiple instances
-
-    if not instance in config.instances and all_instances:
+    instance_obj = config.instances.get(instance)
+    if not instance_obj:
         raise BadParameter(
             f"Instance '{instance}' not found in '{config_file}'",
             ctx=ctx,
@@ -443,8 +433,6 @@ def _get_instance_from_config(ctx: Context, instance: str) -> InstanceContext:
             )
     else:
         backup_dir = None
-
-    instance_obj = config.instances[instance]
 
     return InstanceContext(
         host=instance_obj.host,
