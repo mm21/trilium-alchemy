@@ -21,22 +21,24 @@ def test_db(session: Session, tmp_path: Path):
     session.flush()
 
     # backup to folder w/unique name
-    subprocess.check_call(DB_CMD + ["backup", tmp_path])
+    subprocess.check_call(DB_CMD + ["backup", "--path", tmp_path])
 
     # backup to specific file
     backup_path = tmp_path / "test.db"
-    subprocess.check_call(DB_CMD + ["backup", backup_path])
+    subprocess.check_call(DB_CMD + ["backup", "--path", backup_path])
 
     # attempt to backup to same file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(DB_CMD + ["backup", backup_path])
+            subprocess.check_call(DB_CMD + ["backup", "--path", backup_path])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
 
     # backup to same file, overwriting it
-    subprocess.check_call(DB_CMD + ["backup", "--overwrite", backup_path])
+    subprocess.check_call(
+        DB_CMD + ["backup", "--path", backup_path, "--overwrite"]
+    )
 
     # add another note to root
     session.root += Note("test note 2", session=session)

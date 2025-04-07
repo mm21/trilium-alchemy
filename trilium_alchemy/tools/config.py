@@ -3,9 +3,10 @@ Interface to configuration as persisted in .yaml file.
 """
 from __future__ import annotations
 
-import json
+from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+import yaml
+from pydantic import BaseModel, model_validator
 
 __all__ = [
     "Config",
@@ -19,8 +20,17 @@ class Config(BaseModel):
     Encapsulates configuration for use in tools.
     """
 
-    instances: dict[str, TriliumInstance] | None
-    backup_dir: str | None
+    instances: dict[str, TriliumInstance]
+
+    root_data_dir: str
+    """
+    Root folder for per-instance Trilium data dirs.
+    """
+
+    root_backup_dir: str | None = None
+    """
+    Root folder for per-instance Trilium backup dirs.
+    """
 
 
 class TriliumInstance(BaseModel):
@@ -28,21 +38,25 @@ class TriliumInstance(BaseModel):
     Encapsulates info for a Trilium instance.
     """
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "anyOf": [{"required": ["token"]}, {"required": ["password"]}]
-        }
-    )
-
     host: str
-    token: str | None
-    password: str | None
-    data_dir: str | None
+    token: str | None = None
+    password: str | None = None
+    declarative_root: str | None = None
+
+    @model_validator(mode="after")
+    def check_token_or_password(self):
+        if not (self.token or self.password):
+            raise ValueError("Either token or password must be provided")
+        return self
 
 
-# temp for testing
-if __name__ == "__main__":
-    schema = Config.model_json_schema()
+def get_config(file: Path) -> Config:
+    """
+    Get config info from given path.
+    """
+    assert file.is_file()
 
-    with open("__out__/user_schema.json", "w") as f:
-        json.dump(schema, indent=2, fp=f)
+    with file.open() as fh:
+        data = yaml.safe_load(fh)
+
+    return Config(**data)

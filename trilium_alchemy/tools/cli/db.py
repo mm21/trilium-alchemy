@@ -25,15 +25,18 @@ app = OperationTyper(
 @app.command(require_session=True, require_data_dir=True)
 def backup(
     ctx: Context,
-    path: Path = Argument(
-        help="Destination database file or folder; if folder, filename will be generated using current datetime"
-    ),
     name: str = Option(
         "now",
         help="Name of backup in Trilum data dir to generate, e.g. 'now' will write 'backup-now.db'",
     ),
+    path: Path = Option(
+        None,
+        help="Copy to destination database file or folder; if folder, filename will be generated using current datetime",
+    ),
     overwrite: bool = Option(
-        False, help="Whether to overwrite destination file if it already exists"
+        False,
+        "--overwrite",
+        help="Whether to overwrite destination file if it already exists",
     ),
 ):
     """
@@ -41,31 +44,38 @@ def backup(
     """
     params = get_operation_params(ctx)
     assert params.session
-    assert params.trilium_data_dir
+    assert params.data_dir
+    assert params.data_dir.is_dir()
 
-    # ensure destination folder exists
-    if not path.is_dir():
-        # assume path is a specific file in a folder
-        if not path.parent.is_dir():
-            raise BadParameter(
-                f"Destination '{path}' is neither a folder nor a child of an existing folder",
-                ctx=ctx,
-                param=lookup_param(ctx, "path"),
-            )
+    src_path = params.data_dir / "backup" / f"backup-{name}.db"
+    dst_path: Path | None = None
 
-    # get formatted current time
-    now = datetime.datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
+    path_norm = path or params.backup_dir
+    if path_norm:
+        # ensure destination folder exists
+        if not path_norm.is_dir():
+            # assume path is a specific file in a folder
+            if not path_norm.parent.is_dir():
+                raise BadParameter(
+                    f"Destination '{path_norm}' is neither a folder nor a child of an existing folder",
+                    ctx=ctx,
+                    param=lookup_param(ctx, "path"),
+                )
 
-    # get source/destination path
-    src_path = params.trilium_data_dir / "backup" / f"backup-{name}.db"
-    dst_path = path / f"backup-{now}.db" if path.is_dir() else path
+        # get formatted current time
+        now = datetime.datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
 
-    # ensure destination path is allowed to be overwritten if it exists
-    if dst_path.exists() and not overwrite:
-        raise UsageError(
-            f"Destination '{dst_path}' exists and --overwrite was not passed",
-            ctx=ctx,
+        # get destination path
+        dst_path = (
+            path_norm / f"backup-{now}.db" if path_norm.is_dir() else path_norm
         )
+
+        # ensure destination path is allowed to be overwritten if it exists
+        if dst_path.exists() and not overwrite:
+            raise UsageError(
+                f"Destination '{dst_path}' exists and --overwrite was not passed",
+                ctx=ctx,
+            )
 
     # create backup
     params.session.backup(name)
@@ -83,10 +93,13 @@ def backup(
         delta <= MAX_BACKUP_TIME_DELTA
     ), f"Backup '{src_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
 
-    # copy backup to destination
-    shutil.copyfile(src_path, dst_path)
+    logging.info(f"Wrote backup: '{src_path}'")
 
-    logging.info(f"Wrote backup: '{src_path}' -> '{dst_path}'")
+    if dst_path:
+        # copy backup to destination
+        shutil.copyfile(src_path, dst_path)
+
+        logging.info(f"Copied backup: '{src_path}' -> '{dst_path}'")
 
 
 @app.command(require_data_dir=True)
@@ -98,7 +111,7 @@ def restore(
     Restore database from file
     """
     params = get_operation_params(ctx)
-    assert params.trilium_data_dir
+    assert params.data_dir
 
     if not path.is_file():
         raise BadParameter(
@@ -107,7 +120,7 @@ def restore(
             param=lookup_param(ctx, "path"),
         )
 
-    dst_path = params.trilium_data_dir / "document.db"
+    dst_path = params.data_dir / "document.db"
 
     # copy backup to database in trilium data dir
     shutil.copyfile(path, dst_path)

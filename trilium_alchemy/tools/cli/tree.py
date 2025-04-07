@@ -35,7 +35,7 @@ def export(
     """
     params = get_operation_params(ctx)
     assert params.session
-    assert params.note
+    assert params.target_note
 
     if not path.parent.exists():
         raise BadParameter(
@@ -50,11 +50,11 @@ def export(
             ctx=ctx,
         )
 
-    params.note.export_zip(
+    params.target_note.export_zip(
         path, export_format=export_format, overwrite=overwrite
     )
 
-    logging.info(f"Exported note '{params.note.title}' -> '{path}'")
+    logging.info(f"Exported note '{params.target_note.title}' -> '{path}'")
 
 
 @app.command("import", require_session=True, require_note=True)
@@ -67,7 +67,7 @@ def import_(
     """
     params = get_operation_params(ctx)
     assert params.session
-    assert params.note
+    assert params.target_note
 
     if not path.is_file():
         raise BadParameter(
@@ -77,4 +77,4 @@ def import_(
         )
 
     # import zip into note
-    params.note.import_zip(path)
+    params.target_note.import_zip(path)

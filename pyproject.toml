@@ -53,6 +53,7 @@ pytest = "^7.3.1"
 pytest-cov = "^4.1.0"
 pytest-dependency = "^0.5.1"
 python-dotenv = "^1.0.0"
+pyyaml = "^6.0.2"
 sphinx = "^7.0.1"
 sphinx-autodoc2 = {git = "https://github.com/mm21/sphinx-autodoc2.git"}
 sphinx-copybutton = "^0.5.2"
