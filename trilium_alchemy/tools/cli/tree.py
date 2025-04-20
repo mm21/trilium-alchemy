@@ -132,10 +132,14 @@ def import_(
     tree_context.subtree_root.import_zip(path)
 
 
+# TODO:
+# - if note_fqcn not passed: get FQCN from instance config,
+# ensure note_id == root
 def push_declarative(
     ctx: Context,
-    note_fqcn: str = Argument(
+    note_fqcn: str = Option(
         None,
+        "--note-fqcn",
         help="Fully-qualified class name of BaseDeclarativeNote subclass",
     ),
 ):
