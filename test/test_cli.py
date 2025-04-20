@@ -21,23 +21,23 @@ def test_db(session: Session, tmp_path: Path):
     session.flush()
 
     # backup to folder w/unique name
-    subprocess.check_call(DB_CMD + ["backup", "--path", tmp_path])
+    subprocess.check_call(DB_CMD + ["backup", "--dest", tmp_path])
 
     # backup to specific file
     backup_path = tmp_path / "test.db"
-    subprocess.check_call(DB_CMD + ["backup", "--path", backup_path])
+    subprocess.check_call(DB_CMD + ["backup", "--dest", backup_path])
 
     # attempt to backup to same file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(DB_CMD + ["backup", "--path", backup_path])
+            subprocess.check_call(DB_CMD + ["backup", "--dest", backup_path])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
 
     # backup to same file, overwriting it
     subprocess.check_call(
-        DB_CMD + ["backup", "--path", backup_path, "--overwrite"]
+        DB_CMD + ["backup", "--dest", backup_path, "--overwrite"]
     )
 
     # add another note to root
@@ -87,14 +87,14 @@ def test_tree(session: Session, tmp_path: Path):
     assert len(session.root.children) == 1
 
     # export root
-    root_path = tmp_path / "test.zip"
+    root_path = tmp_path / "root.zip"
     subprocess.check_call(TREE_CMD + ["export", root_path])
     assert root_path.is_file()
 
     # export by label
     label_path = tmp_path / "label.zip"
     subprocess.check_call(
-        TREE_CMD + ["export", "--label", "testLabel", label_path]
+        TREE_CMD + ["--search", "#testLabel", "export", label_path]
     )
     assert label_path.is_file()
 
@@ -131,7 +131,7 @@ def test_tree(session: Session, tmp_path: Path):
 
     # import by label
     subprocess.check_call(
-        TREE_CMD + ["import", "--label", "testLabel", label_path]
+        TREE_CMD + ["--search", "#testLabel", "import", label_path]
     )
 
     note.refresh()
@@ -144,7 +144,7 @@ def test_tree(session: Session, tmp_path: Path):
     with raises(subprocess.CalledProcessError):
         try:
             subprocess.check_call(
-                TREE_CMD + ["import", "--label", "testLabel", label_path]
+                TREE_CMD + ["--search", "#testLabel", "import", label_path]
             )
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
