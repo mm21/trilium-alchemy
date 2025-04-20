@@ -22,16 +22,12 @@ instances:
     host: http://localhost:8080
     token: MY_TOKEN
 
-    # fully-qualified class name of root note for declarative sync operation
+    # fully-qualified class name of root note for declarative push operation
     root_note_fqcn: my_notes.root.RootNote
 
 # top-level data dir with subfolders per instance
 root_data_dir:
   ./trilium/data
-
-# top-level backup dir with subfolders per instance
-root_backup_dir:
-  ./trilium/backups
 ```
 
 ## Usage
