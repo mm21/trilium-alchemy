@@ -23,7 +23,7 @@ instances:
     token: MY_TOKEN
 
     # fully-qualified class name of root note for declarative sync operation
-    declarative_root: my_notes.root.RootNote
+    root_note_fqcn: my_notes.root.RootNote
 
 # top-level data dir with subfolders per instance
 root_data_dir:
