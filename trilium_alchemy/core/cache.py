@@ -70,8 +70,12 @@ class Cache:
         # validate newly added entities
         self._validate(dirty_set - dirty_set_old)
 
+        if not len(dirty_set):
+            logging.debug("No dirty entities to flush")
+            return
+
         logging.debug(
-            f"Flushing {len(dirty_set)} entities: (create/update/delete) {self._summary(dirty_set)}"
+            f"Flushing {len(dirty_set)} entities: {self._summary(dirty_set)}"
         )
 
         # create topological sorter
@@ -232,4 +236,5 @@ class Cache:
             deletes = index[State.DELETE]
             return f"{creates}/{updates}/{deletes}"
 
-        return f"{states(notes)} notes, {states(attributes)} attributes, {states(branches)} branches"
+        desc = "(create/update/delete) "
+        return f"{desc}{states(notes)} notes, {states(attributes)} attributes, {states(branches)} branches"

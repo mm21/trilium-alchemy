@@ -6,11 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from click import BadParameter, Choice, MissingParameter
+import typer
+from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
-from ._utils import MainTyper, get_root_context, lookup_param
+from ._utils import MainTyper, console, get_root_context, lookup_param
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -132,42 +133,99 @@ def import_(
     tree_context.subtree_root.import_zip(path)
 
 
-# TODO:
-# - if note_fqcn not passed: get FQCN from instance config,
-# ensure note_id == root
-def push_declarative(
+# TODO: sync-template command
+# - verifies target note has #template or #workspaceTemplate
+
+
+# TODO: if target note has attrs/children but not #triliumAlchemyDeclarative,
+# warn and prompt to continue
+@app.command("push")
+def push(
     ctx: Context,
-    note_fqcn: str = Option(
+    note_fqcn: str
+    | None = Argument(
         None,
-        "--note-fqcn",
         help="Fully-qualified class name of BaseDeclarativeNote subclass",
     ),
+    prompt: bool = Option(
+        False,
+        "--prompt",
+        help="Show pending changes and prompt for confirmation before committing changes",
+    ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only show pending changes",
+    ),
 ):
-    if not "." in note_fqcn:
-        raise BadParameter(
-            f"fully-qualified class name '{note_fqcn}' must contain at least one '.'"
+    """
+    Push declarative note to target note
+    """
+    tree_context = _get_tree_context(ctx)
+    root_note_fqcn = tree_context.root_context.instance.root_note_fqcn
+    fqcn = note_fqcn or root_note_fqcn
+
+    if not fqcn:
+        raise MissingParameter(
+            "must be passed when not set in config file",
+            ctx=ctx,
+            param=lookup_param("note_fqcn"),
         )
 
-    module_path, obj_name = note_fqcn.rsplit(".", 1)
+    if root_note_fqcn:
+        if not tree_context.subtree_root.note_id == "root":
+            raise ClickException(
+                "cannot specify a target note other than root when using root_note_fqcn from config file"
+            )
+
+    if not "." in fqcn:
+        raise ClickException(
+            f"fully-qualified class name '{fqcn}' must contain at least one '.'"
+        )
+
+    module_path, obj_name = fqcn.rsplit(".", 1)
 
     try:
         module = importlib.import_module(module_path)
         note_cls = getattr(module, obj_name)
     except (ImportError, AttributeError) as e:
-        raise BadParameter(f"failed to import '{note_fqcn}': {e}")
+        raise BadParameter(f"failed to import '{fqcn}': {e}")
 
     if not issubclass(note_cls, BaseDeclarativeNote):
         raise BadParameter(
-            f"fully-qualified class name '{note_fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls} ({type(note_cls)})"
+            f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls} ({type(note_cls)})"
         )
 
-    tree_context = _get_tree_context(ctx)
+    # transmute note to have imported subclass, invoking its init
+    _ = tree_context.subtree_root.transmute(note_cls)
 
-    # transmute note to have imported subclass
-    tree_context.subtree_root.transmute(note_cls)
+    dirty_set = tree_context.session.dirty_set
+
+    if not dirty_set:
+        logging.info("No changes to commit")
+        return
+
+    # print change summary
+    dirty_summary = tree_context.session.dirty_summary
+    overall_summary = tree_context.session._cache._summary(dirty_set)
+    logging.info("Pending changes:")
+    console.print(
+        f"{dirty_summary}{'\n' if dirty_summary else ''}Summary: {overall_summary}"
+    )
+
+    if dry_run:
+        return
+
+    if prompt:
+        result = typer.confirm("Proceed with committing changes?")
+        if not result:
+            return
 
     # commit changes
     tree_context.session.flush()
+
+    # print summary
+    logging.info("Committed changes")
 
 
 def _get_tree_context(ctx: Context) -> TreeContext:

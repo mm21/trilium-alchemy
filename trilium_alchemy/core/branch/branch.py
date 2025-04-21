@@ -275,7 +275,7 @@ class Branch(OrderedEntity[BranchModel]):
 
     @property
     def _str_short(self):
-        return f"Branch(parent={self.parent}, child={self.child}, prefix={self.prefix}, expanded={self.expanded}, position={self._position}, branch_id={self.branch_id})"
+        return f"Branch(child={self.child}, prefix='{self.prefix}')"
 
     @property
     def _str_safe(self):

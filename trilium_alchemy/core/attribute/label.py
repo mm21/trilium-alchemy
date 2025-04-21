@@ -59,8 +59,8 @@ class Label(BaseAttribute):
         self._model.set_field("value", val)
 
     @property
-    def _str_short(self):
-        return f"Label(#{self.name}, value={self.value}, attribute_id={self.attribute_id}, note={self.note}, position={self.position})"
+    def _str_short(self) -> str:
+        return f"Label('{self.name}', value='{self.value}', attribute_id='{self.attribute_id}')"
 
     @property
     def _str_safe(self):

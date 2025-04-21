@@ -3,10 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from click import MissingParameter, Parameter
+from rich.console import Console
 from typer import Context, Typer
 
 if TYPE_CHECKING:
     from .main import RootContext
+
+
+console = Console()
 
 
 class MainTyper(Typer):

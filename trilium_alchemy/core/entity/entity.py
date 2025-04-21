@@ -185,7 +185,8 @@ class BaseEntity[ModelT: BaseEntityModel](
         Get a summary of this entity, including its current state and model
         values.
         """
-        return f"{self.str_short} <{self._state}> {self._model}"
+        indent = f"\n{' '*4}"
+        return f"{self.str_short}{indent}State: {self._state.name}{indent}Model: {self._model}"
 
     @property
     @abstractmethod

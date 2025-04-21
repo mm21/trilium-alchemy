@@ -8,6 +8,7 @@ import datetime
 import json
 import logging
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Callable, Literal, cast
 
@@ -24,6 +25,8 @@ from trilium_client.models.search_response import SearchResponse
 from .cache import Cache
 
 if TYPE_CHECKING:
+    from .attribute.attribute import BaseAttribute
+    from .branch.branch import Branch
     from .entity.entity import BaseEntity
     from .entity.types import State
     from .note.note import Note
@@ -121,7 +124,6 @@ class Session:
         :param password: Trilium password, if no token provided
         :param default: Register this as the default session; in this case, `session` may be omitted from entity constructors
         """
-
         from .note.note import Note
 
         # ensure no existing default session, if requested to use as default
@@ -466,7 +468,7 @@ class Session:
     @property
     def dirty_set(self) -> set[BaseEntity]:
         """
-        All dirty {obj}`BaseEntity` objects.
+        Copy of all dirty {obj}`BaseEntity` objects.
         """
         return {e for e in self._cache.dirty_set}
 
@@ -496,6 +498,69 @@ class Session:
             index[entity._state].add(entity)
 
         return index
+
+    @property
+    def dirty_summary(self) -> str:
+        """
+        Get a summary of entities with pending changes, grouped by note and
+        sorted by title.
+        """
+        from .attribute.attribute import BaseAttribute
+        from .branch.branch import Branch
+        from .note.note import Note
+
+        # mapping of note's id() to its state
+        # - use id() since note_id may not be set
+        note_states: dict[int, NoteState] = {}
+
+        def add_note(note: Note):
+            "Add a note to the notes dict."
+            if not id(note) in note_states:
+                note_states[id(note)] = NoteState(note)
+
+        def get_note_state(note: Note) -> NoteState:
+            "Get the note state for this note, creating it if needed."
+            add_note(note)
+            note_state = note_states.get(id(note))
+            assert note_state
+            return note_state
+
+        # traverse all dirty entities
+        for entity in self.dirty_set:
+            if isinstance(entity, Note):
+                add_note(entity)
+            elif isinstance(entity, BaseAttribute):
+                note = entity.note
+                if not note:
+                    logging.warning(
+                        f"Attribute has no note: {entity.str_summary}"
+                    )
+                    continue
+
+                note_state = get_note_state(entity.note)
+                note_state.attributes.append(entity)
+            else:
+                assert isinstance(entity, Branch)
+
+                parent = entity.parent
+                if not parent:
+                    logging.warning(
+                        f"Branch has no parent note: {entity.str_summary}"
+                    )
+                    continue
+
+                note_state = get_note_state(parent)
+                note_state.child_branches.append(entity)
+
+        note_summaries: list[str] = []
+
+        # generate summaries of notes
+        for note_state in sorted(
+            note_states.values(), key=lambda n: n.note.title
+        ):
+            note_summaries.append(note_state.summary)
+
+        return "\n".join(note_summaries)
 
     @property
     def host(self) -> str:
@@ -569,6 +634,32 @@ class SessionContainer:
         self._session = session
 
 
+@dataclass
+class NoteState:
+    """
+    Encapsulates a note and its attributes/child branches with pending changes.
+    """
+
+    note: Note
+    attributes: list[BaseAttribute] = field(default_factory=list)
+    child_branches: list[Branch] = field(default_factory=list)
+
+    @property
+    def summary(self) -> str:
+        """
+        Get summary of this note's changes.
+        """
+        lines: list[str] = [self.note.str_summary]
+        indent = " " * 4
+
+        for attribute in sorted(self.attributes, key=lambda a: a.position):
+            lines.append(_indent_str(attribute.str_summary, indent))
+        for branch in sorted(self.child_branches, key=lambda b: b.position):
+            lines.append(_indent_str(branch.str_summary, indent))
+
+        return "\n".join(lines)
+
+
 def normalize_session(session: Session | None) -> Session:
     """
     Interface to get default Session if none provided.
@@ -583,3 +674,7 @@ def normalize_session(session: Session | None) -> Session:
     assert default_session is not None, "No session provided and no default set"
 
     return default_session
+
+
+def _indent_str(value: str, indent: str) -> str:
+    return "\n".join([f"{indent}{line}" for line in value.split("\n")])

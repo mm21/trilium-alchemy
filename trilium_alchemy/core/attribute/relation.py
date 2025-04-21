@@ -82,7 +82,7 @@ class Relation(BaseAttribute):
 
     @property
     def _str_short(self):
-        return f"Relation(~{self.name}, target={self.target}, attribute_id={self.attribute_id}, note={self.note}, position={self.position})"
+        return f"Relation('{self.name}', target={self.target_raw}, attribute_id='{self.attribute_id}')"
 
     @property
     def _str_safe(self):

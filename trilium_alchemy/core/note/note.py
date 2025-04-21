@@ -688,8 +688,9 @@ class Note(BaseEntity[NoteModel]):
         ```
         """
 
-        # commit changes to this note so state is retained
-        self.flush()
+        if self._is_dirty:
+            # commit changes to this note so state is retained
+            self.flush()
 
         return note_cls(note_id=self.note_id, session=self.session)
 
@@ -836,7 +837,7 @@ class Note(BaseEntity[NoteModel]):
 
     @property
     def _str_short(self):
-        return f"Note(title={self.title}, note_id={self.note_id})"
+        return f"Note(title='{self.title}', note_id='{self.note_id}')"
 
     @property
     def _str_safe(self):

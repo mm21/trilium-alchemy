@@ -129,7 +129,7 @@ class BaseEntityModel(ABC):
                 else:
                     backing = "?"
             else:
-                backing = self._backing[field]
+                backing = f"'{self._backing[field]}'"
 
             if self._working is None or not self.is_changed:
                 working = ""
@@ -145,7 +145,7 @@ class BaseEntityModel(ABC):
                     else:
                         arrow = "->"
 
-                    working = f"{arrow}{self._working[field]}"
+                    working = f"{arrow}'{self._working[field]}'"
 
             fields.append(f"{field}={backing}{working}")
 

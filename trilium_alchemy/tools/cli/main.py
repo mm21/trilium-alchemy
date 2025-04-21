@@ -31,14 +31,13 @@ from pathlib import Path
 import dotenv
 from click.exceptions import BadParameter, ClickException, MissingParameter
 from pydantic import ValidationError
-from rich.console import Console
 from rich.logging import RichHandler
 from typer import Context, Option
 
 from ...core import Session
 from ..config import InstanceConfig, get_config
 from . import db, tree
-from ._utils import MainTyper, lookup_param
+from ._utils import MainTyper, console, lookup_param
 
 
 @dataclass(kw_only=True)
@@ -95,7 +94,7 @@ logging.basicConfig(
     format="%(message)s",
     handlers=[
         RichHandler(
-            console=Console(),
+            console=console,
             rich_tracebacks=True,
             show_level=True,
             show_time=True,
