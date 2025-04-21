@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class TreeContext:
     root_context: RootContext
     session: Session
-    subtree_root: Note
+    target_note: Note
 
 
 app = MainTyper(
@@ -60,12 +60,12 @@ def main(
                 ctx=ctx,
                 param=lookup_param(ctx, "search"),
             )
-        subtree_root = results[0]
+        target_note = results[0]
     else:
-        subtree_root = Note(note_id=note_id, session=session)
+        target_note = Note(note_id=note_id, session=session)
 
     context = TreeContext(
-        root_context=root_context, session=session, subtree_root=subtree_root
+        root_context=root_context, session=session, target_note=target_note
     )
 
     # replace with new context which encapsulates root context
@@ -106,12 +106,12 @@ def export(
 
     tree_context = _get_tree_context(ctx)
 
-    tree_context.subtree_root.export_zip(
+    tree_context.target_note.export_zip(
         path, export_format=export_format, overwrite=overwrite
     )
 
     logging.info(
-        f"Exported note '{tree_context.subtree_root.title}' (note_id='{tree_context.subtree_root.note_id}') -> '{path}'"
+        f"Exported note '{tree_context.target_note.title}' (note_id='{tree_context.target_note.note_id}') -> '{path}'"
     )
 
 
@@ -130,7 +130,7 @@ def import_(
     tree_context = _get_tree_context(ctx)
 
     # import zip into note
-    tree_context.subtree_root.import_zip(path)
+    tree_context.target_note.import_zip(path)
 
 
 # TODO: sync-template command
@@ -173,7 +173,7 @@ def push(
         )
 
     if root_note_fqcn:
-        if not tree_context.subtree_root.note_id == "root":
+        if not tree_context.target_note.note_id == "root":
             raise ClickException(
                 "cannot specify a target note other than root when using root_note_fqcn from config file"
             )
@@ -197,7 +197,7 @@ def push(
         )
 
     # transmute note to have imported subclass, invoking its init
-    _ = tree_context.subtree_root.transmute(note_cls)
+    _ = tree_context.target_note.transmute(note_cls)
 
     dirty_set = tree_context.session.dirty_set
 
