@@ -186,7 +186,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         values.
         """
         indent = f"\n{' '*4}"
-        return f"{self.str_short}{indent}State: {self._state.name}{indent}Model: {self._model}"
+        return f"{self.str_short}{indent}{self._state}{indent}{self._model}"
 
     @property
     @abstractmethod

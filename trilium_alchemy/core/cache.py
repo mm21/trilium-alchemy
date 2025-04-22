@@ -75,7 +75,7 @@ class Cache:
             return
 
         logging.debug(
-            f"Flushing {len(dirty_set)} entities: {self._summary(dirty_set)}"
+            f"Flushing {len(dirty_set)} entities: {self._get_summary(dirty_set)}"
         )
 
         # create topological sorter
@@ -185,7 +185,7 @@ class Cache:
 
         return refresh_set
 
-    def _summary(self, dirty_set: set[BaseEntity]) -> str:
+    def _get_summary(self, dirty_set: set[BaseEntity] | None = None) -> str:
         """
         Return a brief summary of how many entities are in each state.
         """
@@ -194,6 +194,8 @@ class Cache:
         from .branch import Branch
         from .entity.types import State
         from .note import Note
+
+        entities = dirty_set if dirty_set is not None else self.dirty_set
 
         def state_map():
             return {
@@ -208,7 +210,7 @@ class Cache:
             Branch: state_map(),
         }
 
-        def get_cls(entity: BaseEntity):
+        def get_cls(entity: BaseEntity) -> type[BaseEntity]:
             classes = [
                 Note,
                 BaseAttribute,
@@ -219,7 +221,7 @@ class Cache:
                 if isinstance(entity, cls):
                     return cls
 
-        for entity in dirty_set:
+        for entity in entities:
             cls = get_cls(entity)
             assert cls
 

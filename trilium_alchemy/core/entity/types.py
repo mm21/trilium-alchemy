@@ -1,5 +1,7 @@
 from enum import Enum, auto
 
+from rich.markup import escape
+
 
 class State(Enum):
     """
@@ -21,3 +23,18 @@ class State(Enum):
 
     DELETE = auto()
     """Pending delete"""
+
+    def __format__(self, _: str):
+        """
+        Support for f-strings with color formatting.
+        """
+        color_map = {
+            State.CLEAN: "cyan",
+            State.CREATE: "bright_green",
+            State.UPDATE: "yellow",
+            State.DELETE: "red",
+        }
+
+        start = escape("[")
+        end = escape("]")
+        return f"{start}[{color_map[self]}]{self.name}[/{color_map[self]}]{end}"

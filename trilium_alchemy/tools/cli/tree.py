@@ -6,12 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import typer
 from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
-from ._utils import MainTyper, console, get_root_context, lookup_param
+from ._utils import MainTyper, commit_changes, get_root_context, lookup_param
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -147,10 +146,11 @@ def push(
         None,
         help="Fully-qualified class name of BaseDeclarativeNote subclass",
     ),
-    prompt: bool = Option(
+    yes: bool = Option(
         False,
-        "--prompt",
-        help="Show pending changes and prompt for confirmation before committing changes",
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before committing changes",
     ),
     dry_run: bool = Option(
         False,
@@ -199,33 +199,8 @@ def push(
     # transmute note to have imported subclass, invoking its init
     _ = tree_context.target_note.transmute(note_cls)
 
-    dirty_set = tree_context.session.dirty_set
-
-    if not dirty_set:
-        logging.info("No changes to commit")
-        return
-
-    # print change summary
-    dirty_summary = tree_context.session.dirty_summary
-    overall_summary = tree_context.session._cache._summary(dirty_set)
-    logging.info("Pending changes:")
-    console.print(
-        f"{dirty_summary}{'\n' if dirty_summary else ''}Summary: {overall_summary}"
-    )
-
-    if dry_run:
-        return
-
-    if prompt:
-        result = typer.confirm("Proceed with committing changes?")
-        if not result:
-            return
-
-    # commit changes
-    tree_context.session.flush()
-
-    # print summary
-    logging.info("Committed changes")
+    # print summary and commit changes
+    commit_changes(tree_context.session, yes=yes, dry_run=dry_run)
 
 
 def _get_tree_context(ctx: Context) -> TreeContext:

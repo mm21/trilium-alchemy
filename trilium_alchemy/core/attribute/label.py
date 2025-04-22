@@ -60,7 +60,7 @@ class Label(BaseAttribute):
 
     @property
     def _str_short(self) -> str:
-        return f"Label('{self.name}', value='{self.value}', attribute_id='{self.attribute_id}')"
+        return f"Label('{self.name}', attribute_id='{self.attribute_id}')"
 
     @property
     def _str_safe(self):
