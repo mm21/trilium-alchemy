@@ -25,11 +25,8 @@ class TreeContext:
 
 app = MainTyper(
     "tree",
-    help="Tree maintenance operations",
+    help="Operations on tree or subtree",
 )
-
-# TODO: for export/import: take note spec (note id or label uniquely
-# identifying a note)
 
 
 @app.callback()
@@ -136,8 +133,6 @@ def import_(
 # - verifies target note has #template or #workspaceTemplate
 
 
-# TODO: if target note has attrs/children but not #triliumAlchemyDeclarative,
-# warn and prompt to continue
 @app.command("push")
 def push(
     ctx: Context,
