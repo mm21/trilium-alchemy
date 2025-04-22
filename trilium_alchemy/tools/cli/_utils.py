@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import typer
-from click import MissingParameter, Parameter
+from click import Parameter
 from rich.console import Console
 from typer import Context, Typer
 
@@ -32,24 +32,11 @@ class MainTyper(Typer):
         )
 
 
-def get_root_context(
-    ctx: Context, *, require_data_dir: bool = False
-) -> RootContext:
+def get_root_context(ctx: Context) -> RootContext:
     from .main import RootContext
 
     root_context = ctx.obj
     assert isinstance(root_context, RootContext)
-
-    if require_data_dir:
-        data_dir = root_context.instance.data_dir
-
-        if not data_dir:
-            raise MissingParameter(
-                message="required for this command",
-                ctx=root_context.ctx,
-                param=lookup_param(root_context.ctx, "data_dir"),
-            )
-
     return root_context
 
 

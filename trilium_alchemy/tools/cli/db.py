@@ -1,13 +1,20 @@
+from __future__ import annotations
+
 import datetime
 import logging
 import os
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from click import BadParameter, ClickException
+from click import BadParameter, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ._utils import MainTyper, get_root_context, lookup_param
+
+if TYPE_CHECKING:
+    from .main import RootContext
 
 MAX_BACKUP_TIME_DELTA = 5
 """
@@ -16,10 +23,41 @@ by Trilium.
 """
 
 
+@dataclass(kw_only=True)
+class DbContext:
+    root_context: RootContext
+    data_dir: Path | None
+
+
 app = MainTyper(
     "db",
     help="Database maintenance operations",
 )
+
+
+@app.callback()
+def main(
+    ctx: Context,
+    data_dir: Path
+    | None = Option(
+        None,
+        "--data-dir",
+        help="Directory containing Trilium database, if not specified in config file",
+        envvar="TRILIUM_DATA_DIR",
+        exists=True,
+        file_okay=False,
+    ),
+):
+    root_context = get_root_context(ctx)
+
+    # instance-configured data dir takes precedence over parameter
+    db_context = DbContext(
+        root_context=root_context,
+        data_dir=root_context.instance.data_dir or data_dir,
+    )
+
+    # replace with new context
+    ctx.obj = db_context
 
 
 @app.command()
@@ -74,11 +112,18 @@ def backup(
     # determine whether data dir is required
     require_data_dir = bool(dest or verify)
 
-    root_context = get_root_context(ctx, require_data_dir=require_data_dir)
-    data_dir = root_context.instance.data_dir
+    db_context = _get_db_context(ctx)
+    data_dir = db_context.data_dir
+
+    if require_data_dir and not data_dir:
+        raise MissingParameter(
+            message="required when --dest or --verify is passed",
+            ctx=ctx,
+            param=lookup_param(ctx, "data_dir"),
+        )
 
     # create session
-    session = root_context.create_session()
+    session = db_context.root_context.create_session()
 
     # create backup
     try:
@@ -129,15 +174,26 @@ def restore(
     Restore database from file
     """
 
-    root_context = get_root_context(ctx, require_data_dir=True)
-    data_dir = root_context.instance.data_dir
+    db_context = _get_db_context(ctx)
+    data_dir = db_context.data_dir
+
+    if not data_dir:
+        raise MissingParameter(
+            message="required for this command",
+            ctx=ctx,
+            param=lookup_param(ctx, "data_dir"),
+        )
 
     assert src.is_file()
-    assert data_dir
-
     dest = data_dir / "document.db"
 
     # copy backup to database in trilium data dir
     shutil.copyfile(src, dest)
 
     logging.info(f"Restored backup: '{src}' -> '{dest}'")
+
+
+def _get_db_context(ctx: Context) -> DbContext:
+    db_context = ctx.obj
+    assert isinstance(db_context, DbContext)
+    return db_context

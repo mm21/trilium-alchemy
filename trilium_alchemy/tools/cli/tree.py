@@ -60,12 +60,12 @@ def main(
     else:
         target_note = Note(note_id=note_id, session=session)
 
-    context = TreeContext(
+    tree_context = TreeContext(
         root_context=root_context, session=session, target_note=target_note
     )
 
-    # replace with new context which encapsulates root context
-    ctx.obj = context
+    # replace with new context
+    ctx.obj = tree_context
 
 
 @app.command()
@@ -154,7 +154,7 @@ def push(
     ),
 ):
     """
-    Push declarative note to target note
+    Push declarative note subtree to target note
     """
     tree_context = _get_tree_context(ctx)
     root_note_fqcn = tree_context.root_context.instance.root_note_fqcn

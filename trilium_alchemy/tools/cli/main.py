@@ -133,15 +133,6 @@ def main(
         help="Trilium password",
         envvar="TRILIUM_PASSWORD",
     ),
-    data_dir: Path
-    | None = Option(
-        None,
-        "--data-dir",
-        help="Directory containing Trilium database",
-        envvar="TRILIUM_DATA_DIR",
-        exists=True,
-        file_okay=False,
-    ),
     instance_name: str
     | None = Option(
         None,
@@ -171,9 +162,7 @@ def main(
                 param_type="option",
             )
 
-        instance = InstanceConfig(
-            host=host, token=token, password=password, data_dir=data_dir
-        )
+        instance = InstanceConfig(host=host, token=token, password=password)
 
         root_context = RootContext(
             ctx=ctx,
