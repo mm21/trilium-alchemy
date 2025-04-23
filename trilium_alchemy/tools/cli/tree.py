@@ -198,6 +198,30 @@ def push(
     commit_changes(tree_context.session, yes=yes, dry_run=dry_run)
 
 
+"""
+TODO: command: fs-dump [dest: Path]
+- option: --propagate-deletes
+    - or --no-propagate-deletes, propagate by default
+- add Note.walk(): yield subtree recursively
+- add Note.fs_dump(dest: Path): dump meta.yaml, content.[txt/bin] to dest folder
+    - meta.yaml: title/type/mime, attributes, child branches, blob_id
+        - if existing: compare metadata, only update if different
+    - content.[txt/bin]: note content, extension based on Note.is_string
+- add Session.fs_dump_subtree(dest: Path, note: Note)
+    - recursively dumps flattened note subtree to dest folder
+    - use Note.walk(), Note.fs_dump() to recurse and dump notes
+    - note folder under dest: named as [note_id]
+- possible option: --build-hierarchy [dest: Path]
+    - recreates note hierarchy in destination using symlinks
+        - name folders using branch prefix + note titles, suffix w/note_id 
+            if duplicate prefix+title
+
+possible command: fs-load [src: Path]
+- could enable bypassing database migration in case of any issue
+    - but would not restore settings, only user-visible notes
+"""
+
+
 def _get_tree_context(ctx: Context) -> TreeContext:
     tree_context = ctx.obj
     assert isinstance(tree_context, TreeContext)
