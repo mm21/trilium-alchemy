@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Generator
 
 import dotenv
-from pytest import Config, Parser, fixture, raises
+from pytest import Config, FixtureRequest, Parser, fixture, raises
 from trilium_client import DefaultApi
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -79,17 +79,51 @@ def newline(request):
     print("\n" + "-" * len(request.node.nodeid))
 
 
+@fixture(autouse=True)
+def cleanup_tree(request: FixtureRequest):
+    """
+    Cleanup existing tree and ensure this testcase cleaned up its notes
+    afterward.
+    """
+    if request.config.getoption("--skip-teardown"):
+        yield
+        return
+
+    session = create_session()
+    root = get_root_note(session.api)
+    assert root.child_branch_ids is not None
+
+    # delete root children
+    for branch_id in root.child_branch_ids:
+        branch = get_branch(session.api, branch_id)
+        delete_branch(session.api, branch.branch_id)
+
+    # delete root attributes
+    for attribute in root.attributes:
+        assert attribute.attribute_id
+        delete_attribute(session.api, attribute.attribute_id)
+
+    # run test
+    yield
+
+    # ensure test cleaned up
+    root = get_root_note(session.api)
+    assert root.child_branch_ids is not None
+
+    assert len(root.child_branch_ids) == 0, "Test did not cleanup root notes"
+    assert len(root.attributes) == 0, "Test did not cleanup root attributes"
+
+
 @fixture(autouse=True, scope="session")
 def session_setup(request):
     """
     Ensure there are no non-system notes under root; these may be clobbered by
-    a test case.
+    a testcase.
     """
     if not request.config.getoption("--clobber"):
         session = create_session()
-        root = get_note(session.api, "root")
-
-        assert root is not None
+        root = get_root_note(session.api)
+        assert root.child_branch_ids is not None
 
         for branch_id in root.child_branch_ids:
             branch = get_branch(session.api, branch_id)
@@ -97,8 +131,13 @@ def session_setup(request):
             if not branch.note_id.startswith("_"):
                 # non-hidden child found: fail test session
                 sys.exit(
-                    "Root children found and may be deleted by a test case; pass --clobber to ignore. Do not run test cases on production Trilium instance."
+                    "Root note children found and may be deleted by a testcase; pass --clobber to ignore. Do not run test cases on production Trilium instance."
                 )
+
+        if root.attributes:
+            sys.exit(
+                "Root note attributes found and will be deleted by a testcase; pass --clobber to ignore. Do not run test cases on production Trilium instance."
+            )
 
     yield
 
@@ -423,12 +462,6 @@ def teardown_note(request, session: Session, note_id: str) -> None:
 
 
 def delete_note(api: DefaultApi, note_id: str):
-    # delete all attributes first
-    note = get_note(api, note_id)
-    for attr in note.attributes:
-        if attr.note_id == note_id:
-            delete_attribute(api, attr.attribute_id)
-
     api.delete_note_by_id(note_id)
 
 
@@ -486,13 +519,19 @@ def change_note(api: DefaultApi, note_id: str) -> None:
         change_branch(api, branch_id)
 
 
-def get_note(api: DefaultApi, note_id: str) -> EtapiNoteModel:
+def get_note(api: DefaultApi, note_id: str) -> EtapiNoteModel | None:
     try:
         model = api.get_note_by_id(note_id)
     except NotFoundException:
         model = None
 
     return model
+
+
+def get_root_note(api: DefaultApi) -> EtapiNoteModel:
+    root = get_note(api, "root")
+    assert root is not None
+    return root
 
 
 def note_exists(api: DefaultApi, note_id: str):
