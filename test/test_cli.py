@@ -1,5 +1,4 @@
 import datetime
-import logging
 import re
 import subprocess
 import time
@@ -23,47 +22,48 @@ def test_db(session: Session, tmp_path: Path):
     session.root += Note("test note", session=session)
     session.flush()
 
-    # backup with specific name
-    now = str(datetime.datetime.now()).replace(" ", "-")
+    # backup with specific name and verify
+    now = (
+        str(datetime.datetime.now())
+        .replace(" ", "_")
+        .replace(":", "-")
+        .replace(".", "-")
+    )
     now_path = BACKUP_PATH / f"backup-{now}.db"
     assert not now_path.is_file()
 
-    subprocess.check_call(DB_CMD + ["backup", "--name", now])
+    _run(DB_CMD + ["backup", "--name", now, "--verify"])
     assert now_path.is_file()
     now_path.unlink()
 
     # backup with auto-name
-    output = subprocess.check_output(
-        DB_CMD + ["backup", "--auto-name"], text=True
-    )
+    output = _run_output(DB_CMD + ["backup", "--auto-name"])
     match = re.search(r"Wrote backup: '(.*)'", output)
     assert match
     assert len(match.groups()) == 1
     backup_name = str(match.group(1))
     backup_path = BACKUP_PATH / backup_name
 
-    logging.info(f"Got --auto-name backup path: {backup_path}")
+    print(f"Got --auto-name backup path: {backup_path}")
     assert backup_path.is_file()
 
     # backup to folder w/file having unique name
-    subprocess.check_call(DB_CMD + ["backup", "--dest", tmp_path])
+    _run(DB_CMD + ["backup", "--dest", tmp_path])
 
     # backup to specific file
     backup_path = tmp_path / "test.db"
-    subprocess.check_call(DB_CMD + ["backup", "--dest", backup_path])
+    _run(DB_CMD + ["backup", "--dest", backup_path])
 
     # attempt to backup to same file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(DB_CMD + ["backup", "--dest", backup_path])
+            _run(DB_CMD + ["backup", "--dest", backup_path])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
 
     # backup to same file, overwriting it
-    subprocess.check_call(
-        DB_CMD + ["backup", "--dest", backup_path, "--overwrite"]
-    )
+    _run(DB_CMD + ["backup", "--dest", backup_path, "--overwrite"])
 
     # add another note to root
     session.root += Note("test note 2", session=session)
@@ -73,7 +73,13 @@ def test_db(session: Session, tmp_path: Path):
         assert DB_PATH.is_file()
         DB_PATH.unlink()
         assert not DB_PATH.exists()
-        subprocess.check_call(DB_CMD + ["restore", backup_path])
+
+        # test dry run
+        _run(DB_CMD + ["restore", "--dry-run", backup_path])
+        assert not DB_PATH.exists()
+
+        # actually restore
+        _run(DB_CMD + ["restore", "-y", backup_path])
         assert DB_PATH.is_file()
 
     _restart_trilium(restore)
@@ -86,9 +92,7 @@ def test_db(session: Session, tmp_path: Path):
     # attempt to restore a nonexistent file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(
-                DB_CMD + ["restore", tmp_path / "nonexistent.db"]
-            )
+            _run(DB_CMD + ["restore", tmp_path / "nonexistent.db"])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
@@ -111,26 +115,24 @@ def test_tree(session: Session, tmp_path: Path):
 
     # export root
     root_path = tmp_path / "root.zip"
-    subprocess.check_call(TREE_CMD + ["export", root_path])
+    _run(TREE_CMD + ["export", root_path])
     assert root_path.is_file()
 
     # export by label
     label_path = tmp_path / "label.zip"
-    subprocess.check_call(
-        TREE_CMD + ["--search", "#testLabel", "export", label_path]
-    )
+    _run(TREE_CMD + ["--search", "#testLabel", "export", label_path])
     assert label_path.is_file()
 
     # attempt to export to same file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(TREE_CMD + ["export", root_path])
+            _run(TREE_CMD + ["export", root_path])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
 
     # export to same file, overwriting it
-    subprocess.check_call(TREE_CMD + ["export", "--overwrite", root_path])
+    _run(TREE_CMD + ["export", "--overwrite", root_path])
 
     # delete note
     note.delete()
@@ -138,7 +140,7 @@ def test_tree(session: Session, tmp_path: Path):
     assert len(session.root.children) == 0
 
     # import root
-    subprocess.check_call(TREE_CMD + ["import", root_path])
+    _run(TREE_CMD + ["import", root_path])
 
     session.root.refresh()
     assert len(session.root.children) == 1
@@ -153,9 +155,7 @@ def test_tree(session: Session, tmp_path: Path):
     assert len(note.children) == 0
 
     # import by label
-    subprocess.check_call(
-        TREE_CMD + ["--search", "#testLabel", "import", label_path]
-    )
+    _run(TREE_CMD + ["--search", "#testLabel", "import", label_path])
 
     note.refresh()
     assert len(note.children) == 1
@@ -166,9 +166,7 @@ def test_tree(session: Session, tmp_path: Path):
     # attempt to import by label with multiple labels
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(
-                TREE_CMD + ["--search", "#testLabel", "import", label_path]
-            )
+            _run(TREE_CMD + ["--search", "#testLabel", "import", label_path])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
@@ -176,9 +174,7 @@ def test_tree(session: Session, tmp_path: Path):
     # attempt to import a nonexistent file
     with raises(subprocess.CalledProcessError):
         try:
-            subprocess.check_call(
-                TREE_CMD + ["import", tmp_path / "nonexistent.zip"]
-            )
+            _run(TREE_CMD + ["import", tmp_path / "nonexistent.zip"])
         except subprocess.CalledProcessError as e:
             assert e.returncode == 2
             raise
@@ -195,13 +191,23 @@ def _restart_trilium(callable: Callable[[], None]):
     """
 
     # shutdown trilium
-    subprocess.check_call(["docker-compose", "down"])
+    _run(["docker-compose", "down"])
 
     # invoke callable
     callable()
 
     # start trilium
-    subprocess.check_call(["docker-compose", "up", "-d"])
+    _run(["docker-compose", "up", "-d"])
 
     # wait for trilium to startup
     time.sleep(5)
+
+
+def _run(cmd: list[str]):
+    print(f"Running: {cmd}")
+    subprocess.check_call(cmd)
+
+
+def _run_output(cmd: list[str]) -> str:
+    print(f"Running: {cmd}")
+    return subprocess.check_output(cmd, text=True)

@@ -8,13 +8,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import typer
 from click import BadParameter, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ._utils import (
-    DATETIME_FILE_FORMAT,
-    DATETIME_FORMAT,
     MainTyper,
+    format_datetime,
+    format_file_datetime,
+    format_seconds,
     get_root_context,
     lookup_param,
 )
@@ -98,7 +100,7 @@ def backup(
     Backup database, optionally copying to destination path
     """
 
-    now = datetime.datetime.now().strftime(DATETIME_FILE_FORMAT)
+    now = format_file_datetime(datetime.datetime.now())
 
     # select name
     backup_name = now if auto_name else name
@@ -169,8 +171,7 @@ def backup(
                 f"Backup '{backup_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
             )
 
-        seconds = round(delta.seconds + delta.microseconds / 1e6, 3)
-        verify_str = f" at {mod_datetime.strftime(DATETIME_FORMAT)} ({seconds} seconds ago)"
+        verify_str = f" at {format_datetime(mod_datetime)} ({format_seconds(delta)} seconds ago)"
         backup_str = str(backup_path)
     else:
         verify_str = ""
@@ -192,6 +193,17 @@ def restore(
     src: Path = Argument(
         help="Source database file", dir_okay=False, exists=True
     ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Don't copy, only print source/destination paths",
+    ),
+    yes: bool = Option(
+        False,
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before overwriting document.db",
+    ),
 ):
     """
     Restore database from file
@@ -210,10 +222,21 @@ def restore(
     assert src.is_file()
     dest = data_dir / "document.db"
 
+    copy_str = f"'{src}' -> '{dest}'"
+
+    if dry_run:
+        logging.info(f"Would restore backup: {copy_str}")
+        return
+
+    if not yes:
+        logging.info(f"Will restore backup: {copy_str}")
+        if not typer.confirm("Proceed with copy?"):
+            return
+
     # copy backup to database in trilium data dir
     shutil.copyfile(src, dest)
 
-    logging.info(f"Restored backup: '{src}' -> '{dest}'")
+    logging.info(f"Restored backup: {copy_str}")
 
 
 def _get_db_context(ctx: Context) -> DbContext:

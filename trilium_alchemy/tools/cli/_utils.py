@@ -4,6 +4,7 @@ Utilities specific to CLI functionality.
 
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 from click import Parameter
@@ -13,8 +14,6 @@ from typer import Context, Typer
 if TYPE_CHECKING:
     from .main import RootContext
 
-DATETIME_FORMAT = r"%Y-%m-%d %H:%M:%S"
-DATETIME_FILE_FORMAT = r"%Y-%m-%d_%H-%M-%S"
 
 console = Console()
 
@@ -49,3 +48,27 @@ def lookup_param(ctx: Context, name: str) -> Parameter:
     param = next((p for p in ctx.command.params if p.name == name), None)
     assert param
     return param
+
+
+def format_datetime(dt: datetime.datetime) -> str:
+    return dt.strftime(r"%Y-%m-%d %H:%M:") + format_seconds(dt)
+
+
+def format_file_datetime(dt: datetime.datetime) -> str:
+    return dt.strftime(r"%Y-%m-%d_%H-%M-") + format_seconds(
+        dt, decimal_point="-"
+    )
+
+
+def format_seconds(
+    dt: datetime.datetime | datetime.timedelta, decimal_point: str = "."
+) -> str:
+    seconds, microseconds = (
+        (dt.second, dt.microsecond)
+        if isinstance(dt, datetime.datetime)
+        else (dt.seconds, dt.microseconds)
+    )
+
+    return str(round(seconds + microseconds / 1e6, 3)).replace(
+        ".", decimal_point
+    )

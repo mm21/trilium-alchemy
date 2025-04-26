@@ -15,8 +15,8 @@ def commit_changes(
     session: Session,
     console: Console,
     *,
-    yes: bool = False,
     dry_run: bool = False,
+    yes: bool = False,
 ):
     """
     Print a summary of changes and handle flags.

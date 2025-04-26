@@ -142,16 +142,16 @@ def push(
         None,
         help="Fully-qualified class name of BaseDeclarativeNote subclass",
     ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only show pending changes",
+    ),
     yes: bool = Option(
         False,
         "-y",
         "--yes",
         help="Don't ask for confirmation before committing changes",
-    ),
-    dry_run: bool = Option(
-        False,
-        "--dry-run",
-        help="Only show pending changes",
     ),
 ):
     """
@@ -198,7 +198,7 @@ def push(
     _ = tree_context.target_note.transmute(note_cls)
 
     # print summary and commit changes
-    commit_changes(tree_context.session, console, yes=yes, dry_run=dry_run)
+    commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
 
 
 """
