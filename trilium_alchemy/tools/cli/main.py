@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
+import typer
 from click.exceptions import BadParameter, ClickException, MissingParameter
 from pydantic import ValidationError
 from rich.logging import RichHandler
@@ -37,13 +38,14 @@ from typer import Context, Option
 from ...core import Session
 from ..config import InstanceConfig, get_config
 from . import db, tree
-from ._utils import MainTyper, console, lookup_param
+from ._utils import MainTyper, console, get_root_context, lookup_param
 
 
 @dataclass(kw_only=True)
 class RootContext:
     ctx: Context
     instance: InstanceConfig
+    from_file: bool
 
     @classmethod
     def from_config(
@@ -53,10 +55,18 @@ class RootContext:
         instance_name: str | None = None,
         config_file: Path | None = None,
     ) -> RootContext:
-        # ensure config file was passed and exists
+        # ensure config file was passed
         if not config_file:
             raise MissingParameter(
                 message="must be passed with --instance",
+                ctx=ctx,
+                param=lookup_param("config_file"),
+            )
+
+        # ensure config file exists
+        if not config_file.is_file():
+            raise BadParameter(
+                message=f"file does not exist: {config_file}",
                 ctx=ctx,
                 param=lookup_param("config_file"),
             )
@@ -80,7 +90,7 @@ class RootContext:
                 param=lookup_param("config_file"),
             )
 
-        return RootContext(ctx=ctx, instance=instance)
+        return RootContext(ctx=ctx, instance=instance, from_file=True)
 
     def create_session(self) -> Session:
         try:
@@ -168,6 +178,7 @@ def main(
         root_context = RootContext(
             ctx=ctx,
             instance=instance,
+            from_file=False,
         )
 
     ctx.obj = root_context
@@ -175,6 +186,24 @@ def main(
 
 app.add_typer(db.app)
 app.add_typer(tree.app)
+
+
+@app.command()
+def check(ctx: Context):
+    """
+    Check Trilium connection
+    """
+    root_context = get_root_context(ctx)
+
+    try:
+        session = root_context.create_session()
+    except Exception as e:
+        logging.error(f"Failed to connect to Trilium: {e}")
+        raise typer.Exit(code=1)
+    else:
+        logging.info(
+            f"Connected to Trilium, got version: {session.trilium_version}"
+        )
 
 
 def run():

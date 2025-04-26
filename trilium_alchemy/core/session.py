@@ -80,6 +80,11 @@ class Session:
     ETAPI client object.
     """
 
+    _trilium_version: str
+    """
+    Trilium version.
+    """
+
     _cache: Cache
     """
     Cache object.
@@ -168,6 +173,7 @@ class Session:
                 _request_timeout=(3.0, 3.0)
             )
             logging.debug(f"Got Trilium version: {app_info.app_version}")
+            self._trilium_version = app_info.app_version
         except ApiException:
             logging.error(
                 f"Failed to connect to Trilium server {host} using token={self._token}"
@@ -197,6 +203,10 @@ class Session:
         # logout if the user provided a password
         if self._logout_pending:
             self.logout()
+
+    @property
+    def trilium_version(self) -> str:
+        return self._trilium_version
 
     def flush(
         self,
