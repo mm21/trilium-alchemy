@@ -10,7 +10,8 @@ from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
-from ._utils import MainTyper, commit_changes, get_root_context, lookup_param
+from ..utils import commit_changes
+from ._utils import MainTyper, get_root_context, lookup_param
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -156,6 +157,8 @@ def push(
     """
     Push declarative note subtree to target note
     """
+    from .main import console
+
     tree_context = _get_tree_context(ctx)
     root_note_fqcn = tree_context.root_context.instance.root_note_fqcn
     fqcn = note_fqcn or root_note_fqcn
@@ -195,7 +198,7 @@ def push(
     _ = tree_context.target_note.transmute(note_cls)
 
     # print summary and commit changes
-    commit_changes(tree_context.session, yes=yes, dry_run=dry_run)
+    commit_changes(tree_context.session, console, yes=yes, dry_run=dry_run)
 
 
 """

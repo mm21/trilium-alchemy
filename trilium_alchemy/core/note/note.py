@@ -837,7 +837,8 @@ class Note(BaseEntity[NoteModel]):
 
     @property
     def _str_short(self):
-        return f"Note('{self.title}', note_id='{self.note_id}')"
+        title = self.title.replace("'", "\\'")
+        return f"Note('{title}', note_id='{self.note_id}')"
 
     @property
     def _str_safe(self):

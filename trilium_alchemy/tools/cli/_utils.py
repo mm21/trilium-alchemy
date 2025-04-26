@@ -1,14 +1,14 @@
+"""
+Utilities specific to CLI functionality.
+"""
+
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
-import typer
 from click import Parameter
 from rich.console import Console
 from typer import Context, Typer
-
-from ...core import Session
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -47,33 +47,3 @@ def lookup_param(ctx: Context, name: str) -> Parameter:
     param = next((p for p in ctx.command.params if p.name == name), None)
     assert param
     return param
-
-
-def commit_changes(session: Session, *, yes: bool, dry_run: bool):
-    """
-    Print a summary of changes and handle flags.
-    """
-    if not session._cache.dirty_set:
-        logging.info("No changes to commit")
-        return
-
-    dirty_summary = session.dirty_summary
-    overall_summary = session._cache._get_summary()
-
-    logging.info("Pending changes:")
-    console.print(
-        f"{dirty_summary}{'\n' if dirty_summary else ''}Summary: {overall_summary}"
-    )
-
-    if dry_run:
-        return
-
-    if not yes:
-        if not typer.confirm("Proceed with committing changes?"):
-            return
-
-    # commit changes
-    session.flush()
-
-    # print summary
-    logging.info("Committed changes")

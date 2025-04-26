@@ -51,7 +51,7 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
         """
         self._set_values(name, vals, inheritable)
 
-    def append_value(self, name: str, val: str, inheritable: bool = False):
+    def append_value(self, name: str, val: str = "", inheritable: bool = False):
         """
         Create and append new label.
         """

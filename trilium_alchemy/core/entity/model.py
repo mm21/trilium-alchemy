@@ -122,6 +122,13 @@ class BaseEntityModel(ABC):
     def __str__(self):
         fields = list()
 
+        def get_field_str(value: str | int | bool) -> str:
+            return (
+                f"'{value.replace(" '", "\\' ")}'"
+                if isinstance(value, str)
+                else str(value)
+            )
+
         for field in self.fields_update:
             if self._backing is None:
                 if self.entity._is_create:
@@ -129,7 +136,7 @@ class BaseEntityModel(ABC):
                 else:
                     backing = "?"
             else:
-                backing = f"'{self._backing[field]}'"
+                backing = f"{get_field_str(self._backing[field])}"
 
             if self._working is None or not self.is_changed:
                 working = ""
@@ -145,7 +152,7 @@ class BaseEntityModel(ABC):
                     else:
                         arrow = "->"
 
-                    working = f"{arrow}'{self._working[field]}'"
+                    working = f"{arrow}{get_field_str(self._working[field])}"
 
             fields.append(f"{field}={backing}{working}")
 
