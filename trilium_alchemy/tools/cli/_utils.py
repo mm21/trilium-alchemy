@@ -13,6 +13,8 @@ from typer import Context, Typer
 if TYPE_CHECKING:
     from .main import RootContext
 
+DATETIME_FORMAT = r"%Y-%m-%d %H:%M:%S"
+DATETIME_FILE_FORMAT = r"%Y-%m-%d_%H-%M-%S"
 
 console = Console()
 

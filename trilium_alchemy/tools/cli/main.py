@@ -115,6 +115,7 @@ app = MainTyper(
 def main(
     ctx: Context,
     host: str = Option(
+        ...,
         "--host",
         help="Trilium host, e.g. http://localhost:8080",
         envvar="TRILIUM_HOST",

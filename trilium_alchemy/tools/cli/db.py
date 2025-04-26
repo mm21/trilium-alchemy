@@ -11,12 +11,18 @@ from typing import TYPE_CHECKING
 from click import BadParameter, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
-from ._utils import MainTyper, get_root_context, lookup_param
+from ._utils import (
+    DATETIME_FILE_FORMAT,
+    DATETIME_FORMAT,
+    MainTyper,
+    get_root_context,
+    lookup_param,
+)
 
 if TYPE_CHECKING:
     from .main import RootContext
 
-MAX_BACKUP_TIME_DELTA = 5
+MAX_BACKUP_TIME_DELTA = 10
 """
 Maximum number of seconds within which the backup should have been created
 by Trilium.
@@ -73,12 +79,14 @@ def backup(
         help="Whether to use current datetime as name instead of --name option",
     ),
     verify: bool = Option(
-        False, "--verify", help="Whether to verify by checking backup's mtime"
+        False,
+        "--verify",
+        help=f"Whether to verify by ensuring backup's mtime is < {MAX_BACKUP_TIME_DELTA} seconds ago (requires db --data-dir)",
     ),
     dest: Path
     | None = Option(
         None,
-        help="Optional destination database file or folder to copy backup; if folder, filename will use current datetime",
+        help="Optional destination database file or folder to copy backup; if folder, filename will use current datetime (requires db --data-dir)",
     ),
     overwrite: bool = Option(
         False,
@@ -90,24 +98,31 @@ def backup(
     Backup database, optionally copying to destination path
     """
 
-    now = datetime.datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
+    now = datetime.datetime.now().strftime(DATETIME_FILE_FORMAT)
 
     # select name
     backup_name = now if auto_name else name
 
     # normalize destination, if any
     if dest:
-        dest_path = dest / f"backup-{now}.db" if dest.is_dir() else dest
+        dest_file = dest / f"backup-{now}.db" if dest.is_dir() else dest
+
+        if not dest_file.parent.is_dir():
+            raise BadParameter(
+                f"destination '{dest}' parent folder does not exist",
+                ctx=ctx,
+                param=lookup_param(ctx, "dest"),
+            )
 
         # ensure destination path is allowed to be overwritten if it exists
-        if dest_path.exists() and not overwrite:
+        if dest_file.exists() and not overwrite:
             raise BadParameter(
-                f"destination '{dest_path}' exists and --overwrite was not passed",
+                f"destination '{dest_file}' exists and --overwrite was not passed",
                 ctx=ctx,
                 param=lookup_param(ctx, "dest"),
             )
     else:
-        dest_path = None
+        dest_file = None
 
     # determine whether data dir is required
     require_data_dir = bool(dest or verify)
@@ -119,7 +134,8 @@ def backup(
         raise MissingParameter(
             message="required when --dest or --verify is passed",
             ctx=ctx,
-            param=lookup_param(ctx, "data_dir"),
+            param_hint="db --data-dir",
+            param_type="option",
         )
 
     # create session
@@ -146,21 +162,28 @@ def backup(
         mod_time = os.path.getmtime(backup_path)
         mod_datetime = datetime.datetime.fromtimestamp(mod_time)
 
-        delta = (datetime.datetime.now() - mod_datetime).seconds
+        delta = datetime.datetime.now() - mod_datetime
 
-        if delta > MAX_BACKUP_TIME_DELTA:
+        if delta.seconds > MAX_BACKUP_TIME_DELTA:
             raise ClickException(
                 f"Backup '{backup_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
             )
 
-    logging.info(f"Wrote backup: '{backup_filename}'")
+        seconds = round(delta.seconds + delta.microseconds / 1e6, 3)
+        verify_str = f" at {mod_datetime.strftime(DATETIME_FORMAT)} ({seconds} seconds ago)"
+        backup_str = str(backup_path)
+    else:
+        verify_str = ""
+        backup_str = backup_filename
 
-    if dest_path:
+    logging.info(f"Wrote backup: '{backup_str}'{verify_str}")
+
+    if dest_file:
         assert backup_path
-        # copy backup to destination
 
-        shutil.copyfile(backup_path, dest_path)
-        logging.info(f"Copied backup: '{backup_path}' -> '{dest_path}'")
+        # copy backup to destination
+        shutil.copyfile(backup_path, dest_file)
+        logging.info(f"Copied backup: '{backup_path}' -> '{dest_file}'")
 
 
 @app.command()

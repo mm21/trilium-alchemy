@@ -1,3 +1,6 @@
+import datetime
+import logging
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -7,7 +10,7 @@ from pytest import raises
 
 from trilium_alchemy import *
 
-from .conftest import DATA_DIR, HOST, TOKEN
+from .conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN
 
 MAIN_CMD = ["trilium-alchemy"]
 DB_CMD = MAIN_CMD + ["db"]
@@ -20,7 +23,29 @@ def test_db(session: Session, tmp_path: Path):
     session.root += Note("test note", session=session)
     session.flush()
 
-    # backup to folder w/unique name
+    # backup with specific name
+    now = str(datetime.datetime.now()).replace(" ", "-")
+    now_path = BACKUP_PATH / f"backup-{now}.db"
+    assert not now_path.is_file()
+
+    subprocess.check_call(DB_CMD + ["backup", "--name", now])
+    assert now_path.is_file()
+    now_path.unlink()
+
+    # backup with auto-name
+    output = subprocess.check_output(
+        DB_CMD + ["backup", "--auto-name"], text=True
+    )
+    match = re.search(r"Wrote backup: '(.*)'", output)
+    assert match
+    assert len(match.groups()) == 1
+    backup_name = str(match.group(1))
+    backup_path = BACKUP_PATH / backup_name
+
+    logging.info(f"Got --auto-name backup path: {backup_path}")
+    assert backup_path.is_file()
+
+    # backup to folder w/file having unique name
     subprocess.check_call(DB_CMD + ["backup", "--dest", tmp_path])
 
     # backup to specific file
@@ -44,14 +69,12 @@ def test_db(session: Session, tmp_path: Path):
     session.root += Note("test note 2", session=session)
     session.flush()
 
-    db_path = DATA_DIR / "document.db"
-
     def restore():
-        assert db_path.is_file()
-        db_path.unlink()
-        assert not db_path.exists()
+        assert DB_PATH.is_file()
+        DB_PATH.unlink()
+        assert not DB_PATH.exists()
         subprocess.check_call(DB_CMD + ["restore", backup_path])
-        assert db_path.is_file()
+        assert DB_PATH.is_file()
 
     _restart_trilium(restore)
 

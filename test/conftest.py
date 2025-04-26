@@ -36,7 +36,10 @@ assert "TRILIUM_DATA_DIR" in os.environ  # to confirm backup was created
 HOST = os.environ["TRILIUM_HOST"]
 TOKEN = os.environ["TRILIUM_TOKEN"]
 PASSWORD = os.environ["TRILIUM_PASSWORD"]
+
 DATA_DIR = Path(os.environ["TRILIUM_DATA_DIR"])
+DB_PATH = DATA_DIR / "document.db"
+BACKUP_PATH = DATA_DIR / "backup"
 
 MARKERS = [
     "auto_flush",
