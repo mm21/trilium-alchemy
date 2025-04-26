@@ -4,15 +4,30 @@ Verify the example under examples/event-tracker.
 import os
 import sys
 
-from pytest import mark
+import pexpect
 
 from trilium_alchemy import *
 
 
-@mark.default_session
-def test_event_tracker(session: Session, note: Note):
-    sys.path.append(f"{os.getcwd()}/examples/event-tracker")
-    from event_tracker.setup import setup_declarative, setup_notes
+def test_event_tracker(note: Note):
+    # add #eventTrackerRoot
+    note.labels.append_value("eventTrackerRoot")
+    note.flush()
 
-    setup_declarative(session, note)
-    setup_notes(session)
+    sys.path.append(f"{os.getcwd()}/examples/event-tracker")
+
+    # use pexpect to handle interactive prompts
+    child = pexpect.spawn("python", ["-m", "event_tracker"])
+
+    # confirm declarative notes
+    child.expect("Proceed with committing changes?")
+    child.sendline("y")
+
+    # confirm example notes
+    child.expect("Proceed with committing changes?")
+    child.sendline("y")
+
+    _ = child.read()
+    child.close()
+
+    assert child.exitstatus == 0

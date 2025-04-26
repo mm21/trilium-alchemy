@@ -48,6 +48,7 @@ MARKERS = [
     "note_type",
     "note_mime",
     "skip_teardown",
+    "skip_cleanup",
     "setup",
     "temp_file",
 ]
@@ -85,18 +86,17 @@ def cleanup_tree(request: FixtureRequest):
     Cleanup existing tree and ensure this testcase cleaned up its notes
     afterward.
     """
-    if request.config.getoption("--skip-teardown"):
+    if request.config.getoption(
+        "--skip-teardown"
+    ) or request.node.get_closest_marker("skip_cleanup"):
         yield
         return
 
     session = create_session()
     root = get_root_note(session.api)
-    assert root.child_branch_ids is not None
 
     # delete root children
-    for branch_id in root.child_branch_ids:
-        branch = get_branch(session.api, branch_id)
-        delete_branch(session.api, branch.branch_id)
+    delete_children(session.api, root)
 
     # delete root attributes
     for attribute in root.attributes:
@@ -108,9 +108,11 @@ def cleanup_tree(request: FixtureRequest):
 
     # ensure test cleaned up
     root = get_root_note(session.api)
-    assert root.child_branch_ids is not None
+    assert root.attributes is not None
 
-    assert len(root.child_branch_ids) == 0, "Test did not cleanup root notes"
+    assert (
+        len(get_branches(session.api, root)) == 0
+    ), "Test did not cleanup root notes"
     assert len(root.attributes) == 0, "Test did not cleanup root attributes"
 
 
@@ -125,14 +127,11 @@ def session_setup(request):
         root = get_root_note(session.api)
         assert root.child_branch_ids is not None
 
-        for branch_id in root.child_branch_ids:
-            branch = get_branch(session.api, branch_id)
-
-            if not branch.note_id.startswith("_"):
-                # non-hidden child found: fail test session
-                sys.exit(
-                    "Root note children found and may be deleted by a testcase; pass --clobber to ignore. Do not run test cases on production Trilium instance."
-                )
+        if len(get_branches(session.api, root)):
+            # non-hidden child found: fail test session
+            sys.exit(
+                "Root note children found and may be deleted by a testcase; pass --clobber to ignore. Do not run test cases on production Trilium instance."
+            )
 
         if root.attributes:
             sys.exit(
@@ -454,7 +453,9 @@ def create_note(api: DefaultApi, **kwargs) -> str:
     return note_id
 
 
-def teardown_note(request, session: Session, note_id: str) -> None:
+def teardown_note(
+    request: FixtureRequest, session: Session, note_id: str
+) -> None:
     if not request.node.get_closest_marker(
         "skip_teardown"
     ) and not request.config.getoption("--skip-teardown"):
@@ -463,6 +464,11 @@ def teardown_note(request, session: Session, note_id: str) -> None:
 
 def delete_note(api: DefaultApi, note_id: str):
     api.delete_note_by_id(note_id)
+
+
+def delete_children(api: DefaultApi, note: EtapiNoteModel):
+    for branch in get_branches(api, note):
+        delete_branch(api, branch)
 
 
 def clean_note(api: DefaultApi, note_id: str) -> None:
@@ -482,12 +488,7 @@ def clean_note(api: DefaultApi, note_id: str) -> None:
         delete_attribute(api, attr.attribute_id)
 
     # clean child branches
-    for branch_id in note.child_branch_ids:
-        branch = get_branch(api, branch_id)
-
-        # don't delete system branches
-        if not branch.note_id.startswith("_"):
-            delete_branch(api, branch_id)
+    delete_children(api, note)
 
     # clean content
     api.put_note_content_by_id(note_id, "")
@@ -642,13 +643,11 @@ def create_branch(api: DefaultApi, **kwargs) -> EtapiBranchModel:
     model_new = api.post_branch(model)
     assert model_new is not None
 
-    # print(f'Created branch: {model_new}')
-
     return model_new
 
 
-def delete_branch(api: DefaultApi, branch_id: str) -> None:
-    api.delete_branch_by_id(branch_id)
+def delete_branch(api: DefaultApi, branch: EtapiBranchModel) -> None:
+    api.delete_branch_by_id(branch.branch_id)
 
 
 def get_branch(api: DefaultApi, branch_id: str) -> EtapiBranchModel | None:
@@ -658,6 +657,26 @@ def get_branch(api: DefaultApi, branch_id: str) -> EtapiBranchModel | None:
         model = None
 
     return model
+
+
+def get_branches(
+    api: DefaultApi, note: EtapiNoteModel
+) -> list[EtapiBranchModel]:
+    """
+    Get branch models which are not hidden.
+    """
+    branches: list[EtapiBranchModel] = []
+
+    assert note.child_branch_ids is not None
+    for branch_id in note.child_branch_ids:
+        branch = get_branch(api, branch_id)
+        assert branch
+        assert branch.note_id
+
+        if not branch.note_id.startswith("_"):
+            branches.append(branch)
+
+    return branches
 
 
 def branch_exists(api: DefaultApi, branch_id: str) -> bool:

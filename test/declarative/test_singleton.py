@@ -302,9 +302,8 @@ def check_note_state(note: Note, state: State):
         check_note_state(branch.child, state)
 
 
-# TODO: add pre-existing attributes/branches of root, ensure deleted
-# - use note fixture, set note id in marker?
 @mark.dependency()
+@mark.skip_cleanup
 @mark.setup("testSingletonRoot", exist=False)
 def test_create(session: Session, note_setup):
     """
@@ -316,6 +315,7 @@ def test_create(session: Session, note_setup):
 
 
 @mark.dependency(depends=["test_create"])
+@mark.skip_cleanup
 def test_clean(session: Session):
     """
     Make sure singleton is clean after being previously created.
@@ -326,6 +326,7 @@ def test_clean(session: Session):
 
 
 @mark.dependency(depends=["test_clean"])
+@mark.skip_cleanup
 @mark.setup("testSingletonRoot", change=True)
 def test_update(session: Session, note_setup):
     """
@@ -337,6 +338,7 @@ def test_update(session: Session, note_setup):
 
 
 @mark.dependency(depends=["test_clean"])
+@mark.skip_cleanup
 def test_instance(request, session: Session):
     """
     Create a new note which has TemplateTest as a template.
