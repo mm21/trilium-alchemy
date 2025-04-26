@@ -58,6 +58,17 @@ def main(
 ):
     root_context = get_root_context(ctx)
 
+    if (
+        data_dir
+        and "TRILIUM_DATA_DIR" not in os.environ
+        and root_context.from_file
+    ):
+        raise BadParameter(
+            message="cannot be passed with config file",
+            ctx=ctx,
+            param=lookup_param("data_dir"),
+        )
+
     # instance-configured data dir takes precedence over parameter
     db_context = DbContext(
         root_context=root_context,
