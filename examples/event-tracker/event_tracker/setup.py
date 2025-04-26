@@ -8,8 +8,13 @@ it with example notes imperatively.
 """
 
 import logging
+import subprocess
+import sys
 
-from trilium_alchemy import Label, Note, Relation, Session
+from rich.console import Console
+
+from trilium_alchemy import BaseDeclarativeNote, Label, Note, Relation, Session
+from trilium_alchemy.tools.utils import commit_changes
 
 from .events import (
     BattleInstance,
@@ -21,18 +26,49 @@ from .events import (
 )
 from .people import Group, Groups, Person
 from .places import City, Land, Lands, PointOfInterest, Residence
-from .root import Root
+
+LEAF_NOTES: list[type[BaseDeclarativeNote]] = [
+    Groups,
+    Lands,
+    Birthdays,
+    Meetings,
+    Battles,
+]
+"""
+Leaf note classes. These hold user-maintained notes and are singletons -- they
+resolve to the same `Note` object when instantiated.
+"""
 
 
-def setup_declarative(session: Session, dest_note: Note):
-    dest_note.transmute(Root)
+def setup_declarative():
+    logging.info("Syncing declarative tree")
 
-    logging.info("Syncing declarative notes")
-    session.flush()
-    logging.info("Synced declarative notes")
+    # invoke CLI to push declarative root note
+    try:
+        subprocess.check_call(
+            [
+                "trilium-alchemy",
+                "tree",
+                "--search",
+                "#eventTrackerRoot",
+                "push",
+                "event_tracker.root.Root",
+            ]
+        )
+    except subprocess.CalledProcessError:
+        sys.exit("CLI invocation failed; see error log for details")
+
+    # ensure all leaf notes got created -- the user may have declined to push
+    # changes
+    for note_cls in LEAF_NOTES:
+        note = note_cls()
+        if note._is_create:
+            sys.exit(
+                "Exiting as leaf notes were not created; user likely declined prompt"
+            )
 
 
-def setup_notes(session: Session):
+def setup_notes(session: Session, console: Console):
     # get leaf notes under which to populate test data
     # since these are defined with singleton = True, we'll get the same
     # Note instance every time they're instantiated
@@ -198,5 +234,4 @@ def setup_notes(session: Session):
     battle_helms_deep["date"] = "3019-03-15"
 
     logging.info("Syncing example notes")
-    session.flush()
-    logging.info("Synced example notes")
+    commit_changes(session, console)

@@ -26,5 +26,5 @@ class System(BaseRootSystemNote):
     Events,
 )
 class Root(BaseRootNote):
-    title = "EventTracker"
+    title_ = "EventTracker"
     system = System

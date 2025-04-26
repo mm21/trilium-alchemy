@@ -3,20 +3,35 @@ Provides a runner to install example declarative note hierarchy and populate
 it with example notes imperatively.
 """
 
-import argparse
 import logging
 import os
 import sys
 
 import dotenv
+from rich.console import Console
+from rich.logging import RichHandler
 
-from trilium_alchemy import Note, Session
+from trilium_alchemy import Session
 
 from .setup import setup_declarative, setup_notes
 
-logging.basicConfig(level=logging.INFO)
-
 dotenv.load_dotenv()
+
+console = Console()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[
+        RichHandler(
+            console=console,
+            rich_tracebacks=True,
+            show_level=True,
+            show_time=True,
+            show_path=False,
+        )
+    ],
+)
 
 # ensure we have expected environment variables
 if not "TRILIUM_HOST" in os.environ:
@@ -32,19 +47,6 @@ if not "TRILIUM_TOKEN" in os.environ and not "TRILIUM_PASSWORD" in os.environ:
 host = os.environ.get("TRILIUM_HOST")
 token = os.environ.get("TRILIUM_TOKEN", None)
 password = os.environ.get("TRILIUM_PASSWORD", None)
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--clobber",
-    action="store_true",
-    default=False,
-    help="Delete any existing attributes/children of destination note",
-)
-parser.add_argument(
-    "--root", action="store_true", default=False, help="Install to root note"
-)
-
-args = parser.parse_args()
 
 session = Session(host, token=token, password=password)
 
@@ -62,41 +64,19 @@ def exit(msg: str):
     sys.exit(msg)
 
 
-if args.root:
-    # install to root note
-    root = Note(note_id="root")
-else:
-    # lookup destination root
-    result = session.search("#eventTrackerRoot")
-
-    if len(result) != 1:
-        exit(
-            f"Must define exactly one destination note with label #eventTrackerRoot, got {len(result)} (or pass --root to install to root note)"
-        )
-
-    root = result[0]
-
-# bail out if existing child notes and user didn't pass --clobber
-if len(root.children) != 0 and args.clobber is False:
-    exit(
-        f"Found existing children of destination note {root.note_id}; pass --clobber to delete"
-    )
-
 # ------------------------------------------------------------------------------
 # Use declarative approach to generate base note hierarchy. The user can then
 # maintain their data under notes designated as "leaf" notes, while leveraging
 # a reusable and shareable base hierarchy.
 # ------------------------------------------------------------------------------
-
-setup_declarative(session, root)
+setup_declarative()
 
 # ------------------------------------------------------------------------------
 # Use imperative approach to generate example data. This mimics notes manually
 # added by the user in the UI and also provides an example of how to work with
 # notes imperatively.
 # ------------------------------------------------------------------------------
-
-setup_notes(session)
+setup_notes(session, console)
 
 # no-op if user provided token
 session.logout()
