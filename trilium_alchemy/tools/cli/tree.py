@@ -165,12 +165,12 @@ def push(
 
     if not fqcn:
         raise MissingParameter(
-            "must be passed when not set in config file",
+            "must be passed when root_note_fqcn not set in config file",
             ctx=ctx,
-            param=lookup_param("note_fqcn"),
+            param=lookup_param(ctx, "note_fqcn"),
         )
 
-    if root_note_fqcn:
+    if not note_fqcn and root_note_fqcn:
         if not tree_context.target_note.note_id == "root":
             raise ClickException(
                 "cannot specify a target note other than root when using root_note_fqcn from config file"

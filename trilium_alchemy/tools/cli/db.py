@@ -66,7 +66,7 @@ def main(
         raise BadParameter(
             message="cannot be passed with config file",
             ctx=ctx,
-            param=lookup_param("data_dir"),
+            param=lookup_param(ctx, "data_dir"),
         )
 
     # instance-configured data dir takes precedence over parameter
@@ -179,7 +179,7 @@ def backup(
 
         if delta.seconds > MAX_BACKUP_TIME_DELTA:
             raise ClickException(
-                f"Backup '{backup_path}' was written {delta} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
+                f"Backup '{backup_path}' was written {delta.seconds} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
             )
 
         verify_str = f" at {format_datetime(mod_datetime)} ({format_seconds(delta)} seconds ago)"

@@ -19,15 +19,19 @@ The tool can be configured via any of the following, in order of precedence:
 instances:
   my-notes:
     # connection info, either "token" or "password" required
-    host: http://localhost:8080
-    token: MY_TOKEN
+    host: "http://localhost:8080"
+    token: "MY_TOKEN"
+    password: "MY_PASSWORD"
 
-    # fully-qualified class name of root note for declarative push operation
+    # optional fully-qualified class name of root note for tree push
     root_note_fqcn: my_notes.root.RootNote
+
+    # optional data dir which overrides root_data_dir
+    data_dir: ./trilium_data/my-notes
 
 # top-level data dir with subfolders per instance
 root_data_dir:
-  ./trilium/data
+  ./trilium_data
 ```
 
 ## Usage

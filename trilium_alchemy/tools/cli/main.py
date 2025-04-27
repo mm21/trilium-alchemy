@@ -60,7 +60,7 @@ class RootContext:
             raise MissingParameter(
                 message="must be passed with --instance",
                 ctx=ctx,
-                param=lookup_param("config_file"),
+                param=lookup_param(ctx, "config_file"),
             )
 
         # ensure config file exists
@@ -68,7 +68,7 @@ class RootContext:
             raise BadParameter(
                 message=f"file does not exist: {config_file}",
                 ctx=ctx,
-                param=lookup_param("config_file"),
+                param=lookup_param(ctx, "config_file"),
             )
 
         # get config from file
@@ -78,7 +78,7 @@ class RootContext:
             raise BadParameter(
                 f"failed to load config file: {e}",
                 ctx=ctx,
-                param=lookup_param("config_file"),
+                param=lookup_param(ctx, "config_file"),
             )
 
         # get instance from config
@@ -87,7 +87,7 @@ class RootContext:
             raise BadParameter(
                 f"instance '{instance_name}' not found in '{config_file}'",
                 ctx=ctx,
-                param=lookup_param("config_file"),
+                param=lookup_param(ctx, "instance_name"),
             )
 
         return RootContext(ctx=ctx, instance=instance, from_file=True)
@@ -162,7 +162,7 @@ def main(
 ):
     if instance_name:
         root_context = RootContext.from_config(
-            ctx, instance_name=instance_name, config_file=config_file
+            ctx=ctx, instance_name=instance_name, config_file=config_file
         )
     else:
         if not (token or password):
