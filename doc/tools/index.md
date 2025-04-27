@@ -24,14 +24,14 @@ instances:
     password: "MY_PASSWORD"
 
     # optional fully-qualified class name of root note for tree push
-    root_note_fqcn: my_notes.root.RootNote
+    root_note_fqcn: "my_notes.root.RootNote"
 
     # optional data dir which overrides root_data_dir
-    data_dir: ./trilium_data/my-notes
+    data_dir: "./trilium_data/my-notes"
 
 # top-level data dir with subfolders per instance
 root_data_dir:
-  ./trilium_data
+  "./trilium_data"
 ```
 
 ## Usage

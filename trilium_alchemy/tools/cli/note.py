@@ -9,10 +9,11 @@ Options to select note(s): (exactly one required)
 
 Commands:
 - sync-template: syncs previously selected notes with this template,
-    all notes w/this template if --all
+    all notes w/this template if --all; verifies template note has #template
+    or #workspaceTemplate
     --template-note-id
     --template-search
     --all-templates
-    -y/--yes
     --dry-run
+    -y/--yes
 """

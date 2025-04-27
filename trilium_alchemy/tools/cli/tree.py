@@ -72,7 +72,10 @@ def main(
 @app.command()
 def export(
     ctx: Context,
-    path: Path = Argument(help="Destination .zip file"),
+    dest: Path = Argument(
+        help="Destination .zip file",
+        dir_okay=False,
+    ),
     export_format: str = Option(
         "html",
         "--format",
@@ -81,22 +84,24 @@ def export(
         click_type=Choice(["html", "markdown"]),
     ),
     overwrite: bool = Option(
-        False, help="Whether to overwrite destination file if it already exists"
+        False,
+        "--overwrite",
+        help="Whether to overwrite destination file if it already exists",
     ),
 ):
     """
     Export subtree to .zip file
     """
-    if not path.parent.exists():
+    if not dest.parent.exists():
         raise BadParameter(
-            f"Parent folder of '{path}' does not exist",
+            f"Parent folder of '{dest}' does not exist",
             ctx=ctx,
             param=lookup_param(ctx, "path"),
         )
 
-    if path.exists() and not overwrite:
+    if dest.exists() and not overwrite:
         raise MissingParameter(
-            f"Destination '{path}' exists and --overwrite was not passed",
+            f"Destination '{dest}' exists and --overwrite was not passed",
             ctx=ctx,
             param=lookup_param(ctx, "overwrite"),
         )
@@ -104,18 +109,18 @@ def export(
     tree_context = _get_tree_context(ctx)
 
     tree_context.target_note.export_zip(
-        path, export_format=export_format, overwrite=overwrite
+        dest, export_format=export_format, overwrite=overwrite
     )
 
     logging.info(
-        f"Exported note '{tree_context.target_note.title}' (note_id='{tree_context.target_note.note_id}') -> '{path}'"
+        f"Exported note '{tree_context.target_note.title}' (note_id='{tree_context.target_note.note_id}') -> '{dest}'"
     )
 
 
 @app.command("import")
 def import_(
     ctx: Context,
-    path: Path = Argument(
+    src: Path = Argument(
         help="Source .zip file",
         dir_okay=False,
         exists=True,
@@ -127,11 +132,7 @@ def import_(
     tree_context = _get_tree_context(ctx)
 
     # import zip into note
-    tree_context.target_note.import_zip(path)
-
-
-# TODO: sync-template command
-# - verifies target note has #template or #workspaceTemplate
+    tree_context.target_note.import_zip(src)
 
 
 @app.command("push")
