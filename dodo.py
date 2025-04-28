@@ -2,11 +2,14 @@
 Doit file to wrap development workflow commands.
 """
 
+import os
 import shutil
 from pathlib import Path
 
+from doit import task_params
 from doit.task import Task
 from doit.tools import create_folder
+from dotenv import load_dotenv
 
 PACKAGE = "trilium_alchemy"
 
@@ -109,7 +112,18 @@ def task_badges() -> Task:
     )
 
 
-def task_doc() -> Task:
+@task_params(
+    [
+        {
+            "name": "copy",
+            "long": "copy",
+            "type": bool,
+            "default": False,
+            "help": "Copy to output folder after build",
+        }
+    ]
+)
+def task_doc(copy: bool) -> Task:
     """
     Generate documentation.
     """
@@ -121,11 +135,25 @@ def task_doc() -> Task:
         str(DOC_HTML_PATH),
     ]
 
+    def _do_copy():
+        if not copy:
+            return
+
+        load_dotenv()
+
+        dest = os.environ.get("TRILIUM_ALCHEMY_DOCS_DIR")
+        assert dest, f"Environment variable TRILIUM_ALCHEMY_DOCS_DIR not set"
+
+        shutil.copytree(DOC_HTML_PATH, dest, dirs_exist_ok=True)
+
+        print(f"\nCopied: {DOC_HTML_PATH} -> {dest}")
+
     return Task(
         "doc",
         actions=[
             (create_folder, [DOC_HTML_PATH]),
             " ".join(args),
+            (_do_copy,),
         ],
         targets=[
             f"{DOC_HTML_PATH}/index.html",
