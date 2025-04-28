@@ -202,7 +202,7 @@ def check(ctx: Context):
         raise typer.Exit(code=1)
     else:
         logging.info(
-            f"Connected to Trilium, got version: {session.trilium_version}"
+            f"Connected to Trilium host '{session.host}', version {session.trilium_version}"
         )
 
 
