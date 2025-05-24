@@ -23,84 +23,6 @@ class TreeContext:
     session: Session
     target_note: Note
 
-def format_note_for_tree(note, is_last: List[bool] = None, is_current: bool = False) -> str:
-    """Format a note's name for display in the hierarchy."""
-    if is_last is None:
-        is_last = []
-    
-    # Build the tree prefix
-    prefix = ""
-    for last in is_last[:-1]:
-        prefix += "    " if last else "│   "
-    if is_last:
-        prefix += "└── " if is_last[-1] else "├── "
-    
-    # Get note properties with defaults
-    title = getattr(note, 'title', 'ROOT')
-    note_id = getattr(note, 'note_id', 'root')
-    
-    # Format the note line
-    note_line = f"{title} ({note_id})"
-    
-    # Highlight current note and handle root note
-    if note_id == 'root' or getattr(note, 'is_root', False):
-        return f"{prefix}🌳 {note_line}"
-    if is_current:
-        return f"{prefix}👉 {note_line} 👈"
-    return f"{prefix}{note_line}"
-
-def get_note_hierarchy(note) -> List[tuple]:
-    """Get the hierarchy of notes from root to the given note."""
-    path = []
-    current = note
-    
-    while current is not None:
-        path.append(current)
-        parents = list(getattr(current, 'parents', []))
-        current = parents[0] if parents else None
-        
-        # Prevent infinite loops in case of cycles
-        if current in path:
-            break
-    
-    # Return the path in root -> target order
-    return list(reversed(path))
-
-
-def print_path_to_note(path: List, current_note_id: str = None, show_children: bool = False) -> None:
-    """Print the path from root to target note in a tree format."""
-    if not path:
-        return
-    
-    target_note = path[-1]
-    
-    # Print the root note
-    root = path[0]
-    print(format_note_for_tree(root, [], is_current=(getattr(root, 'note_id', None) == current_note_id)))
-    
-    # Print the rest of the path with proper indentation
-    prefix = ""
-    for i, note in enumerate(path[1:], 1):
-        is_last = (i == len(path) - 1)
-        connector = "└── " if is_last else "├── "
-        print(f"{prefix}{connector}" + format_note_for_tree(note, [], is_current=(getattr(note, 'note_id', None) == current_note_id)).lstrip())
-        prefix += "    " if is_last else "│   "
-    
-    # Print children if this is the target note and show_children is True
-    if show_children and getattr(target_note, 'children', None):
-        children = list(target_note.children)
-        for i, child in enumerate(children):
-            is_last_child = (i == len(children) - 1)
-            connector = "└── " if is_last_child else "├── "
-            print(f"{prefix}{connector}" + format_note_for_tree(child, [], is_current=False).lstrip())
-
-def print_hierarchy(hierarchy: List[tuple], current_note_id: str = None) -> None:
-    """Print the path from root to target note in a tree format."""
-    if not hierarchy:
-        print("No hierarchy found")
-        return
-    print_path_to_note(hierarchy, current_note_id, show_children=True)
-
 
 app = MainTyper(
     "tree",
@@ -116,6 +38,11 @@ def main(
         "--note-id",
         help="Note id on which to perform operation",
     ),
+    
+    # stub. there is no title search function implemented yet
+    # using this param will not yield an error, and will revert to
+    # showing root and 1st level children.
+    # TODO: implement title search
     title: str
     | None = Option(
         None,
@@ -442,7 +369,78 @@ def show_hierarchy(
         print_hierarchy(hierarchy, current_note_id=getattr(note, 'note_id', None))
 
 
+# ============================================================================
+# Helper functions
+# ============================================================================
+
 def _get_tree_context(ctx: Context) -> TreeContext:
-    tree_context = ctx.obj
-    assert isinstance(tree_context, TreeContext)
-    return tree_context
+    if not isinstance(ctx.obj, TreeContext):
+        raise ClickException("Expected TreeContext")
+    return ctx.obj
+
+
+# ============================================================================
+# Hierarchy display
+# ============================================================================
+
+def format_note_for_tree(note, is_last: List[bool] = None, is_current: bool = False) -> str:
+    """Format a note's name for display in the hierarchy."""
+    if is_last is None:
+        is_last = []
+    
+    # Build the tree prefix
+    prefix = ""
+    for last in is_last[:-1]:
+        prefix += "    " if last else "│   "
+    if is_last:
+        prefix += "└── " if is_last[-1] else "├── "
+    
+    # Get note properties with defaults
+    title = getattr(note, 'title', 'ROOT')
+    note_id = getattr(note, 'note_id', 'root')
+    
+    # Format the note line
+    note_line = f"{title} ({note_id})"
+    
+    # Highlight current note and handle root note
+    if note_id == 'root' or getattr(note, 'is_root', False):
+        return f"{prefix}🌳 {note_line}"
+    if is_current:
+        return f"{prefix}👉 {note_line} 👈"
+    return f"{prefix}{note_line}"
+
+
+def print_path_to_note(path: List, current_note_id: str = None, show_children: bool = False) -> None:
+    """Print the path from root to target note in a tree format."""
+    if not path:
+        return
+    
+    target_note = path[-1]
+    
+    # Print the root note
+    root = path[0]
+    print(format_note_for_tree(root, [], is_current=(getattr(root, 'note_id', None) == current_note_id)))
+    
+    # Print the rest of the path with proper indentation
+    prefix = ""
+    for i, note in enumerate(path[1:], 1):
+        is_last = (i == len(path) - 1)
+        connector = "└── " if is_last else "├── "
+        print(f"{prefix}{connector}" + format_note_for_tree(note, [], is_current=(getattr(note, 'note_id', None) == current_note_id)).lstrip())
+        prefix += "    " if is_last else "│   "
+    
+    # Print children if this is the target note and show_children is True
+    if show_children and getattr(target_note, 'children', None):
+        children = list(target_note.children)
+        for i, child in enumerate(children):
+            is_last_child = (i == len(children) - 1)
+            connector = "└── " if is_last_child else "├── "
+            print(f"{prefix}{connector}" + format_note_for_tree(child, [], is_current=False).lstrip())
+
+
+def print_hierarchy(hierarchy: List[tuple], current_note_id: str = None) -> None:
+    """Print the path from root to target note in a tree format."""
+    if not hierarchy:
+        print("No hierarchy found")
+        return
+    print_path_to_note(hierarchy, current_note_id, show_children=True)
