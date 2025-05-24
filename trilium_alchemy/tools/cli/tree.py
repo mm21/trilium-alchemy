@@ -50,13 +50,58 @@ def main(
 
     # lookup subtree root
     if search:
-        results = session.search(search)
-        if len(results) != 1:
+        original_search = search
+        search = search.strip()
+
+        # Initialize results list
+        results = []
+
+        # Try different search strategies in order of specificity
+        search_strategies = [
+            # 1. Exact title match (most specific)
+            lambda s: session.search(f'note.title = "{s}"'),
+            # 2. Label search (if starts with #)
+            lambda s: session.search(f'#"{s[1:]}"') if s.startswith('#') else [],
+            # 3. Title contains (case-insensitive)
+            lambda s: session.search(f'note.title ~= "{s}"'),
+            # 4. Content contains (if no results from above)
+            lambda s: session.search(f'note.content ~= "{s}"')
+        ]
+
+        # Try each strategy until we get results
+        for strategy in search_strategies:
+            if not results:  # Skip if we already have results
+                results = strategy(search)
+
+        # If we still don't have results, try a more general search
+        if not results:
+            results = session.search(search)
+
+        # Handle the search results
+        if not results:
             raise BadParameter(
-                f"search '{search}' does not uniquely identify a note: got {len(results)} results",
+                f"No notes found matching search: '{original_search}'",
                 ctx=ctx,
                 param=lookup_param(ctx, "search"),
             )
+        elif len(results) > 1:
+            error_msg = [
+                f"Search '{original_search}' matched {len(results)} notes. Please be more specific.",
+                "\nMatching notes (showing first 10):"
+            ]
+            for i, note in enumerate(results[:10], 1):
+                note_type = f" [{note.type}]" if hasattr(note, 'type') else ""
+                error_msg.append(f"{i}. {note.title}{note_type} (id: {note.note_id})")
+
+            if len(results) > 10:
+                error_msg.append(f"... and {len(results) - 10} more")
+
+            raise BadParameter(
+                "\n".join(error_msg),
+                ctx=ctx,
+                param=lookup_param(ctx, "search"),
+            )
+
         target_note = results[0]
     else:
         target_note = Note(note_id=note_id, session=session)
