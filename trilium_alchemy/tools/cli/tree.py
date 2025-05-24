@@ -23,185 +23,82 @@ class TreeContext:
     session: Session
     target_note: Note
 
-# this is misnamed. A note is first class item, full of content. This name spunds like it's going to change the content of the note, whereas this function is just formatting the note for display in a tree.
-def format_note(note, is_last: List[bool] = None, is_current: bool = False) -> str:
-    """
-    Format a single note for display in the hierarchy.
-    
-    Args:
-        note: The note to format
-        is_last: List indicating if each ancestor is the last child
-        is_current: Whether this is the current note being searched for
-        
-    Returns:
-        Formatted string representation of the note
-    """
+def format_note_for_tree(note, is_last: List[bool] = None, is_current: bool = False) -> str:
+    """Format a note's name for display in the hierarchy."""
     if is_last is None:
         is_last = []
     
     # Build the tree prefix
     prefix = ""
-    for i, last in enumerate(is_last):
-        if i < len(is_last) - 1:  # For all but the last level
-            prefix += "    " if last else "│   "
-    
-    # Add connector for current level if not root
+    for last in is_last[:-1]:
+        prefix += "    " if last else "│   "
     if is_last:
         prefix += "└── " if is_last[-1] else "├── "
     
     # Get note properties with defaults
     title = getattr(note, 'title', 'ROOT')
     note_id = getattr(note, 'note_id', 'root')
-    note_type = getattr(note, 'type', '')
-    
-    # Include note type if it's not 'text' (the default)
-    type_suffix = f" [{note_type}]" if note_type and note_type != 'text' else ""
     
     # Format the note line
-    note_line = f"{title} ({note_id}){type_suffix}"
+    note_line = f"{title} ({note_id})"
     
     # Highlight current note and handle root note
     if note_id == 'root' or getattr(note, 'is_root', False):
         return f"{prefix}🌳 {note_line}"
-    elif is_current:
+    if is_current:
         return f"{prefix}👉 {note_line} 👈"
     return f"{prefix}{note_line}"
 
 def get_note_hierarchy(note) -> List[tuple]:
-    """
-    Get the hierarchy of notes from root to the given note.
-    
-    Args:
-        note: The target note to get the hierarchy for
-        
-    Returns:
-        List of notes in order from root to the target note
-    """
-    logging.debug(f"Getting hierarchy for note: {getattr(note, 'title', 'unknown')} ({getattr(note, 'note_id', 'no-id')})")
-    
-    # First, get the full path from the root to the note
+    """Get the hierarchy of notes from root to the given note."""
     path = []
     current = note
-    visited = set()  # To detect cycles
-
-    #get note metadata
-    note_id = getattr(note, 'note_id', 'root')
-    note_type = getattr(note, 'type', '')
-    title = getattr(note, 'title', 'ROOT')
-    parent_count = getattr(note, 'parentCount', 0)
-    child_count = getattr(note, 'childCount', 0)
-   
-    logging.debug(f"Note: {title} ({note_id}) {note_type} {parent_count} {child_count}")
-
-    # Build the path from the note up to the root
-    while current is not None and id(current) not in visited:
-        visited.add(id(current))
+    
+    while current is not None:
         path.append(current)
-        try:
-            # Get parent note, if available
-            parent = getattr(current, 'parent', None)
-            # If parent is callable (method), call it
-            current = parent() if callable(parent) else parent
-            if current:
-                logging.debug(f"  Parent: {getattr(current, 'title', 'unknown')} ({getattr(current, 'note_id', 'no-id')})")
-        except Exception as e:
-            note_id = getattr(current, 'note_id', 'unknown')
-            logging.debug(f"Error getting parent for note {note_id}: {e}")
-            current = None
-    
-    # If we have a path but it doesn't include the root, try to get it
-    if path:
-        logging.debug(f"Path before root check: {[getattr(n, 'title', 'unknown') for n in path]}")
+        parents = list(getattr(current, 'parents', []))
+        current = parents[0] if parents else None
         
-        # Check if we have a session to get the root note
-        try:
-            session = getattr(note, 'session', None)
-            if session:
-                root_note = getattr(session, 'root_note', None)
-                if root_note and root_note not in path:
-                    logging.debug(f"Adding root note from session: {getattr(root_note, 'title', 'unknown')}")
-                    path.append(root_note)
-        except Exception as e:
-            logging.debug(f"Error getting root note from session: {e}")
-        
-        # Fallback: try to get root from the last note in path
-        if not any(getattr(n, 'is_root', False) for n in path):
-            try:
-                last_note = path[-1]
-                root = getattr(last_note, 'root', None)
-                if root and root not in path:
-                    logging.debug(f"Adding root note from note.root: {getattr(root, 'title', 'unknown')}")
-                    path.append(root)
-                    
-                # If we still don't have a root, try to find it in the path
-                if not any(getattr(n, 'is_root', False) for n in path):
-                    for n in path:
-                        if hasattr(n, 'is_root') and n.is_root:
-                            logging.debug(f"Found root note in path: {getattr(n, 'title', 'unknown')}")
-                            break
-            except Exception as e:
-                logging.debug(f"Error getting root note from path: {e}")
-    
-    # Log the final path
-    if path:
-        path_str = " -> ".join([f"{getattr(n, 'title', 'unknown')} ({getattr(n, 'note_id', 'no-id')})" for n in path])
-        logging.debug(f"Final path: {path_str}")
-    else:
-        logging.debug("No path found")
+        # Prevent infinite loops in case of cycles
+        if current in path:
+            break
     
     # Return the path in root -> target order
     return list(reversed(path))
 
 
 def print_path_to_note(path: List, current_note_id: str = None, show_children: bool = False) -> None:
-    """Print the path from root to target note in a tree format, optionally showing children.
-    
-    Args:
-        path: List of notes from root to target
-        current_note_id: ID of the note that was searched for (to highlight it)
-        show_children: Whether to show children of the target note
-    """
+    """Print the path from root to target note in a tree format."""
     if not path:
         return
     
-    target_note = path[-1] if path else None
+    target_note = path[-1]
     
     # Print the root note
     root = path[0]
-    print(format_note(root, [], is_current=(getattr(root, 'note_id', None) == current_note_id)))
+    print(format_note_for_tree(root, [], is_current=(getattr(root, 'note_id', None) == current_note_id)))
     
     # Print the rest of the path with proper indentation
     prefix = ""
     for i, note in enumerate(path[1:], 1):
         is_last = (i == len(path) - 1)
         connector = "└── " if is_last else "├── "
-        print(f"{prefix}{connector}" + format_note(note, [], is_current=(getattr(note, 'note_id', None) == current_note_id)).lstrip())
-        
-        # Update prefix for next level
+        print(f"{prefix}{connector}" + format_note_for_tree(note, [], is_current=(getattr(note, 'note_id', None) == current_note_id)).lstrip())
         prefix += "    " if is_last else "│   "
     
     # Print children if this is the target note and show_children is True
-    if show_children and target_note and getattr(target_note, 'children', None):
+    if show_children and getattr(target_note, 'children', None):
         children = list(target_note.children)
-        child_prefix = prefix + ("    " if not children else "│   ")
-        
         for i, child in enumerate(children):
             is_last_child = (i == len(children) - 1)
             connector = "└── " if is_last_child else "├── "
-            print(f"{prefix}{connector}" + format_note(child, [], is_current=False).lstrip())
+            print(f"{prefix}{connector}" + format_note_for_tree(child, [], is_current=False).lstrip())
 
 def print_hierarchy(hierarchy: List[tuple], current_note_id: str = None) -> None:
-    """Print the path from root to target note in a tree format, with children of target.
-    
-    Args:
-        hierarchy: List of notes from root to target
-        current_note_id: ID of the note that was searched for (to highlight it)
-    """
+    """Print the path from root to target note in a tree format."""
     if not hierarchy:
         print("No hierarchy found")
         return
-    
-    # Print the path from root to target, with target's children
     print_path_to_note(hierarchy, current_note_id, show_children=True)
 
 
