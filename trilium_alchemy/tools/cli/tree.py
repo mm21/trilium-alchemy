@@ -56,7 +56,24 @@ def main(
         "--search",
         help="Search string to identify note on which to perform operation, e.g. '#myProjectRoot'",
     ),
+    debug: bool = Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug logging",
+    ),
 ):
+    # Configure logging
+    log_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(levelname)s: %(message)s",
+        force=True  # Override any existing handlers
+    )
+    # Set root logger level to ensure debug messages are shown
+    logging.getLogger().setLevel(log_level)
+    # Enable debug logging for our package
+    logging.getLogger('trilium_alchemy').setLevel(log_level)
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
@@ -286,12 +303,6 @@ possible command: fs-load [src: Path]
 @app.command("show-hierarchy")
 def show_hierarchy(
     ctx: Context,
-    debug: bool = Option(
-        False,
-        "--debug",
-        "-d",
-        help="Enable debug logging",
-    ),
 ):
     """
     Show the hierarchy from root to the current note in a tree format.
@@ -300,20 +311,11 @@ def show_hierarchy(
         trilium-alchemy tree show-hierarchy --note-id abc123
         trilium-alchemy tree show-hierarchy --search "#myNote"
     """
-    # Configure logging
-    log_level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(levelname)s: %(message)s" if debug else "%(message)s",
-        force=True  # Override any existing handlers
-    )
-    
     tree_context = _get_tree_context(ctx)
     note = tree_context.target_note
-
+    
     logging.debug(f"Note: {note}")
-    logging.debug(f"Note attributes: {dir(note)}")
-    logging.debug(f"Note attributes: {note.__dict__}")
+    # logging.debug(f"Note attributes: {dir(note)}") # decomment to see what's available
     
     # Get parent and child note IDs
     parent_ids = [parent.note_id for parent in note.parents] if hasattr(note, 'parents') else []
@@ -326,15 +328,8 @@ def show_hierarchy(
     logging.debug(f"Target note: {getattr(note, 'title', 'unknown')} ({getattr(note, 'note_id', 'no-id')})")
     logging.debug(f"Note type: {type(note).__name__}")
     
-    # Log session details if available
-    session = getattr(note, 'session', None)
-    if session:
-        logging.debug(f"Session: {session}")
-        root_note = getattr(session, 'root_note', None)
-        if root_note:
-            logging.debug(f"Root note from session: {getattr(root_note, 'title', 'unknown')} ({getattr(root_note, 'note_id', 'no-id')})")
-    
     # Build the hierarchy from root to target note
+    ## (I wonder if we need to do this. Trilium must have a hierarchy in the database already.)
     def get_path_to_root(n):
         path = []
         current = n
