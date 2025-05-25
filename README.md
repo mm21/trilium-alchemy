@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="doc/_static/logo-light.svg" alt="Logo" />
+  <img src="./doc/_static/logo-light.svg#gh-light-mode-only" alt="Logo" />
+  <img src="./doc/_static/logo-dark.svg#gh-dark-mode-only" alt="Logo" />
 </p>
 
 # TriliumAlchemy
