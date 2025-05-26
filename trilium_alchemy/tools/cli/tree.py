@@ -4,7 +4,7 @@ import importlib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
@@ -38,25 +38,99 @@ def main(
         "--note-id",
         help="Note id on which to perform operation",
     ),
+    
+    # stub. there is no title search function implemented yet
+    # using this param will not yield an error, and will revert to
+    # showing root and 1st level children.
+    # TODO: implement title search
+    title: str
+    | None = Option(
+        None,
+        "--title",
+        help="Note title on which to perform operation",
+    ),
+    
     search: str
     | None = Option(
         None,
         "--search",
         help="Search string to identify note on which to perform operation, e.g. '#myProjectRoot'",
     ),
+    debug: bool = Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug logging",
+    ),
 ):
+    # Configure logging
+    log_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(levelname)s: %(message)s",
+        force=True  # Override any existing handlers
+    )
+    # Set root logger level to ensure debug messages are shown
+    logging.getLogger().setLevel(log_level)
+    # Enable debug logging for our package
+    logging.getLogger('trilium_alchemy').setLevel(log_level)
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
     # lookup subtree root
     if search:
-        results = session.search(search)
-        if len(results) != 1:
+        original_search = search
+        search = search.strip()
+        
+        # Initialize results list
+        results = []
+        
+        # Try different search strategies in order of specificity
+        search_strategies = [
+            # 1. Exact title match (most specific)
+            lambda s: session.search(f'note.title = "{s}"'),
+            # 2. Label search (if starts with #)
+            lambda s: session.search(f'#"{s[1:]}"') if s.startswith('#') else [],
+            # 3. Title contains (case-insensitive)
+            lambda s: session.search(f'note.title ~= "{s}"'),
+            # 4. Content contains (if no results from above)
+            lambda s: session.search(f'note.content ~= "{s}"')
+        ]
+        
+        # Try each strategy until we get results
+        for strategy in search_strategies:
+            if not results:  # Skip if we already have results
+                results = strategy(search)
+        
+        # If we still don't have results, try a more general search
+        if not results:
+            results = session.search(search)
+        
+        # Handle the search results
+        if not results:
             raise BadParameter(
-                f"search '{search}' does not uniquely identify a note: got {len(results)} results",
+                f"No notes found matching search: '{original_search}'",
                 ctx=ctx,
                 param=lookup_param(ctx, "search"),
             )
+        elif len(results) > 1:
+            error_msg = [
+                f"Search '{original_search}' matched {len(results)} notes. Please be more specific.",
+                "\nMatching notes (showing first 10):"
+            ]
+            for i, note in enumerate(results[:10], 1):
+                note_type = f" [{note.type}]" if hasattr(note, 'type') else ""
+                error_msg.append(f"{i}. {note.title}{note_type} (id: {note.note_id})")
+            
+            if len(results) > 10:
+                error_msg.append(f"... and {len(results) - 10} more")
+            
+            raise BadParameter(
+                "\n".join(error_msg),
+                ctx=ctx,
+                param=lookup_param(ctx, "search"),
+            )
+            
         target_note = results[0]
     else:
         target_note = Note(note_id=note_id, session=session)
@@ -226,7 +300,142 @@ possible command: fs-load [src: Path]
 """
 
 
+@app.command("show-hierarchy")
+def show_hierarchy(
+    ctx: Context,
+):
+    """
+    Show the hierarchy from root to the current note in a tree format.
+    
+    Examples:
+        trilium-alchemy tree show-hierarchy --note-id abc123
+        trilium-alchemy tree show-hierarchy --search "#myNote"
+    """
+    tree_context = _get_tree_context(ctx)
+    note = tree_context.target_note
+    
+    logging.debug(f"Note: {note}")
+    # logging.debug(f"Note attributes: {dir(note)}") # decomment to see what's available
+    
+    # Get parent and child note IDs
+    parent_ids = [parent.note_id for parent in note.parents] if hasattr(note, 'parents') else []
+    child_ids = [child.note_id for child in note.children] if hasattr(note, 'children') else []
+    
+    logging.debug(f"Parent note IDs: {parent_ids}")
+    logging.debug(f"Child note IDs: {child_ids}")
+    
+    # Log note details
+    logging.debug(f"Target note: {getattr(note, 'title', 'unknown')} ({getattr(note, 'note_id', 'no-id')})")
+    logging.debug(f"Note type: {type(note).__name__}")
+    
+    # Build the hierarchy from root to target note
+    ## (I wonder if we need to do this. Trilium must have a hierarchy in the database already.)
+    def get_path_to_root(n):
+        path = []
+        current = n
+        while current is not None:
+            path.append(current)
+            # Get the first parent (handling the case where there are multiple parents)
+            parents = list(getattr(current, 'parents', []))
+            current = parents[0] if parents else None
+            # Prevent infinite loops in case of cycles
+            if current in path:
+                break
+        return list(reversed(path))
+    
+    # Get the path from root to the current note
+    hierarchy = get_path_to_root(note)
+    
+    # Log the hierarchy
+    logging.debug(f"Found path with {len(hierarchy)} notes from root to target")
+    
+    # Log the final hierarchy
+    if hierarchy:
+        logging.debug(f"Hierarchy levels: {len(hierarchy)}")
+        for i, h_note in enumerate(hierarchy):
+            logging.debug(f"  {i}. {getattr(h_note, 'title', 'unknown')} ({getattr(h_note, 'note_id', 'no-id')}) is_root={getattr(h_note, 'is_root', False)}")
+    else:
+        logging.debug("No hierarchy found")
+    
+    # Print the hierarchy
+    print("\nHierarchy (from root to target with children):")
+    if hierarchy:
+        # Print the path from root to target, with target's children
+        print_hierarchy(hierarchy, current_note_id=getattr(note, 'note_id', None))
+
+
+# ============================================================================
+# Helper functions
+# ============================================================================
+
 def _get_tree_context(ctx: Context) -> TreeContext:
-    tree_context = ctx.obj
-    assert isinstance(tree_context, TreeContext)
-    return tree_context
+    if not isinstance(ctx.obj, TreeContext):
+        raise ClickException("Expected TreeContext")
+    return ctx.obj
+
+
+# ============================================================================
+# Hierarchy display
+# ============================================================================
+
+def format_note_for_tree(note, is_last: List[bool] = None, is_current: bool = False) -> str:
+    """Format a note's name for display in the hierarchy."""
+    if is_last is None:
+        is_last = []
+    
+    # Build the tree prefix
+    prefix = ""
+    for last in is_last[:-1]:
+        prefix += "    " if last else "│   "
+    if is_last:
+        prefix += "└── " if is_last[-1] else "├── "
+    
+    # Get note properties with defaults
+    title = getattr(note, 'title', 'ROOT')
+    note_id = getattr(note, 'note_id', 'root')
+    
+    # Format the note line
+    note_line = f"{title} ({note_id})"
+    
+    # Highlight current note and handle root note
+    if note_id == 'root' or getattr(note, 'is_root', False):
+        return f"{prefix}🌳 {note_line}"
+    if is_current:
+        return f"{prefix}👉 {note_line} 👈"
+    return f"{prefix}{note_line}"
+
+
+def print_path_to_note(path: List, current_note_id: str = None, show_children: bool = False) -> None:
+    """Print the path from root to target note in a tree format."""
+    if not path:
+        return
+    
+    target_note = path[-1]
+    
+    # Print the root note
+    root = path[0]
+    print(format_note_for_tree(root, [], is_current=(getattr(root, 'note_id', None) == current_note_id)))
+    
+    # Print the rest of the path with proper indentation
+    prefix = ""
+    for i, note in enumerate(path[1:], 1):
+        is_last = (i == len(path) - 1)
+        connector = "└── " if is_last else "├── "
+        print(f"{prefix}{connector}" + format_note_for_tree(note, [], is_current=(getattr(note, 'note_id', None) == current_note_id)).lstrip())
+        prefix += "    " if is_last else "│   "
+    
+    # Print children if this is the target note and show_children is True
+    if show_children and getattr(target_note, 'children', None):
+        children = list(target_note.children)
+        for i, child in enumerate(children):
+            is_last_child = (i == len(children) - 1)
+            connector = "└── " if is_last_child else "├── "
+            print(f"{prefix}{connector}" + format_note_for_tree(child, [], is_current=False).lstrip())
+
+
+def print_hierarchy(hierarchy: List[tuple], current_note_id: str = None) -> None:
+    """Print the path from root to target note in a tree format."""
+    if not hierarchy:
+        print("No hierarchy found")
+        return
+    print_path_to_note(hierarchy, current_note_id, show_children=True)
