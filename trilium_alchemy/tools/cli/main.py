@@ -25,6 +25,7 @@ Planned commands:
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -121,13 +122,17 @@ app = MainTyper(
 )
 
 
+def _get_host() -> str | None:
+    """Get host from environment variable if not provided."""
+    return os.environ.get("TRILIUM_HOST")
+
 @app.callback()
 def main(
     ctx: Context,
     host: str = Option(
-        ...,
+        None,
         "--host",
-        help="Trilium host, e.g. http://localhost:8080",
+        help="Trilium host, e.g. http://localhost:8080. Can also be set via TRILIUM_HOST environment variable.",
         envvar="TRILIUM_HOST",
     ),
     token: str
@@ -160,17 +165,35 @@ def main(
         dir_okay=False,
     ),
 ):
+    # Load environment variables from .env file if it exists
+    dotenv.load_dotenv(Path('.env').resolve(), override=True)
+    
     if instance_name:
         root_context = RootContext.from_config(
             ctx=ctx, instance_name=instance_name, config_file=config_file
         )
     else:
+        # Get host from environment if not provided
+        if not host:
+            host = _get_host()
+            if not host:
+                raise MissingParameter(
+                    message="either --host or --instance must be provided, or set TRILIUM_HOST environment variable",
+                    ctx=ctx,
+                    param_hint=["host", "instance"],
+                    param_type="option",
+                )
+
+        # Get token/password from environment if not provided
+        token = token or os.environ.get("TRILIUM_TOKEN")
+        password = password or os.environ.get("TRILIUM_PASSWORD")
+        
         if not (token or password):
             raise MissingParameter(
-                message="either --token or --password must be passed",
+                message="either --token/TRILIUM_TOKEN or --password/TRILIUM_PASSWORD must be provided",
                 ctx=ctx,
                 param_hint=["token", "password"],
-                param_type="option",
+                param_type="option" if not token and not password else None,
             )
 
         instance = InstanceConfig(host=host, token=token, password=password)
