@@ -346,6 +346,7 @@ class BaseEntityModel(ABC):
             for ext in self._extensions:
                 ext._setup(model_backing)
 
+    # TODO: param check_type: check and return given type
     def get_field(self, field: str, bypass_model_setup: bool = False):
         """
         Get field from model, with working state taking precedence over
@@ -378,6 +379,7 @@ class BaseEntityModel(ABC):
 
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
+        return None
 
     def set_field(self, field: str, value: Any, bypass_validate: bool = False):
         """

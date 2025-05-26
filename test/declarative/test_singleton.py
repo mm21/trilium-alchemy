@@ -28,7 +28,7 @@ class TemplateChild1(BaseDeclarativeNote):
     singleton = True
     title_ = "Child 1"
     note_type_ = "book"
-    mime_ = "text/plain"
+    mime_ = ""
 
 
 class IdempotentTest1(BaseDeclarativeNote):
@@ -67,7 +67,7 @@ def check_child1(branch: Branch, state: State):
     assert note.note_id == id_hash(f"{__name__}.TemplateChild1")
     assert note.title == "Child 1"
     assert note.note_type == "book"
-    assert note.mime == "text/plain"
+    assert note.mime == ""
 
     assert len(note.attributes.owned) == 1
     child1 = note.attributes.owned[0]
@@ -85,6 +85,7 @@ def check_child1(branch: Branch, state: State):
 class TemplateChild2(BaseDeclarativeNote):
     singleton = True
     leaf = True
+    note_type_ = "render"
 
 
 def check_child2(branch: Branch, state: State):
@@ -103,8 +104,8 @@ def check_child2(branch: Branch, state: State):
     assert note.note_id_seed_final == f"{__name__}.TemplateChild2"
     assert note.note_id == id_hash(f"{__name__}.TemplateChild2")
     assert note.title == "TemplateChild2"
-    assert note.note_type == "text"
-    assert note.mime == "text/html"
+    assert note.note_type == "render"
+    assert note.mime == ""
 
     assert len(note.attributes.owned) == 1
     assert note.attributes.owned[0].name == "child1"

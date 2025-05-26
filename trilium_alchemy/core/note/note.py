@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+import logging
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
+from ._fs import export_fs
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
@@ -34,12 +36,16 @@ __all__ = [
 STRING_NOTE_TYPES = [
     "text",
     "code",
-    "relationMap",
     "search",
+    "relationMap",
+    "noteMap",
     "render",
     "book",
     "mermaid",
     "canvas",
+    "webView",
+    "mindMap",
+    "geoMap",
 ]
 """
 Keep in sync with isStringNote() (src/services/utils.js).
@@ -59,6 +65,28 @@ STRING_MIME_TYPES = {
 }
 """
 Keep in sync with STRING_MIME_TYPES (src/services/utils.js).
+"""
+
+NOTE_TYPES_MIME_NA = [
+    "search",
+    "noteMap",
+    "render",
+    "book",
+    "webView",
+]
+"""
+Note types to which mime is not applicable (empty string).
+"""
+
+NOTE_TYPES_MIME_FIXED = {
+    "relationMap": "application/json",
+    "mermaid": "text/plain",
+    "canvas": "application/json",
+    "mindMap": "application/json",
+    "geoMap": "application/json",
+}
+"""
+Note types which have a fixed mime type.
 """
 
 
@@ -143,14 +171,16 @@ class Note(BaseEntity[NoteModel]):
             model_backing=kwargs.get("_model_backing"),
         )
 
+    # TODO: add:
+    # type NoteType = Literal["text", "code", ...]
     def __init__(
         self,
         title: str | None = None,
         note_type: str | None = None,
         mime: str | None = None,
+        attributes: Iterable[BaseAttribute] | None = None,
         parents: Iterable[Note | Branch] | Note | Branch | None = None,
         children: Iterable[Note | Branch] | None = None,
-        attributes: Iterable[BaseAttribute] | None = None,
         content: str | bytes | IO | None = None,
         note_id: str | None = None,
         template: Note | type[Note] | None = None,
@@ -159,8 +189,8 @@ class Note(BaseEntity[NoteModel]):
     ):
         """
         :param title: Note title
-        :param note_type: Note type, default `text`; one of: `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}, `"search"`{l=python}, `"book"`{l=python}, `"relationMap"`{l=python}, `"render"`{l=python}
-        :param mime: MIME type, default `text/html`; needs to be specified only for note types `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
+        :param note_type: Note type, default `text`; one of: `"text"`{l=python}, `"code"`{l=python}, `"relationMap"`{l=python}, `"search"`{l=python}, `"render"`{l=python}, `"book"`{l=python}, `"mermaid"`, `"canvas"`, `"file"`{l=python}, `"image"`{l=python}
+        :param mime: MIME type, default `text/html`; needs to be specified only for note types `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
         :param parents: Parent note/branch, or iterable of notes/branches (internally modeled as a `set`{l=python})
         :param children: Iterable of child notes/branches (internally modeled as a `list`{l=python})
         :param attributes: Iterable of attributes (internally modeled as a `list`{l=python})
@@ -221,15 +251,44 @@ class Note(BaseEntity[NoteModel]):
                     result += lst
             return result
 
-        # get container from any subclass
+        # get container from subclass if applicable
         init_container = self._init_hook(
             note_id, note_id_seed_final, force_leaf
         )
 
+        def normalize_mime(
+            title: str | None, note_type: str | None, mime: str | None
+        ) -> str | None:
+            """
+            Return correct mime given note_type, validating if it was passed
+            by user.
+            """
+
+            if note_type is None:
+                return None
+            elif note_type in NOTE_TYPES_MIME_NA:
+                mime_norm = ""
+            elif note_type in NOTE_TYPES_MIME_FIXED:
+                mime_norm = NOTE_TYPES_MIME_FIXED[note_type]
+            elif mime is not None:
+                mime_norm = mime
+            else:
+                mime_norm = "text/html" if note_type == "text" else None
+
+            # if passed by user, validate
+            if mime is not None:
+                assert (
+                    mime == mime_norm
+                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_norm}'"
+
+            return mime_norm
+
         # aggregate fields to set
         title_set = title or init_container.title
         note_type_set = note_type or init_container.note_type
-        mime_set = mime or init_container.mime
+        mime_set = normalize_mime(
+            title_set, note_type_set, mime or init_container.mime
+        )
         content_set = content or init_container.content
         attributes_set = combine_lists(attributes, init_container.attributes)
         parents_set: Iterable[Note | Branch] | None = (
@@ -404,7 +463,8 @@ class Note(BaseEntity[NoteModel]):
 
     @note_type.setter
     def note_type(self, val: str):
-        assert val in NOTE_TYPES, f"Invalid note_type: {val}"
+        if not val in NOTE_TYPES:
+            logging.warning(f"Invalid note_type: {val}")
         self._model.set_field("type", val)
 
     @property
@@ -696,14 +756,14 @@ class Note(BaseEntity[NoteModel]):
 
     def export_zip(
         self,
-        dest_path: Path,
+        dest_file: Path,
         export_format: Literal["html", "markdown"] = "html",
         overwrite: bool = False,
     ):
         """
         Export this note subtree to zip file.
 
-        :param dest_path: Destination .zip file
+        :param dest_file: Destination .zip file
         :param export_format: Format of exported HTML notes
         :param overwrite: Whether to overwrite destination path if it exists
         """
@@ -712,12 +772,14 @@ class Note(BaseEntity[NoteModel]):
         ), f"Source note {self.str_short} must have a note_id for export"
         assert export_format in {"html", "markdown"}
 
-        if dest_path.exists() and not overwrite:
-            raise ValueError(f"Path {dest_path} exists and overwrite=False")
-
-        dest_path = (
-            dest_path if isinstance(dest_path, Path) else Path(dest_path)
+        dest_file_norm = (
+            dest_file if isinstance(dest_file, Path) else Path(dest_file)
         )
+
+        if dest_file_norm.exists() and not overwrite:
+            raise ValueError(
+                f"Path {dest_file_norm} exists and overwrite=False"
+            )
 
         url = f"{self.session._base_path}/notes/{self.note_id}/export"
         params = {"format": export_format}
@@ -730,25 +792,27 @@ class Note(BaseEntity[NoteModel]):
         zip_file: bytes = response.content
         assert isinstance(zip_file, bytes)
 
-        with dest_path.open("wb") as fh:
+        with dest_file_norm.open("wb") as fh:
             for chunk in response.iter_content(chunk_size=8192):
                 fh.write(chunk)
 
     def import_zip(
         self,
-        src_path: Path,
+        src_file: Path,
     ) -> Note:
         """
         Import note subtree from zip file, adding the imported root as a
         child of this note and returning it.
 
-        :param src_path: Source .zip file
+        :param src_file: Source .zip file
         """
 
         # flush any changes since we need to refresh later
         self.flush()
 
-        src_path = src_path if isinstance(src_path, Path) else Path(src_path)
+        src_file_norm = (
+            src_file if isinstance(src_file, Path) else Path(src_file)
+        )
 
         assert (
             self.note_id is not None
@@ -757,7 +821,7 @@ class Note(BaseEntity[NoteModel]):
         zip_file: bytes
 
         # read input zip
-        with src_path.open("rb") as fh:
+        with src_file_norm.open("rb") as fh:
             zip_file = fh.read()
 
         headers = self._session._etapi_headers.copy()
@@ -783,14 +847,26 @@ class Note(BaseEntity[NoteModel]):
 
         return imported_note
 
+    def export_fs(self, dest_dir: Path):
+        """
+        Export to folder in TriliumAlchemy's filesystem format. Will write
+        `meta.yaml` along with a file containing the content, replacing any
+        previous metadata and content file.
+
+        The destination folder is expected to only contain a single note.
+
+        :param dest_dir: Destination folder
+        """
+        export_fs(self, dest_dir)
+
     def flush(self):
         """
         Flush note along with its owned attributes.
         """
 
         # collect set of entities
-        flush_set = {attr for attr in self.attributes.owned}
-        flush_set.add(self)  # type: ignore
+        flush_set: set[BaseEntity] = {attr for attr in self.attributes.owned}
+        flush_set.add(self)
 
         self._session.flush(flush_set)
 

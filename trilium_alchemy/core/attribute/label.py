@@ -52,7 +52,9 @@ class Label(BaseAttribute):
         """
         Getter/setter for label value, which may be an empty string.
         """
-        return self._model.get_field("value")
+        value = self._model.get_field("value")
+        assert isinstance(value, str)
+        return value
 
     @value.setter
     def value(self, val: str):

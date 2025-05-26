@@ -211,9 +211,9 @@ class BaseDeclarativeMixin(
         )
 
         # check if ids are known
-        if self._note_id is not None:
+        if self._note_id and child_note_id:
             # if ids are known at this point, also generate branch id
-            branch_id = f"{self._note_id}_{child.note_id}"
+            branch_id = Branch._gen_branch_id(self._note_id, child_note_id)
         else:
             branch_id = None
 
@@ -502,7 +502,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
         # set fields from subclass
         container.note_type = self.note_type_ or "text"
-        container.mime = self.mime_ or "text/html"
+        container.mime = self.mime_
         container.content = self.content_
 
         # invoke init chain defined on mixin

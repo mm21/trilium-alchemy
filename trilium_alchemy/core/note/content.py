@@ -142,7 +142,7 @@ class Content(NoteStatefulExtension):
             else:
                 self._backing.blob = b""
 
-            self._backing.digest = self._get_digest(self._backing.blob)
+            self._backing.digest = get_digest(self._backing.blob)
         else:
             # get digest from model, only fetch content if accessed by user
             assert (
@@ -182,7 +182,7 @@ class Content(NoteStatefulExtension):
         blob: str | bytes = self._normalize_blob(blob)
 
         self._working.blob = blob
-        self._working.digest = self._get_digest(blob)
+        self._working.digest = get_digest(blob)
 
         # could potentially change clean/dirty state, so reevaluate
         self._note._check_state()
@@ -278,28 +278,6 @@ class Content(NoteStatefulExtension):
 
         return blob
 
-    def _get_digest(self, blob: str | bytes) -> str:
-        """
-        Calculate digest of content.
-
-        This should be kept in sync with src/services/utils.js:hashedBlobId()
-        """
-
-        # encode if string
-        blob_bytes = blob.encode() if isinstance(blob, str) else blob
-
-        # compute digest
-        sha = hashlib.sha512(blob_bytes).digest()
-
-        # encode in base64 and decode as string
-        b64 = base64.b64encode(sha).decode()
-
-        # make replacements to form "kinda" base62
-        b62 = b64.replace("+", "X").replace("/", "Y")
-
-        # return first 20 characters
-        return b62[:20]
-
     @property
     def _url(self) -> str:
         """
@@ -307,3 +285,26 @@ class Content(NoteStatefulExtension):
         """
         base_path = self._note._session._base_path
         return f"{base_path}/notes/{self._note.note_id}/content"
+
+
+def get_digest(blob: str | bytes):
+    """
+    Calculate digest of blob.
+
+    This should be kept in sync with src/services/utils.js:hashedBlobId()
+    """
+
+    # encode if string
+    blob_bytes = blob.encode() if isinstance(blob, str) else blob
+
+    # compute digest
+    sha = hashlib.sha512(blob_bytes).digest()
+
+    # encode in base64 and decode as string
+    b64 = base64.b64encode(sha).decode()
+
+    # make replacements to form "kinda" base62
+    b62 = b64.replace("+", "X").replace("/", "Y")
+
+    # return first 20 characters
+    return b62[:20]

@@ -1,0 +1,14 @@
+note_id: abcdef
+title: Note 1
+note_type: text
+mime: text/html
+blob_id: asdfasdf
+attributes:
+  - attribute_id: abcdef_attr1
+    attribute_type: label
+    name: label1
+    value: testValue
+    inheritable: true
+children:
+  - note_id: ghijkl
+    prefix: Test prefix

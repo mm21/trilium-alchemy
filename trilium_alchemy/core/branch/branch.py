@@ -309,16 +309,10 @@ class Branch(OrderedEntity[BranchModel]):
         ...
 
     @classmethod
-    def _gen_branch_id(cls, parent: Note, child: Note) -> str:
-        from ..note.note import Note
-
-        assert isinstance(parent, Note)
-        assert isinstance(child, Note)
-
-        assert parent.note_id is not None
-        assert child.note_id is not None
-
-        return f"{parent.note_id}_{child.note_id}"
+    def _gen_branch_id(cls, parent_note_id: str, child_note_id: str) -> str:
+        assert len(parent_note_id)
+        assert len(child_note_id)
+        return f"{parent_note_id}_{child_note_id}"
 
     def _setup(self, model: EtapiBranchModel):
         from ..note.note import Note
