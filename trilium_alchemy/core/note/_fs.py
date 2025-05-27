@@ -19,7 +19,7 @@ __all__ = [
     "NoteMetadata",
     "AttributeMetadata",
     "BranchMetadata",
-    "export_fs",
+    "dump_note",
 ]
 
 METADATA_FILENAME = "meta.yaml"
@@ -119,7 +119,7 @@ class BranchMetadata(BaseModel):
     prefix: str
 
 
-def export_fs(note: Note, dest_dir: Path):
+def dump_note(note: Note, dest_dir: Path):
     """
     Export given note to given destination folder.
     """
@@ -142,7 +142,9 @@ def export_fs(note: Note, dest_dir: Path):
 
     # convert metadata to yaml string
     metadata_dict = metadata.model_dump()
-    metadata_str = yaml.dump(metadata_dict)
+    metadata_str = yaml.safe_dump(
+        metadata_dict, default_flow_style=False, sort_keys=False
+    )
 
     # write metadata if it differs from any existing metadata
     metadata_path = dest_dir / METADATA_FILENAME

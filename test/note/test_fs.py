@@ -6,17 +6,19 @@ from pathlib import Path
 
 from trilium_alchemy import *
 
-FS_DUMP_PATH = Path(__file__) / "fs-dump"
+from ..conftest import compare_folders
+
+FS_NOTES_PATH = Path(__file__).parent / "fs-dump"
 
 
-def test_export(session: Session, note: Note, tmp_path: Path):
+def test_dump(session: Session, note: Note, tmp_path: Path):
     """
-    Export a single note and verify output, also verifying overwrite.
+    Dump a single note and verify output, also verifying overwrite.
     """
 
     label1 = Label(
         "label1",
-        value="testvalue",
+        value="testValue",
         inheritable=True,
         session=session,
         _attribute_id="abcdef_attr1",
@@ -25,13 +27,20 @@ def test_export(session: Session, note: Note, tmp_path: Path):
         title="Note 1",
         parents=note,
         attributes=[label1],
+        content="<p>Hello, world!</p>",
         note_id="abcdef",
         session=session,
     )
-    # TODO: add child note
+    note1 += (
+        Note(title="Note 1 child", note_id="ghijkl", session=session),
+        "Test prefix",
+    )
 
-    note1.export_fs(tmp_path)
+    # flush so branch id gets generated
+    session.flush()
 
-    # TODO: compare tmp_path with FS_DUMP_PATH / "note1"
-    # filecmp.dircmp
-    # filecmp.cmpfiles
+    note1.dump_fs(tmp_path)
+
+    # compare tmp_path with expected path
+    expected_path = FS_NOTES_PATH / "note1"
+    compare_folders(tmp_path, expected_path)

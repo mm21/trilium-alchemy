@@ -691,3 +691,35 @@ def check_read_only(entity: BaseEntity, fields: list[str]):
         with raises((ReadOnlyError, AttributeError)):
             # set dummy value of None; exception should be raised
             setattr(entity, field, None)
+
+
+def compare_folders(dir1: Path, dir2: Path):
+    """
+    Ensure the given folders have the same files and the contents match.
+    """
+
+    def collect_files(path: Path) -> Generator[Path, None, None]:
+        for dirpath, _, filenames in path.walk():
+            for filename in filenames:
+                yield (dirpath / filename).relative_to(path)
+
+    dir1_files = list(collect_files(dir1))
+    dir2_files = list(collect_files(dir2))
+
+    assert set(dir1_files) == set(
+        dir2_files
+    ), f"Directories do not contain the same files: dir1='{dir1}', dir2='{dir2}'"
+
+    files = sorted(dir1_files)
+
+    for file in files:
+        file1, file2 = dir1 / file, dir2 / file
+        file1_bytes, file2_bytes = file1.read_bytes(), file2.read_bytes()
+
+        # try comparing as text for better debugging output
+        try:
+            file1_text, file2_text = file1_bytes.decode(), file2_bytes.decode()
+        except UnicodeDecodeError:
+            assert file1_bytes == file2_bytes
+        else:
+            assert file1_text == file2_text

@@ -20,7 +20,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
-from ._fs import export_fs
+from ._fs import dump_note
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
@@ -847,17 +847,17 @@ class Note(BaseEntity[NoteModel]):
 
         return imported_note
 
-    def export_fs(self, dest_dir: Path):
+    def dump_fs(self, dest_dir: Path):
         """
         Export to folder in TriliumAlchemy's filesystem format. Will write
-        `meta.yaml` along with a file containing the content, replacing any
+        `meta.yaml` along with a file containing the content, overwriting any
         previous metadata and content file.
 
         The destination folder is expected to only contain a single note.
 
         :param dest_dir: Destination folder
         """
-        export_fs(self, dest_dir)
+        dump_note(self, dest_dir)
 
     def flush(self):
         """
