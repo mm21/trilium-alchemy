@@ -15,6 +15,9 @@ from .types import State
 if TYPE_CHECKING:
     from .entity import BaseEntity
 
+# TODO: parameterize BaseDriver and BaseEntityModel with BaseModel subclass
+# for this entity
+
 
 class BaseDriver(ABC):
     """
@@ -425,10 +428,17 @@ class BaseEntityModel(ABC):
         """
         self._extensions.append(extension)
 
-    def flush_extensions(self):
+    def flush_extensions(self) -> BaseModel | None:
+        """
+        Flush extensions and return the latest model, if applicable.
+        """
+        model_new: BaseModel | None = None
+
         for ext in self._extensions:
             if ext._is_changed:
-                ext._flush()
+                model_new = ext._flush() or model_new
+
+        return model_new
 
     def _field_default(self, field: str) -> str:
         """
@@ -520,9 +530,9 @@ class StatefulExtension(Extension):
         """
         return False
 
-    def _flush(self):
+    def _flush(self) -> BaseModel | None:
         """
-        Commits changes to database.
+        Commit changes to database, returning the latest model if applicable.
         """
         ...
 

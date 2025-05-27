@@ -48,6 +48,7 @@ class EtapiDriver(NoteDriver):
 
         # for simplicity, always init content as empty string and let
         # content extension set content later (handling text/bin)
+        # - API generated from openapi does not handle binary content
         model_dict["content"] = ""
 
         if self.note.note_id is not None:

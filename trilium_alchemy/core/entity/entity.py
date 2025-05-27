@@ -334,13 +334,14 @@ class BaseEntity[ModelT: BaseEntityModel](
                 )
             else:
                 if self._state is not State.DELETE:
-                    self._model.flush_extensions()
+                    # get latest model from extensions if applicable
+                    model_new = self._model.flush_extensions() or model_new
 
         # mark as clean
         self._set_clean()
 
-        # perform setup if model is newer
-        if model_new is not None and self._model.check_newer(model_new):
+        # perform setup if we got a new model
+        if model_new is not None:
             self._model.setup(model_new)
 
         # continue flush sequence, if needed by subclass

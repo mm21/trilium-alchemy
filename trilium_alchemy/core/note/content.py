@@ -215,13 +215,16 @@ class Content(NoteStatefulExtension):
 
         self._backing.blob = blob
 
-    def _flush(self):
+    def _flush(self) -> EtapiNoteModel:
         """
-        Push note content to server.
+        Push note content to server and return the updated note model.
         """
 
         blob: str | bytes = self._working.blob
         assert blob is not None
+
+        digest = self._working.digest
+        assert digest is not None
 
         headers = self._note._session._etapi_headers.copy()
 
@@ -250,10 +253,14 @@ class Content(NoteStatefulExtension):
         self._backing = self._working
         self._working = BlobState()
 
-        # TODO:
-        # - refresh Note model using response via self._note._refresh_model()
-        #   - updates note's last modified time
-        # - sanity check to ensure digest is what we expect
+        # refresh note model to update blob_id and modified time
+        model_new = self._note._model._driver.fetch()
+        assert isinstance(model_new, EtapiNoteModel)
+
+        # sanity check to ensure blob_id is expected
+        assert model_new.blob_id == digest
+
+        return model_new
 
     def _normalize_blob(self, blob: str | bytes | IO) -> str | bytes:
         if isinstance(blob, IOBase):
