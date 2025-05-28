@@ -849,7 +849,7 @@ class Note(BaseEntity[NoteModel]):
 
     def dump_fs(self, dest_dir: Path):
         """
-        Export to folder in TriliumAlchemy's filesystem format. Will write
+        Dump to folder in TriliumAlchemy's filesystem format. Will write
         `meta.yaml` along with a file containing the content, overwriting any
         previous metadata and content file.
 

@@ -1,5 +1,5 @@
 """
-Interface for filesystem representation of note.
+Filesystem representation of a single note.
 """
 from __future__ import annotations
 
@@ -16,9 +16,6 @@ if TYPE_CHECKING:
 
 __all__ = [
     "METADATA_FILENAME",
-    "NoteMetadata",
-    "AttributeMetadata",
-    "BranchMetadata",
     "dump_note",
 ]
 
@@ -121,8 +118,9 @@ class BranchMetadata(BaseModel):
 
 def dump_note(note: Note, dest_dir: Path):
     """
-    Export given note to given destination folder.
+    Dump note to destination folder.
     """
+
     # collect files/folders in destination besides meta.yaml
     extra_paths: list[Path] = [
         p for p in dest_dir.iterdir() if not p.name == METADATA_FILENAME
