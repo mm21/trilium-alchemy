@@ -23,6 +23,9 @@ from trilium_alchemy import (
     Session,
 )
 
+# enable import of modules in test folder
+sys.path.insert(0, os.getcwd())
+
 logging.basicConfig(level=logging.INFO)
 
 dotenv.load_dotenv()

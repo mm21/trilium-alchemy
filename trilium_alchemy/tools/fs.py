@@ -34,8 +34,8 @@ def dump_notes(
     notes: list[Note],
     dest_dir: Path,
     *,
-    prune: bool = False,
     recursive: bool = False,
+    prune: bool = False,
 ):
     """
     Dump notes to destination folder in prefix tree folder format.
@@ -43,23 +43,23 @@ def dump_notes(
 
     assert dest_dir.is_dir()
 
-    dumped_note_paths: list[Note] = []
+    dumped_note_dirs: list[Note] = []
     aggregated_notes = _aggregate_notes(notes) if recursive else notes
 
     # traverse each note
     for note in aggregated_notes:
-        # map note to path
-        note_path = dest_dir / _map_note_path(note)
+        # map note to folder
+        note_dir = dest_dir / _map_note_dir(note)
 
         # dump note to this folder
-        note_path.mkdir(parents=True, exist_ok=True)
-        note.dump_fs(note_path)
+        note_dir.mkdir(parents=True, exist_ok=True)
+        note.dump_fs(note_dir)
 
-        dumped_note_paths.append(note_path)
+        dumped_note_dirs.append(note_dir)
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
-        _prune_paths(dest_dir, dumped_note_paths)
+        _prune_dirs(dest_dir, dumped_note_dirs)
 
 
 def _aggregate_notes(notes: list[Note]) -> list[Note]:
@@ -80,7 +80,7 @@ def _aggregate_notes(notes: list[Note]) -> list[Note]:
     return sorted(aggregated_notes, key=lambda n: n.note_id)
 
 
-def _map_note_path(note: Note) -> Path:
+def _map_note_dir(note: Note) -> Path:
     """
     Map note to relative path in which it should be placed based on its note_id.
 
@@ -92,54 +92,60 @@ def _map_note_path(note: Note) -> Path:
     assert note.note_id
     blob_id = hashlib.sha256(note.note_id.encode(encoding="utf-8")).hexdigest()
 
-    print(f"--- blob_id: {blob_id}")
-
     # generate prefixes
     prefixes = [
-        blob_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE + 1]
+        blob_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE]
         for i in range(TREE_DEPTH)
     ]
 
     # trim blob_id to get suffix
     suffix = blob_id[PREFIX_SIZE * TREE_DEPTH :]
 
-    print(f"--- path: {'/'.join(prefixes + [suffix])}")
-
     return "/".join(prefixes + [suffix])
 
 
-def _prune_paths(root: Path, dumped_note_paths: list[Path]):
+def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
     """
     Remove existing paths not belonging to dumped notes.
     """
 
-    note_paths: list[Path] = []
+    note_dirs: list[Path] = []
     empty_dirs: list[Path] = []
 
-    def check_note_path(dir_path: Path):
+    def check_note_dir(dir_path: Path):
+        """
+        Check if this is a valid note folder and add to note dirs.
+        """
+
         if METADATA_FILENAME in [p.name for p in dir_path.iterdir()]:
-            note_paths.append(dir_path)
+            note_dirs.append(dir_path)
         else:
             logging.warning(
                 f"Note folder '{dir_path}' does not contain metadata file"
             )
 
-    def check_prefix_path(dir_path: Path):
+    def check_prefix_dir(dir_path: Path) -> bool:
+        """
+        Check if this folder is a valid prefix folder.
+        """
+
         # ensure folder is a hex value of expected size
         try:
-            int(path.name, base=16)
+            int(dir_path.name, base=16)
         except ValueError:
             is_hex = False
         else:
             is_hex = True
 
-        if len(path.name) != PREFIX_SIZE or not is_hex:
-            logging.warning(f"Unexpected folder: '{path}'")
-            return
+        if len(dir_path.name) != PREFIX_SIZE or not is_hex:
+            logging.warning(f"Unexpected folder: '{dir_path}'")
+            return False
 
         # check for empty folder
-        if len(dir_path.iterdir()) == 0:
+        if next(dir_path.iterdir(), None) is None:
             empty_dirs.append(dir_path)
+
+        return True
 
     def recurse(dir_path: Path, depth: int = 0):
         for path in dir_path.iterdir():
@@ -148,32 +154,32 @@ def _prune_paths(root: Path, dumped_note_paths: list[Path]):
                 continue
 
             if depth == TREE_DEPTH:
-                check_note_path(path)
+                check_note_dir(path)
             else:
-                check_prefix_path(path)
-                recurse(path, depth=depth + 1)
+                if check_prefix_dir(path):
+                    recurse(path, depth=depth + 1)
 
-    recurse(root)
+    recurse(root_dir)
 
     # determine which note paths to prune
-    stale_note_paths = sorted(set(note_paths) - set(dumped_note_paths))
+    stale_note_dirs = sorted(set(note_dirs) - set(dumped_note_dirs))
 
     # prune stale note paths and empty dirs
-    for path in stale_note_paths + empty_dirs:
-        _prune_path(path)
+    for path in stale_note_dirs + empty_dirs:
+        _prune_dir(root_dir, path)
 
 
-def _prune_path(root: Path, path: Path):
+def _prune_dir(root_dir: Path, path: Path):
     """
     Remove this folder and empty parent folders.
     """
 
-    if not path.exists() or root == path:
+    if not path.exists() or root_dir == path:
         return
 
     shutil.rmtree(path)
 
     # if parent is empty, prune it as well
     parent = path.parent
-    if not len(parent.iterdir()):
-        _prune_path(parent)
+    if next(parent.iterdir(), None) is None:
+        _prune_dir(root_dir, parent)

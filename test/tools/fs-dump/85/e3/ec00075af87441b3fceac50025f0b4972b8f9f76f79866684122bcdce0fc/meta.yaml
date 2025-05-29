@@ -1,0 +1,14 @@
+note_id: note_1
+title: Note 1
+note_type: text
+mime: text/html
+blob_id: 7XJSwh6apxkriWy2bX9P
+attributes:
+- attribute_id: note_1_attr_1
+  attribute_type: label
+  name: label_1
+  value: test_value
+  inheritable: true
+children:
+- note_id: note_2
+  prefix: Test prefix
