@@ -116,7 +116,7 @@ class BranchMetadata(BaseModel):
     prefix: str
 
 
-def dump_note(note: Note, dest_dir: Path):
+def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
     """
     Dump note to destination folder.
     """
@@ -153,10 +153,12 @@ def dump_note(note: Note, dest_dir: Path):
     content_path = dest_dir / f"content.{'txt' if note.is_string else 'bin'}"
 
     # write content if it doesn't exist or is out of date
-    if (
-        not content_path.exists()
-        or get_digest(content_path.read_bytes()) != note.blob_id
-    ):
+    blob_id = (
+        get_digest(content_path.read_bytes())
+        if check_content_hash
+        else metadata.blob_id
+    )
+    if not content_path.exists() or blob_id != note.blob_id:
         if note.is_string:
             content_path.write_text(note.content_str)
         else:

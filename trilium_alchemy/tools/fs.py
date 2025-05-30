@@ -16,6 +16,14 @@ __all__ = [
     "dump_notes",
 ]
 
+NORM_NOTE_ID_SIZE = 32
+"""
+Number of characters in normalized note id.
+
+Use 32 characters (128 bits of entropy) since Trilium note ids have
+log2(62**12) = 72 bits of entropy.
+"""
+
 TREE_DEPTH = 2
 """
 Depth of prefix tree. For example:
@@ -29,6 +37,11 @@ PREFIX_SIZE = 2
 Number of characters in each prefix.
 """
 
+SUFFIX_SIZE = NORM_NOTE_ID_SIZE - TREE_DEPTH * PREFIX_SIZE
+"""
+Number of characters in note folder.
+"""
+
 
 def dump_notes(
     notes: list[Note],
@@ -36,9 +49,10 @@ def dump_notes(
     *,
     recursive: bool = False,
     prune: bool = False,
+    check_content_hash: bool = False,
 ):
     """
-    Dump notes to destination folder in prefix tree folder format.
+    Dump notes to destination folder in prefix tree format.
     """
 
     assert dest_dir.is_dir()
@@ -53,7 +67,7 @@ def dump_notes(
 
         # dump note to this folder
         note_dir.mkdir(parents=True, exist_ok=True)
-        note.dump_fs(note_dir)
+        note.dump_fs(note_dir, check_content_hash=check_content_hash)
 
         dumped_note_dirs.append(note_dir)
 
@@ -88,18 +102,20 @@ def _map_note_dir(note: Note) -> Path:
     itself, primarily to accommodate case-insensitive filesystems.
     """
 
-    # generate hash of note's note_id to get "blob id"
+    # generate hash of note id to get normalized note id
     assert note.note_id
-    blob_id = hashlib.sha256(note.note_id.encode(encoding="utf-8")).hexdigest()
+    norm_note_id = hashlib.sha256(
+        note.note_id.encode(encoding="utf-8")
+    ).hexdigest()[:NORM_NOTE_ID_SIZE]
 
     # generate prefixes
     prefixes = [
-        blob_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE]
+        norm_note_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE]
         for i in range(TREE_DEPTH)
     ]
 
-    # trim blob_id to get suffix
-    suffix = blob_id[PREFIX_SIZE * TREE_DEPTH :]
+    # trim to get suffix
+    suffix = norm_note_id[TREE_DEPTH * PREFIX_SIZE :]
 
     return "/".join(prefixes + [suffix])
 
@@ -117,7 +133,12 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
         Check if this is a valid note folder and add to note dirs.
         """
 
-        if METADATA_FILENAME in [p.name for p in dir_path.iterdir()]:
+        # ensure name is of expected length
+        if len(dir_path.name) != SUFFIX_SIZE:
+            logging.warning(f"Unexpected folder: '{dir_path}'")
+            return
+
+        if METADATA_FILENAME in (p.name for p in dir_path.iterdir()):
             note_dirs.append(dir_path)
         else:
             logging.warning(
@@ -129,15 +150,8 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
         Check if this folder is a valid prefix folder.
         """
 
-        # ensure folder is a hex value of expected size
-        try:
-            int(dir_path.name, base=16)
-        except ValueError:
-            is_hex = False
-        else:
-            is_hex = True
-
-        if len(dir_path.name) != PREFIX_SIZE or not is_hex:
+        # ensure name is of expected length
+        if len(dir_path.name) != PREFIX_SIZE:
             logging.warning(f"Unexpected folder: '{dir_path}'")
             return False
 
@@ -149,8 +163,16 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
 
     def recurse(dir_path: Path, depth: int = 0):
         for path in dir_path.iterdir():
+            # ensure not a file
             if path.is_file():
                 logging.warning(f"Unexpected file: '{path}'")
+                continue
+
+            # ensure dir name is a hex string
+            try:
+                int(path.name, base=16)
+            except ValueError:
+                logging.warning(f"Unexpected folder: '{path}'")
                 continue
 
             if depth == TREE_DEPTH:
