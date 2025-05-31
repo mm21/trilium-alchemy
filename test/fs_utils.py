@@ -9,8 +9,6 @@ __all__ = [
 ]
 
 NOTE_1_ID = "note_1"
-LABEL_1_ID = "note_1_attr_1"
-
 NOTE_2_ID = "note_2"
 
 
@@ -26,25 +24,25 @@ def create_note_1(session: Session, parent: Note) -> Note:
         note_id=NOTE_1_ID,
         session=session,
     )
-
-    label_1 = Label(
+    note_2 = Note(
+        title="Note 2",
+        content="<p>Hello, world 2!</p>",
+        note_id=NOTE_2_ID,
+        session=session,
+    )
+    attr_1 = Label(
         "label_1",
         value="test_value",
         inheritable=True,
         session=session,
-        _attribute_id=LABEL_1_ID,
+    )
+    attr_2 = Relation(
+        "relation_1",
+        target=note_2,
+        session=session,
     )
 
-    note_1 += label_1
-    note_1 += (
-        Note(
-            title="Note 2",
-            content="<p>Hello, world 2!</p>",
-            note_id=NOTE_2_ID,
-            session=session,
-        ),
-        "Test prefix",
-    )
+    note_1 += [attr_1, attr_2, (note_2, "Test prefix")]
 
     # flush so branch id gets generated
     session.flush()

@@ -4,14 +4,21 @@ Filesystem representation of a single note.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    Field,
+    model_serializer,
+    model_validator,
+)
 
 from .content import get_digest
 
 if TYPE_CHECKING:
+    from ..session import Session
     from .note import Note
 
 __all__ = [
@@ -30,13 +37,18 @@ class NoteMetadata(BaseModel):
     Note metadata used to populate yaml.
     """
 
-    note_id: str
     title: str
-    note_type: str
-    mime: str
     blob_id: str
     attributes: list[AttributeMetadata]
     children: list[BranchMetadata]
+    note_type: str = Field(
+        validation_alias=AliasChoices("note_type", "type"),
+        serialization_alias="type",
+    )
+    mime: str
+    note_id: str = Field(
+        validation_alias=AliasChoices("note_id", "id"), serialization_alias="id"
+    )
 
     @classmethod
     def from_note(cls, note: Note) -> NoteMetadata:
@@ -76,16 +88,16 @@ class NoteMetadata(BaseModel):
             )
 
         return NoteMetadata(
-            note_id=note.note_id,
             title=note.title,
-            note_type=note.note_type,
-            mime=note.mime,
             blob_id=note.blob_id,
             attributes=attributes,
             children=children,
+            note_type=note.note_type,
+            mime=note.mime,
+            note_id=note.note_id,
         )
 
-    def to_note(self) -> Note:
+    def to_note(self, session: Session) -> Note:
         """
         Populate note from this model.
         """
@@ -97,11 +109,45 @@ class AttributeMetadata(BaseModel):
     order in the containing list.
     """
 
-    attribute_id: str
     attribute_type: str
     name: str
     value: str
     inheritable: bool
+
+    @model_serializer
+    def to_str(self) -> str:
+        type_prefix = "~" if self.attribute_type == "relation" else ""
+        inheritable = "(inheritable)" if self.inheritable else ""
+        return f"{type_prefix}{self.name}{inheritable}={self.value}"
+
+    @model_validator(mode="before")
+    @classmethod
+    def from_str(cls, data: Any) -> Any:
+        if not isinstance(data, str):
+            return data
+
+        spec, value = data.split("=", maxsplit=1)
+
+        if spec.startswith("~"):
+            attribute_type = "relation"
+            spec = spec[1:]
+        else:
+            attribute_type = "label"
+
+        if spec.endswith("(inheritable)"):
+            inheritable = True
+            spec = spec.replace("(inheritable)", "")
+        else:
+            inheritable = False
+
+        name = spec
+
+        return {
+            "attribute_type": attribute_type,
+            "name": name,
+            "value": value,
+            "inheritable": inheritable,
+        }
 
 
 class BranchMetadata(BaseModel):
@@ -114,6 +160,22 @@ class BranchMetadata(BaseModel):
 
     note_id: str
     prefix: str
+
+    @model_serializer
+    def to_str(self) -> str:
+        return f"{self.note_id}|{self.prefix}"
+
+    @model_validator(mode="before")
+    @classmethod
+    def from_str(cls, data: Any) -> Any:
+        if not isinstance(data, str):
+            return data
+
+        note_id, prefix = data.split("|", maxsplit=1)
+        return {
+            "note_id": note_id,
+            "prefix": prefix,
+        }
 
 
 def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
@@ -139,7 +201,7 @@ def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
     metadata = NoteMetadata.from_note(note)
 
     # convert metadata to yaml string
-    metadata_dict = metadata.model_dump()
+    metadata_dict = metadata.model_dump(by_alias=True)
     metadata_str = yaml.safe_dump(
         metadata_dict, default_flow_style=False, sort_keys=False
     )
