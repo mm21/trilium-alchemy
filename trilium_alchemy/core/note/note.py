@@ -4,6 +4,7 @@ import base64
 import copy
 import hashlib
 import logging
+import string
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
+from ..utils import base_n_hash
 from ._fs import dump_note
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
@@ -106,6 +108,21 @@ def is_string(note_type: str, mime: str) -> bool:
 
 def id_hash(seed: str) -> str:
     """
+    Return entity id given seed. Ensures entity ids have a consistent amount of
+    entropy by being of the same length and character distribution, derived
+    from a 128-bit hash of the seed.
+
+    The hash is mapped to "base62" (a-z, A-Z, 0-9) with no loss in entropy.
+    """
+    chars = string.ascii_letters + string.digits
+    return base_n_hash(seed.encode(encoding="utf-8"), chars)
+
+
+def id_hash_legacy(seed: str) -> str:
+    """
+    Legacy implementation of `id_hash()`. Possibly useful for migrating to
+    the new hash mechanism. To be removed before version 1.0.
+
     Return id given seed. Needed to ensure IDs have a consistent amount of
     entropy by all being of the same length and character distribution.
 
