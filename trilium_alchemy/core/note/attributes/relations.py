@@ -40,7 +40,8 @@ class BaseWriteableRelationMixin(BaseReadableRelationMixin):
 
     def set_target(self, name: str, val: Note, inheritable: bool = False):
         """
-        Set target of first relation with provided name.
+        Set target of first relation with provided name, creating if it doesn't
+        exist.
         """
         self._set_value(name, val, inheritable)
 

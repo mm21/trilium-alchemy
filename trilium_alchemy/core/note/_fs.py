@@ -4,7 +4,7 @@ Filesystem representation of a single note.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import (
@@ -15,11 +15,11 @@ from pydantic import (
     model_validator,
 )
 
+from ..attribute import BaseAttribute, Label, Relation
+from ..branch import Branch
+from ..session import Session
 from .content import get_digest
-
-if TYPE_CHECKING:
-    from ..session import Session
-    from .note import Note
+from .note import Note
 
 __all__ = [
     "METADATA_FILENAME",
@@ -49,6 +49,27 @@ class NoteMetadata(BaseModel):
     note_id: str = Field(
         validation_alias=AliasChoices("note_id", "id"), serialization_alias="id"
     )
+
+    @classmethod
+    def from_file(cls, file: Path) -> NoteMetadata:
+        """
+        Populate model from .yaml file.
+        """
+        assert file.is_file()
+
+        with file.open() as fh:
+            data_dict = yaml.safe_load(fh)
+        return NoteMetadata(**data_dict)
+
+    def to_file(self, file: Path):
+        """
+        Write model to .yaml file.
+        """
+        data_dict = self.model_dump(by_alias=True)
+        data_str = yaml.safe_dump(
+            data_dict, default_flow_style=False, sort_keys=False
+        )
+        file.write_text(data_str)
 
     @classmethod
     def from_note(cls, note: Note) -> NoteMetadata:
@@ -82,7 +103,7 @@ class NoteMetadata(BaseModel):
 
             children.append(
                 BranchMetadata(
-                    note_id=branch.child.note_id,
+                    child_note_id=branch.child.note_id,
                     prefix=branch.prefix,
                 )
             )
@@ -109,7 +130,7 @@ class AttributeMetadata(BaseModel):
     order in the containing list.
     """
 
-    attribute_type: str
+    attribute_type: Literal["label", "relation"]
     name: str
     value: str
     inheritable: bool
@@ -158,12 +179,12 @@ class BranchMetadata(BaseModel):
     a UI concept only.
     """
 
-    note_id: str
+    child_note_id: str
     prefix: str
 
     @model_serializer
     def to_str(self) -> str:
-        return f"{self.note_id}|{self.prefix}"
+        return f"{self.child_note_id}|{self.prefix}"
 
     @model_validator(mode="before")
     @classmethod
@@ -171,14 +192,14 @@ class BranchMetadata(BaseModel):
         if not isinstance(data, str):
             return data
 
-        note_id, prefix = data.split("|", maxsplit=1)
+        child_note_id, prefix = data.split("|", maxsplit=1)
         return {
-            "note_id": note_id,
+            "child_note_id": child_note_id,
             "prefix": prefix,
         }
 
 
-def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
+def dump_note(dest_dir: Path, note: Note, *, check_content_hash: bool = False):
     """
     Dump note to destination folder.
     """
@@ -189,7 +210,7 @@ def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
     ]
 
     # ensure there are no unexpected contents in destination
-    if len(extra_paths) > 1 or not all(
+    if not all(
         p.is_file() and p.name in ["content.txt", "content.bin"]
         for p in extra_paths
     ):
@@ -197,36 +218,159 @@ def dump_note(note: Note, dest_dir: Path, *, check_content_hash: bool = False):
             f"Unexpected files in export destination '{dest_dir}': {extra_paths}"
         )
 
-    # get metadata
-    metadata = NoteMetadata.from_note(note)
+    meta_path = dest_dir / METADATA_FILENAME
+    current_meta: NoteMetadata | None = None
 
-    # convert metadata to yaml string
-    metadata_dict = metadata.model_dump(by_alias=True)
-    metadata_str = yaml.safe_dump(
-        metadata_dict, default_flow_style=False, sort_keys=False
-    )
+    # get note metadata
+    meta = NoteMetadata.from_note(note)
 
-    # write metadata if it differs from any existing metadata
-    metadata_path = dest_dir / METADATA_FILENAME
-    if not metadata_path.is_file() or metadata_path.read_text() != metadata_str:
-        metadata_path.write_text(metadata_str)
+    # get metadata from file
+    if meta_path.exists():
+        current_meta = NoteMetadata.from_file(meta_path)
+
+    # write metadata if it doesn't exist or differs from existing metadata
+    if meta != current_meta:
+        meta.to_file(meta_path)
 
     # get path to content file for this note
-    content_path = dest_dir / f"content.{'txt' if note.is_string else 'bin'}"
+    content_file = dest_dir / f"content.{'txt' if note.is_string else 'bin'}"
 
     # write content if it doesn't exist or is out of date
-    blob_id = (
-        get_digest(content_path.read_bytes())
+    current_blob_id = (
+        get_digest(content_file.read_bytes())
         if check_content_hash
-        else metadata.blob_id
+        else (current_meta.blob_id if current_meta else None)
     )
-    if not content_path.exists() or blob_id != note.blob_id:
+    if not content_file.exists() or current_blob_id != note.blob_id:
         if note.is_string:
-            content_path.write_text(note.content_str)
+            content_file.write_text(note.content_str)
         else:
-            content_path.write_bytes(note.content_bin)
+            content_file.write_bytes(note.content_bin)
 
     # prune extra files if different from content_path
     # - would only occur if note content type was changed
-    for path in [p for p in extra_paths if p.name != content_path.name]:
+    for path in [p for p in extra_paths if p.name != content_file.name]:
         path.unlink()
+
+
+def load_note(src_dir: Path, session: Session) -> Note:
+    """
+    Load note from source folder.
+    """
+
+    meta_path = src_dir / METADATA_FILENAME
+    assert meta_path.is_file()
+
+    # get metadata from file
+    meta = NoteMetadata.from_file(meta_path)
+
+    note = Note(note_id=meta.note_id, session=session)
+    note.title = meta.title
+    note.note_type = meta.note_type
+    note.mime = meta.mime
+
+    # update content if out of date
+    if note.blob_id != meta.blob_id:
+        content_file = src_dir / f"content.{'txt' if note.is_string else 'bin'}"
+        assert content_file.is_file()
+
+        note.content = (
+            content_file.read_text()
+            if note.is_string
+            else content_file.read_bytes()
+        )
+
+    # set attributes
+    note.attributes.owned = _load_attributes(note, meta)
+
+    # set children
+    note.branches.children = _load_child_branches(note, meta)
+
+    return note
+
+
+def _load_attributes(note: Note, meta: NoteMetadata) -> list[BaseAttribute]:
+    """
+    Get note's attributes from metadata, updating any existing attributes.
+    """
+
+    def add_attr[T: BaseAttribute](attr: T, attr_dict: dict[str, list[T]]):
+        """
+        Add existing attribute to mapping.
+        """
+        if attr.name in attr_dict:
+            attr_dict[attr.name].append(attr)
+        else:
+            attr_dict[attr.name] = [attr]
+
+    def get_attr[
+        T: BaseAttribute
+    ](name: str, attr_dict: dict[str, list[T]]) -> T | None:
+        """
+        Get and remove first existing attribute with the given name.
+        """
+        if name not in attr_dict or not len(attr_dict[name]):
+            return None
+        return attr_dict[name].pop(-1)
+
+    # create mappings of current attribute names to objects, grouped by type
+    current_labels: dict[str, list[Label]] = {}
+    current_relations: dict[str, list[Relation]] = {}
+
+    for label in note.labels.owned:
+        add_attr(label, current_labels)
+
+    for relation in note.relations.owned:
+        add_attr(relation, current_relations)
+
+    # create attributes from metadata
+    attributes: list[BaseAttribute] = []
+
+    for attr_meta in meta.attributes:
+        if attr_meta.attribute_type == "label":
+            label = get_attr(attr_meta.name, current_labels) or Label(
+                attr_meta.name, session=note.session
+            )
+
+            label.value = attr_meta.value
+            label.inheritable = attr_meta.inheritable
+            attributes.append(label)
+        else:
+            relation = get_attr(attr_meta.name, current_relations) or Relation(
+                attr_meta.name, session=note.session
+            )
+
+            relation.target = Note(
+                note_id=attr_meta.value, session=note.session
+            )
+            relation.inheritable = attr_meta.inheritable
+            attributes.append(relation)
+
+    return attributes
+
+
+def _load_child_branches(note: Note, meta: NoteMetadata) -> list[Branch]:
+    """
+    Get child branches from metadata.
+    """
+    assert note.note_id
+
+    branches: list[Branch] = []
+
+    for branch_meta in meta.children:
+        branch_id = Branch._gen_branch_id(
+            note.note_id, branch_meta.child_note_id
+        )
+        child = Note(note_id=branch_meta.child_note_id, session=note.session)
+        branch = Branch(
+            parent=note,
+            child=child,
+            prefix=branch_meta.prefix,
+            session=note.session,
+            _branch_id=branch_id,
+            _ignore_expanded=True,
+        )
+
+        branches.append(branch)
+
+    return branches

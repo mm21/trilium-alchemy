@@ -40,7 +40,8 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
 
     def set_value(self, name: str, val: str, inheritable: bool = False):
         """
-        Set value of first label with provided name.
+        Set value of first label with provided name, creating if it doesn't
+        exist.
         """
         self._set_value(name, val, inheritable)
 
