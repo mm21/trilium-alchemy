@@ -104,9 +104,7 @@ def _map_note_dir(note: Note) -> Path:
 
     # generate hash of note id to get normalized note id
     assert note.note_id
-    norm_note_id = hashlib.sha256(
-        note.note_id.encode(encoding="utf-8")
-    ).hexdigest()[:NORM_NOTE_ID_SIZE]
+    norm_note_id = _normalize_note_id(note.note_id)
 
     # generate prefixes
     prefixes = [
@@ -205,3 +203,14 @@ def _prune_dir(root_dir: Path, path: Path):
     parent = path.parent
     if next(parent.iterdir(), None) is None:
         _prune_dir(root_dir, parent)
+
+
+def _normalize_note_id(note_id: str) -> str:
+    """
+    Get fixed-length hex id, well suited for a filesystem prefix tree and
+    compatible with case insensitive filesystems.
+
+    Uses SHAKE-128 since we only need 128 bits of entropy; more
+    cryptographically optimal than discarding bits from SHA-256 hash.
+    """
+    return hashlib.shake_128(note_id.encode(encoding="utf-8")).hexdigest(16)
