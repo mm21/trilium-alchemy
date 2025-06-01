@@ -19,7 +19,7 @@ def test_dump(session: Session, note: Note, tmp_path: Path):
     """
 
     note_1 = create_note_1(session, note)
-    dump_notes(tmp_path, [note_1], recursive=True)
+    dump_notes(tmp_path, [note_1], recursive=True, prune=False)
 
     # compare tmp_path with expected path
     compare_folders(tmp_path, FS_NOTES_PATH)

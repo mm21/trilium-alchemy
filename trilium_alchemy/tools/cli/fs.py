@@ -1,0 +1,148 @@
+"""
+Filesystem dump/load functionality.
+
+Possible dump option: --build-hierarchy [dest: Path]
+- recreates note hierarchy in destination using symlinks
+    - name folders using branch prefix + note titles, suffix w/note_id 
+    if duplicate prefix+title
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from typer import Argument, Context, Option
+
+from ..fs import dump_notes, load_notes
+from ..utils import commit_changes
+from ._utils import MainTyper, get_notes, get_root_context, lookup_param
+
+if TYPE_CHECKING:
+    pass
+
+
+app = MainTyper(
+    "fs",
+    help="Operations using TriliumAlchemy's filesystem note format",
+)
+
+
+@app.command()
+def dump(
+    ctx: Context,
+    dest: Path = Argument(
+        help="Destination folder",
+        exists=True,
+        file_okay=False,
+    ),
+    note_id: str = Option(
+        "root",
+        "--note-id",
+        help="Note id to dump",
+    ),
+    search: str
+    | None = Option(
+        None,
+        "--search",
+        help="Search string to identify note(s) to dump, e.g. '#myProjectRoot'",
+    ),
+    no_recurse: bool = Option(
+        False,
+        "--no-recurse",
+        help="Don't recursively dump child notes",
+    ),
+    no_prune: bool = Option(
+        False,
+        "--no-prune",
+        help="Don't propagate deleted notes in destination folder",
+    ),
+    check_content_hash: bool = Option(
+        False,
+        "--check-content-hash",
+        help="Check hash of content file instead of using dump metadata when determining whether content is out of date",
+    ),
+):
+    """
+    Dump notes to destination folder
+    """
+
+    root_context = get_root_context(ctx)
+    session = root_context.create_session()
+
+    # get source notes
+    notes = get_notes(
+        ctx,
+        session,
+        note_id=note_id,
+        search=search,
+        note_id_param=lookup_param(ctx, "note_id"),
+        search_param=lookup_param(ctx, "search"),
+    )
+
+    # dump to destination
+    dump_notes(
+        dest,
+        notes,
+        recursive=not no_recurse,
+        prune=not no_prune,
+        check_content_hash=check_content_hash,
+    )
+
+
+@app.command()
+def load(
+    ctx: Context,
+    src: Path = Argument(
+        help="Source folder",
+        exists=True,
+        file_okay=False,
+    ),
+    parent_note_id: str = Option(
+        None,
+        "--parent_note-id",
+        help="Note id of parent under which to place loaded notes",
+    ),
+    parent_search: str
+    | None = Option(
+        None,
+        "--search",
+        help="Search string to identify parent under which to place loaded notes, e.g. '#myExtensionsRoot'",
+    ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only show pending changes",
+    ),
+    yes: bool = Option(
+        False,
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before committing changes",
+    ),
+):
+    """
+    Load notes from source folder and optionally add as children of given parent
+    """
+    from .main import console
+
+    root_context = get_root_context(ctx)
+    session = root_context.create_session()
+
+    # get parent note if requested
+    if parent_note_id or parent_search:
+        parent_note_results = get_notes(
+            ctx,
+            session,
+            note_id=parent_note_id,
+            search=parent_search,
+            note_id_param=lookup_param(ctx, "parent_note_id"),
+            search_param=lookup_param(ctx, "parent_search"),
+            exactly_one=True,
+        )
+        assert len(parent_note_results) == 1
+        parent_note = parent_note_results[0]
+    else:
+        parent_note = None
+
+    _ = load_notes(src, session, parent_note=parent_note)
+    commit_changes(session, console, dry_run=dry_run, yes=yes)

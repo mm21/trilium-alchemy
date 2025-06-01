@@ -7,9 +7,11 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
-from click import Parameter
+from click import BadParameter, Parameter
 from rich.console import Console
 from typer import Context, Typer
+
+from ...core import Note, Session
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -39,6 +41,54 @@ def get_root_context(ctx: Context) -> RootContext:
     root_context = ctx.obj
     assert isinstance(root_context, RootContext)
     return root_context
+
+
+def get_notes(
+    ctx: Context,
+    session: Session,
+    *,
+    note_id: str | None,
+    search: str | None,
+    note_id_param: Parameter,
+    search_param: Parameter,
+    exactly_one: bool = False,
+) -> list[Note]:
+    """
+    Get notes from id or search string.
+    """
+    assert note_id or search
+
+    notes: list[Note]
+
+    if search:
+        notes = session.search(search)
+
+        if exactly_one and len(notes) != 1:
+            raise BadParameter(
+                f"search '{search}' does not uniquely identify a note: got {len(notes)} results",
+                ctx=ctx,
+                param=search_param,
+            )
+        elif not len(notes):
+            raise BadParameter(
+                f"search '{search}' did not return any results",
+                ctx=ctx,
+                param=search_param,
+            )
+
+    else:
+        assert note_id
+
+        if not Note._exists(session, note_id):
+            raise BadParameter(
+                f"note with note_id '{note_id}' does not exist",
+                ctx=ctx,
+                param=note_id_param,
+            )
+
+        notes = [Note(note_id=note_id, session=session)]
+
+    return notes
 
 
 def lookup_param(ctx: Context, name: str) -> Parameter:

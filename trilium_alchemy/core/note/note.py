@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import IO, Literal, Self, cast
 
 import requests
+from trilium_client.exceptions import NotFoundException
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
 
@@ -1050,6 +1051,18 @@ class Note(BaseEntity[NoteModel]):
         # assign content if empty
         if len(self.content) == 0:
             self.content = src.content
+
+    @classmethod
+    def _exists(cls, session: Session, note_id: str) -> bool:
+        """
+        Check whether note given by note_id exists.
+        """
+        try:
+            _ = session.api.get_note_by_id(note_id)
+        except NotFoundException:
+            return False
+        else:
+            return True
 
 
 @dataclass

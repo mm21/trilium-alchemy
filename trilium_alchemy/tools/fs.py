@@ -15,6 +15,7 @@ from ..core.session import Session
 
 __all__ = [
     "dump_notes",
+    "load_notes",
 ]
 
 NORM_NOTE_ID_SIZE = 32
@@ -48,8 +49,8 @@ def dump_notes(
     dest_dir: Path,
     notes: list[Note],
     *,
-    recursive: bool = False,
-    prune: bool = False,
+    recursive: bool = True,
+    prune: bool = True,
     check_content_hash: bool = False,
 ):
     """
@@ -71,6 +72,8 @@ def dump_notes(
         note.dump_fs(note_dir, check_content_hash=check_content_hash)
 
         dumped_note_dirs.append(note_dir)
+
+    logging.info(f"Dumped {len(dumped_note_dirs)} notes to '{dest_dir}'")
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
@@ -101,10 +104,19 @@ def load_notes(
         children: set[Note] = set(parent_note.children)
         root_notes = _find_root_notes(notes)
 
+        # validate relative root notes
+        invalid_root_notes = {parent_note, session.root}
+        for note in root_notes:
+            assert (
+                note not in invalid_root_notes
+            ), f"Cannot add note {note} as a child of {parent_note}"
+
         # add children sorted by title, if not already present
         for note in sorted(root_notes, key=lambda n: n.title):
             if note not in children:
                 parent_note += root_notes
+
+    logging.info(f"Loaded {len(notes)} notes from '{src_dir}'")
 
     return notes
 
@@ -232,8 +244,11 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
     stale_note_dirs = sorted(set(note_dirs) - set(dumped_note_dirs))
 
     # prune stale note paths and empty dirs
-    for path in stale_note_dirs + empty_dirs:
+    prune_dirs = stale_note_dirs + empty_dirs
+    for path in prune_dirs:
         _prune_dir(root_dir, path)
+
+    logging.info(f"Pruned {len(prune_dirs)} note folders")
 
 
 def _prune_dir(root_dir: Path, path: Path):

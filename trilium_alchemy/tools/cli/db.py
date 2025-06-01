@@ -30,13 +30,6 @@ Maximum number of seconds within which the backup should have been created
 by Trilium.
 """
 
-
-@dataclass(kw_only=True)
-class DbContext:
-    root_context: RootContext
-    data_dir: Path | None
-
-
 app = MainTyper(
     "db",
     help="Database maintenance operations",
@@ -248,6 +241,12 @@ def restore(
     shutil.copyfile(src, dest)
 
     logging.info(f"Restored backup: {copy_str}")
+
+
+@dataclass(kw_only=True)
+class DbContext:
+    root_context: RootContext
+    data_dir: Path | None
 
 
 def _get_db_context(ctx: Context) -> DbContext:

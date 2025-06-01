@@ -11,17 +11,10 @@ from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
 from ..utils import commit_changes
-from ._utils import MainTyper, get_root_context, lookup_param
+from ._utils import MainTyper, get_notes, get_root_context, lookup_param
 
 if TYPE_CHECKING:
     from .main import RootContext
-
-
-@dataclass(kw_only=True)
-class TreeContext:
-    root_context: RootContext
-    session: Session
-    target_note: Note
 
 
 app = MainTyper(
@@ -48,18 +41,19 @@ def main(
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
-    # lookup subtree root
-    if search:
-        results = session.search(search)
-        if len(results) != 1:
-            raise BadParameter(
-                f"search '{search}' does not uniquely identify a note: got {len(results)} results",
-                ctx=ctx,
-                param=lookup_param(ctx, "search"),
-            )
-        target_note = results[0]
-    else:
-        target_note = Note(note_id=note_id, session=session)
+    # get subtree root
+    notes = get_notes(
+        ctx,
+        session,
+        note_id=note_id,
+        search=search,
+        note_id_param=lookup_param(ctx, "note_id"),
+        search_param=lookup_param(ctx, "search"),
+        exactly_one=True,
+    )
+
+    assert len(notes) == 1
+    target_note = notes[0]
 
     tree_context = TreeContext(
         root_context=root_context, session=session, target_note=target_note
@@ -202,28 +196,11 @@ def push(
     commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
 
 
-"""
-TODO: command: fs-dump [dest: Path]
-- option: --propagate-deletes
-    - or --no-propagate-deletes, propagate by default
-- add Note.walk(): yield subtree recursively
-- add Note.fs_dump(dest: Path): dump meta.yaml, content.[txt/bin] to dest folder
-    - meta.yaml: title/type/mime, attributes, child branches, blob_id
-        - if existing: compare metadata, only update if different
-    - content.[txt/bin]: note content, extension based on Note.is_string
-- add Session.fs_dump_subtree(dest: Path, note: Note)
-    - recursively dumps flattened note subtree to dest folder
-    - use Note.walk(), Note.fs_dump() to recurse and dump notes
-    - note folder under dest: named as [note_id]
-- possible option: --build-hierarchy [dest: Path]
-    - recreates note hierarchy in destination using symlinks
-        - name folders using branch prefix + note titles, suffix w/note_id 
-            if duplicate prefix+title
-
-possible command: fs-load [src: Path]
-- could enable bypassing database migration in case of any issue
-    - but would not restore settings, only user-visible notes
-"""
+@dataclass(kw_only=True)
+class TreeContext:
+    root_context: RootContext
+    session: Session
+    target_note: Note
 
 
 def _get_tree_context(ctx: Context) -> TreeContext:
