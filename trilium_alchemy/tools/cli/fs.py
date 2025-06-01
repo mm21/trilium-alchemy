@@ -8,6 +8,7 @@ Possible dump option: --build-hierarchy [dest: Path]
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -80,13 +81,16 @@ def dump(
     )
 
     # dump to destination
-    dump_tree(
+    stats = dump_tree(
         dest,
         notes,
         recursive=not no_recurse,
         prune=not no_prune,
         check_content_hash=check_content_hash,
     )
+
+    extra = f"{stats.update_count} updated, {stats.prune_count} pruned"
+    logging.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
 
 
 @app.command()

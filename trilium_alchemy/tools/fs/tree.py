@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 from ...core.note.note import Note
@@ -45,6 +46,28 @@ Number of characters in note folder.
 """
 
 
+@dataclass(kw_only=True)
+class DumpStats:
+    """
+    Encapsulates statistics for dump operation.
+    """
+
+    note_count: int = 0
+    """
+    Number of notes dumped to tree.
+    """
+
+    update_count: int = 0
+    """
+    Number of note folders which were actually updated.
+    """
+
+    prune_count: int = 0
+    """
+    Number of note folders which were pruned.
+    """
+
+
 def dump_tree(
     dest_dir: Path,
     notes: list[Note],
@@ -52,7 +75,7 @@ def dump_tree(
     recursive: bool = True,
     prune: bool = True,
     check_content_hash: bool = False,
-):
+) -> DumpStats:
     """
     Dump notes to destination folder in prefix tree format.
     """
@@ -61,6 +84,7 @@ def dump_tree(
 
     dumped_note_dirs: list[Note] = []
     aggregated_notes = _aggregate_notes(notes) if recursive else notes
+    stats = DumpStats(note_count=len(aggregated_notes))
 
     # traverse each note
     for note in aggregated_notes:
@@ -69,15 +93,20 @@ def dump_tree(
 
         # dump note to this folder
         note_dir.mkdir(parents=True, exist_ok=True)
-        dump_note(note_dir, note, check_content_hash=check_content_hash)
+        updated = dump_note(
+            note_dir, note, check_content_hash=check_content_hash
+        )
 
         dumped_note_dirs.append(note_dir)
 
-    logging.info(f"Dumped {len(dumped_note_dirs)} notes to '{dest_dir}'")
+        if updated:
+            stats.update_count += 1
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
-        _prune_dirs(dest_dir, dumped_note_dirs)
+        _prune_dirs(dest_dir, dumped_note_dirs, stats)
+
+    return stats
 
 
 def load_tree(
@@ -115,8 +144,6 @@ def load_tree(
         for note in sorted(root_notes, key=lambda n: n.title):
             if note not in children:
                 parent_note += root_notes
-
-    logging.info(f"Loaded {len(notes)} notes from '{src_dir}'")
 
     return notes
 
@@ -232,7 +259,7 @@ def _map_note_dir(note: Note) -> Path:
     return "/".join(prefixes + [suffix])
 
 
-def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
+def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path], stats: DumpStats):
     """
     Remove existing paths not belonging to dumped notes.
     """
@@ -247,8 +274,7 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path]):
     prune_dirs = stale_note_dirs + empty_dirs
     for path in prune_dirs:
         _prune_dir(root_dir, path)
-
-    logging.info(f"Pruned {len(prune_dirs)} note folders")
+        stats.prune_count += 1
 
 
 def _prune_dir(root_dir: Path, path: Path):

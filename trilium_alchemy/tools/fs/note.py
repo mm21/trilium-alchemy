@@ -18,10 +18,14 @@ __all__ = [
 ]
 
 
-def dump_note(dest_dir: Path, note: Note, *, check_content_hash: bool = False):
+def dump_note(
+    dest_dir: Path, note: Note, *, check_content_hash: bool = False
+) -> bool:
     """
-    Dump note to destination folder.
+    Dump note to destination folder, returning whether the folder was updated.
     """
+
+    updated = False
 
     # collect files/folders in destination besides meta.yaml
     extra_paths: list[Path] = [
@@ -50,6 +54,7 @@ def dump_note(dest_dir: Path, note: Note, *, check_content_hash: bool = False):
     # write metadata if it doesn't exist or differs from existing metadata
     if meta != current_meta:
         meta.to_file(meta_path)
+        updated = True
 
     # get path to content file for this note
     content_file = dest_dir / f"content.{'txt' if note.is_string else 'bin'}"
@@ -65,11 +70,14 @@ def dump_note(dest_dir: Path, note: Note, *, check_content_hash: bool = False):
             content_file.write_text(note.content_str)
         else:
             content_file.write_bytes(note.content_bin)
+        updated = True
 
     # prune extra files if different from content_path
     # - would only occur if note content type was changed
     for path in [p for p in extra_paths if p.name != content_file.name]:
         path.unlink()
+
+    return updated
 
 
 def load_note(src_dir: Path, session: Session) -> Note:
