@@ -4,9 +4,11 @@ Test filesystem dump/load functionality.
 
 from pathlib import Path
 
+from pytest import FixtureRequest
+
 from trilium_alchemy import *
 from trilium_alchemy.tools.fs.note import dump_note, load_note
-from trilium_alchemy.tools.fs.tree import dump_tree, load_tree
+from trilium_alchemy.tools.fs.tree import DumpStats, dump_tree, load_tree
 
 from ..conftest import compare_folders
 from ..fs_utils import NOTE_1_ID, check_note_1, create_note_1
@@ -17,7 +19,9 @@ NOTE_1_DUMP_PATH = FS_DUMPS_PATH / "note-1"
 TREE_DUMP_PATH = FS_DUMPS_PATH / "tree"
 
 
-def test_dump_note(session: Session, note: Note, tmp_path: Path):
+def test_dump_note(
+    session: Session, note: Note, tmp_path: Path, request: FixtureRequest
+):
     """
     Dump a single note and verify output, also verifying overwrite.
     """
@@ -51,8 +55,10 @@ def test_dump_note(session: Session, note: Note, tmp_path: Path):
     dump_note(tmp_path, note_1, check_content_hash=True)
     assert content_txt_path.read_text() == "Changed content"
 
+    _teardown_note(note_1, request)
 
-def test_load_note(session: Session, note: Note):
+
+def test_load_note(session: Session, note: Note, request: FixtureRequest):
     """
     Load a single note and verify it.
     """
@@ -81,14 +87,26 @@ def test_load_note(session: Session, note: Note):
     assert session.dirty_count == 0
     check_note_1(note_1, State.CLEAN)
 
+    _teardown_note(note_1, request)
 
-def test_dump_tree(session: Session, note: Note, tmp_path: Path):
+
+def test_dump_tree(
+    session: Session, note: Note, tmp_path: Path, request: FixtureRequest
+):
     """
     Dump note hierarchy to folder.
     """
 
+    def print_stats(stats: DumpStats):
+        print(f"Tree dump stats: {stats}")
+
     note_1 = create_note_1(session, note)
-    dump_tree(tmp_path, [note_1], recursive=True, prune=False)
+    stats = dump_tree(tmp_path, [note_1], recursive=True, prune=False)
+
+    print_stats(stats)
+    assert stats.note_count == 2
+    assert stats.update_count == 2
+    assert stats.prune_count == 0
 
     # compare tmp_path with expected path
     compare_folders(tmp_path, TREE_DUMP_PATH)
@@ -103,7 +121,12 @@ def test_dump_tree(session: Session, note: Note, tmp_path: Path):
     unexpected_file.write_text("")
 
     # dump with pruning
-    dump_tree(tmp_path, [note_1], recursive=True, prune=True)
+    stats = dump_tree(tmp_path, [note_1], recursive=True, prune=True)
+
+    print_stats(stats)
+    assert stats.note_count == 2
+    assert stats.update_count == 0
+    assert stats.prune_count == 1
 
     assert unexpected_folder.exists()
     assert not unexpected_pruned_folder.exists()
@@ -114,8 +137,10 @@ def test_dump_tree(session: Session, note: Note, tmp_path: Path):
     unexpected_file.unlink()
     compare_folders(tmp_path, TREE_DUMP_PATH)
 
+    _teardown_note(note_1, request)
 
-def test_load_tree(session: Session, note: Note):
+
+def test_load_tree(session: Session, note: Note, request: FixtureRequest):
     """
     Load note hierarchy from folder.
     """
@@ -128,3 +153,15 @@ def test_load_tree(session: Session, note: Note):
 
     assert len(note.children)
     assert note.children[0] is note_1
+
+    _teardown_note(note_1, request)
+
+
+def _teardown_note(note: Note, request: FixtureRequest):
+    """
+    Delete this note if skipping note teardown. Otherwise, subsequent tests
+    using note 1 will fail due to it already existing.
+    """
+    if request.config.getoption("--skip-teardown"):
+        note.delete()
+        note.flush()

@@ -176,7 +176,9 @@ def create_session(default=False):
 
 
 @fixture
-def note(request, session: Session) -> Generator[Note, None, None]:
+def note(
+    request: FixtureRequest, session: Session
+) -> Generator[Note, None, None]:
     """
     Create a new note "manually" using ETAPI directly; don't rely on framework
     under test to do so.
@@ -197,14 +199,18 @@ def note(request, session: Session) -> Generator[Note, None, None]:
 
 
 @fixture
-def note1(request, session: Session) -> Generator[Note, None, None]:
+def note1(
+    request: FixtureRequest, session: Session
+) -> Generator[Note, None, None]:
     note = create_note_fixture(request, session, "note1")
     yield note
     teardown_note(request, session, note.note_id)
 
 
 @fixture
-def note2(request, session: Session, note1) -> Generator[Note, None, None]:
+def note2(
+    request: FixtureRequest, session: Session, note1
+) -> Generator[Note, None, None]:
     """
     Take dummy note1 to ensure:
     - note1 is created before note2
@@ -220,7 +226,7 @@ def note2(request, session: Session, note1) -> Generator[Note, None, None]:
 
 
 @fixture
-def label(request, session: Session, note: Note):
+def label(request: FixtureRequest, session: Session, note: Note):
     """
     Create a new label.
     """
@@ -240,7 +246,7 @@ def label(request, session: Session, note: Note):
 
 
 @fixture
-def relation(request, session: Session, note: Note):
+def relation(request: FixtureRequest, session: Session, note: Note):
     """
     Create a new relation.
     """
@@ -258,7 +264,7 @@ def relation(request, session: Session, note: Note):
 
 
 @fixture
-def branch(request, session: Session, note1: Note, note2: Note):
+def branch(request: FixtureRequest, session: Session, note1: Note, note2: Note):
     model = create_branch(
         session.api,
         note_id=note2.note_id,
@@ -276,7 +282,7 @@ def branch(request, session: Session, note1: Note, note2: Note):
 
 
 @fixture
-def note_setup(request, session: Session):
+def note_setup(request: FixtureRequest, session: Session):
     """
     Ensure note is in expected state based on marker.
     """
@@ -313,7 +319,7 @@ def note_setup(request, session: Session):
 
 
 @fixture
-def temp_file(request, tmp_path: Path):
+def temp_file(request: FixtureRequest, tmp_path: Path):
     marker = request.node.get_closest_marker("temp_file")
     content = marker.args[0] if marker else ""
 
@@ -332,12 +338,22 @@ def temp_file(request, tmp_path: Path):
     return file_path
 
 
+@fixture
+def skip_teardown(request: FixtureRequest) -> bool:
+    """
+    Skip teardown if flag was passed.
+    """
+    return bool(request.config.getoption("--skip-teardown"))
+
+
 """
 Helper functions to implement fixtures.
 """
 
 
-def create_note_fixture(request, session: Session, fixture_name: str):
+def create_note_fixture(
+    request: FixtureRequest, session: Session, fixture_name: str
+):
     """
     Collect attribute markers as (args, kwargs).
 

@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from pytest import raises
+from pytest import raises, skip
 
 from trilium_alchemy import *
 
@@ -16,7 +16,10 @@ DB_CMD = MAIN_CMD + ["db"]
 TREE_CMD = MAIN_CMD + ["tree"]
 
 
-def test_db(session: Session, tmp_path: Path):
+def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
+    if skip_teardown:
+        skip("Expects an empty tree")
+
     # create a test note
     assert len(session.root.children) == 0
     session.root += Note("test note", session=session)
@@ -102,7 +105,10 @@ def test_db(session: Session, tmp_path: Path):
     session2.flush()
 
 
-def test_tree(session: Session, tmp_path: Path):
+def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
+    if skip_teardown:
+        skip("Expects an empty tree")
+
     # create a test note
     assert len(session.root.children) == 0
     note = Note("test note", session=session)
