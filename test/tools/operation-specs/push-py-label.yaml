@@ -1,0 +1,8 @@
+# Pushes a singleton BaseDeclarativeNote subclass to a note identified by label.
+
+mappings:
+  push:
+  - src:
+      py: "my_pkg.my_root.MyRoot"
+    dest:
+      label: "myRoot"

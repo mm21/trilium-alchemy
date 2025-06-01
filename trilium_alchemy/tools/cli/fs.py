@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from typer import Argument, Context, Option
 
-from ..fs import dump_notes, load_notes
+from ..fs.tree import dump_tree, load_tree
 from ..utils import commit_changes
 from ._utils import MainTyper, get_notes, get_root_context, lookup_param
 
@@ -80,7 +80,7 @@ def dump(
     )
 
     # dump to destination
-    dump_notes(
+    dump_tree(
         dest,
         notes,
         recursive=not no_recurse,
@@ -144,5 +144,5 @@ def load(
     else:
         parent_note = None
 
-    _ = load_notes(src, session, parent_note=parent_note)
+    _ = load_tree(src, session, parent_note=parent_note)
     commit_changes(session, console, dry_run=dry_run, yes=yes)

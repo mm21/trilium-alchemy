@@ -1,0 +1,8 @@
+# Pushes a zip file (e.g. a theme) to a note identified by label.
+
+mappings:
+  push:
+  - src:
+      zip: "~/my-themes/my-theme.zip"
+    dest:
+      label: "myThemeRoot"

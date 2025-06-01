@@ -1,7 +1,0 @@
-# Pushes a git repo to a note identified by label.
-
-mappings:
-  - dest:
-      label: "testRoot"
-    src:
-      - git: "https://github.com/greengeek/trilium-vscode-dark-theme.git"

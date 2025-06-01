@@ -9,7 +9,7 @@ from pytest import raises
 
 from trilium_alchemy import *
 
-from .conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN
+from ..conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN
 
 MAIN_CMD = ["trilium-alchemy"]
 DB_CMD = MAIN_CMD + ["db"]

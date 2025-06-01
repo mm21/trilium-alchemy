@@ -1,8 +1,0 @@
-# Syncs a folder of .html or other files with a note identified by label.
-# Files may have .yaml metadata as documented in <filesystem-notes.md>.
-
-mappings:
-
-  - nodes:
-    - label: "rawRoot"
-    - path: "assets/raw"

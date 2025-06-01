@@ -864,33 +864,6 @@ class Note(BaseEntity[NoteModel]):
 
         return imported_note
 
-    def dump_fs(self, dest_dir: Path, *, check_content_hash: bool = False):
-        """
-        Dump to folder in TriliumAlchemy's filesystem format. Will write
-        `meta.yaml` along with a file containing the content, overwriting any
-        previous metadata and content file.
-
-        The destination folder is expected to only contain a single note.
-
-        :param dest_dir: Destination folder
-        :param check_content_hash: Whether to check the content file's hash (`blob_id`) to determine if content is out of date instead of reading from metadata
-        """
-        from ._fs import dump_note
-
-        dump_note(dest_dir, self, check_content_hash=check_content_hash)
-
-    @classmethod
-    def load_fs(cls, src_dir: Path, session: Session) -> Note:
-        """
-        Load from folder in TriliumAlchemy's filesystem format.
-
-        :param src_dir: Source folder, should only contain `meta.yaml` and either `content.txt` or `content.bin`
-        :param session: Session with which note should be loaded
-        """
-        from ._fs import load_note
-
-        return load_note(src_dir, session)
-
     def flush(self):
         """
         Flush note along with its owned attributes.

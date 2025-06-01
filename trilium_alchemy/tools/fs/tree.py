@@ -1,7 +1,6 @@
 """
-Filesystem representation of multiple notes in a prefix tree folder format.
+Filesystem operations on a prefix tree of notes.
 """
-
 from __future__ import annotations
 
 import hashlib
@@ -9,13 +8,14 @@ import logging
 import shutil
 from pathlib import Path
 
-from ..core.note._fs import METADATA_FILENAME
-from ..core.note.note import Note
-from ..core.session import Session
+from ...core.note.note import Note
+from ...core.session import Session
+from .meta import META_FILENAME
+from .note import dump_note, load_note
 
 __all__ = [
-    "dump_notes",
-    "load_notes",
+    "dump_tree",
+    "load_tree",
 ]
 
 NORM_NOTE_ID_SIZE = 32
@@ -45,7 +45,7 @@ Number of characters in note folder.
 """
 
 
-def dump_notes(
+def dump_tree(
     dest_dir: Path,
     notes: list[Note],
     *,
@@ -69,7 +69,7 @@ def dump_notes(
 
         # dump note to this folder
         note_dir.mkdir(parents=True, exist_ok=True)
-        note.dump_fs(note_dir, check_content_hash=check_content_hash)
+        dump_note(note_dir, note, check_content_hash=check_content_hash)
 
         dumped_note_dirs.append(note_dir)
 
@@ -80,7 +80,7 @@ def dump_notes(
         _prune_dirs(dest_dir, dumped_note_dirs)
 
 
-def load_notes(
+def load_tree(
     src_dir: Path,
     session: Session,
     *,
@@ -96,7 +96,7 @@ def load_notes(
 
     # load notes
     for note_dir in note_dirs:
-        note = Note.load_fs(note_dir, session)
+        note = load_note(note_dir, session)
         notes.append(note)
 
     # if parent given, find relative root notes and add as children
@@ -160,7 +160,7 @@ def _find_note_dirs(
             logging.warning(f"Unexpected folder: '{dir_path}'")
             return
 
-        if METADATA_FILENAME in (p.name for p in dir_path.iterdir()):
+        if META_FILENAME in (p.name for p in dir_path.iterdir()):
             note_dirs.append(dir_path)
         else:
             logging.warning(
