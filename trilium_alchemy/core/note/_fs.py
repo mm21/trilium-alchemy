@@ -311,7 +311,7 @@ def _load_attributes(note: Note, meta: NoteMetadata) -> list[BaseAttribute]:
         """
         if name not in attr_dict or not len(attr_dict[name]):
             return None
-        return attr_dict[name].pop(-1)
+        return attr_dict[name].pop(0)
 
     # create mappings of current attribute names to objects, grouped by type
     current_labels: dict[str, list[Label]] = {}

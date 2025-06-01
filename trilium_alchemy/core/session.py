@@ -183,7 +183,7 @@ class Session:
             logging.debug(f"Got Trilium version: {app_info.app_version}")
         except ApiException:
             logging.error(
-                f"Failed to connect to Trilium server {host} using token={self._token}"
+                f"Failed to connect to Trilium host '{host}' using token='{self._token}'"
             )
             raise
         else:
