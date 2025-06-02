@@ -36,7 +36,7 @@ def commit_changes(
         logging.info("No changes to commit")
         return
 
-    dirty_summary = session.dirty_summary
+    dirty_summary = session.get_dirty_summary()
     overall_summary = session._cache._get_summary()
 
     logging.info("Pending changes:")

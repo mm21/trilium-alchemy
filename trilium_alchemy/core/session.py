@@ -529,8 +529,7 @@ class Session:
 
         return index
 
-    @property
-    def dirty_summary(self) -> str:
+    def get_dirty_summary(self) -> str:
         """
         Get a summary of entities with pending changes, grouped by note and
         sorted by title.
