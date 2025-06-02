@@ -6,8 +6,23 @@ import hashlib
 from functools import cache
 
 __all__ = [
+    "TEMPLATE_RELATIONS",
+    "INHERIT_RELATIONS",
     "base_n_hash",
 ]
+
+TEMPLATE_RELATIONS = [
+    "template",
+    "workspaceTemplate",
+]
+"""
+List of relations defining templates.
+"""
+
+INHERIT_RELATIONS = TEMPLATE_RELATIONS + ["inherit"]
+"""
+List of relations entailing inheritance.
+"""
 
 
 def base_n_hash(data: bytes, chars: str) -> str:

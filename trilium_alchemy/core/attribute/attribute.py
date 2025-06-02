@@ -339,15 +339,11 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
                 for i in range(index):
                     deps.add(self._note.attributes.owned[i])
 
-        # if template relation, add dependency on child branches to avoid extra
-        # children getting created
+        # add dependency on child branches to avoid extra children getting
+        # created
         # - children from templates will get created if the note does not
         # already have children
-        if self._attribute_type == "relation" and self.name in {
-            "template",
-            "workspaceTemplate",
-        }:
-            for branch in self._note.branches.children:
-                deps.add(branch)
+        for branch in self._note.branches.children:
+            deps.add(branch)
 
         return deps

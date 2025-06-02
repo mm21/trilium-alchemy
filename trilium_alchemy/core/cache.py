@@ -9,8 +9,10 @@ import logging
 from typing import TYPE_CHECKING, Iterable
 
 from .exceptions import ValidationError, _ValidationError
+from .utils import INHERIT_RELATIONS
 
 if TYPE_CHECKING:
+    from .attribute.relation import Relation
     from .entity import BaseEntity
     from .note import Note
     from .session import Session
@@ -128,12 +130,12 @@ class Cache:
 
         # refresh ordering for changed branch positions
         for note in refresh_ordering_notes:
-            if not (note._is_abandoned or note._is_orphan):
+            if note._model.exists:
                 self._session.refresh_note_ordering(note)
 
         # refresh notes
         for note in refresh_notes:
-            if not (note._is_abandoned or note._is_orphan):
+            if note._model.exists:
                 note.refresh()
 
     def add(self, entity: BaseEntity):
@@ -212,15 +214,17 @@ class Cache:
 
         for entity in dirty_set:
             if isinstance(entity, Note) and not entity._is_delete:
-                # check for created/deleted templates
-                templates = entity.relations.get_all(
-                    "template"
-                ) + entity.relations.get_all("workspaceTemplate")
+                # check for created/deleted inherit relations
+                relations: list[Relation] = []
+
+                for relation in INHERIT_RELATIONS:
+                    relations += entity.relations.get_all(relation)
+
                 if any(
-                    t._is_create
-                    or t._is_delete
-                    or t._model.is_field_changed("value")
-                    for t in templates
+                    r._is_create
+                    or r._is_delete
+                    or r._model.is_field_changed("value")
+                    for r in relations
                 ):
                     notes.add(entity)
                     continue

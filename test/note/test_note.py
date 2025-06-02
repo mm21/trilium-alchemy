@@ -183,15 +183,14 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     # flush note1 and its label1
     note1.flush()
 
-    assert session.dirty_count == 3
+    assert session.dirty_count == 2
     assert note2.attributes.get("label1")._is_dirty
 
     note2.flush()
 
-    assert session.dirty_count == 2
+    assert session.dirty_count == 1
     assert note2.attributes.get("label1")._is_clean
 
-    branch.flush()
     parent_branch.flush()
     assert session.dirty_count == 0
 

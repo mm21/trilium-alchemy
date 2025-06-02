@@ -165,7 +165,7 @@ class BaseEntityModel(ABC):
 
     @property
     def exists(self) -> bool:
-        return self._exists
+        return bool(self._exists)
 
     @property
     def _nexists(self) -> bool:
