@@ -12,6 +12,7 @@ from .exceptions import ValidationError, _ValidationError
 
 if TYPE_CHECKING:
     from .entity import BaseEntity
+    from .note import Note
     from .session import Session
 
 
@@ -103,7 +104,10 @@ class Cache:
         sorter.prepare()
 
         # get notes with changed child branch positions
-        refresh_set = self._check_refresh(dirty_set)
+        refresh_ordering_notes = self._check_refresh_ordering(dirty_set)
+
+        # get notes with changed templates/parent branches
+        refresh_notes = self._check_refresh_notes(dirty_set)
 
         # flush entities in order provided by sorter
         while sorter.is_active():
@@ -123,8 +127,14 @@ class Cache:
                 sorter.done(entity)
 
         # refresh ordering for changed branch positions
-        for note in refresh_set:
-            self._session.refresh_note_ordering(note)
+        for note in refresh_ordering_notes:
+            if not (note._is_abandoned or note._is_orphan):
+                self._session.refresh_note_ordering(note)
+
+        # refresh notes
+        for note in refresh_notes:
+            if not (note._is_abandoned or note._is_orphan):
+                note.refresh()
 
     def add(self, entity: BaseEntity):
         """
@@ -169,7 +179,7 @@ class Cache:
                 dirty_set.add(dep)
                 self._flush_gather(dep, dirty_set)
 
-    def _check_refresh(self, dirty_set: set[BaseEntity]):
+    def _check_refresh_ordering(self, dirty_set: set[BaseEntity]) -> set[Note]:
         """
         Return set of notes with changed child branch positions. These need
         to be refreshed in the UI after they're flushed.
@@ -177,13 +187,53 @@ class Cache:
 
         from .branch import Branch
 
-        refresh_set = set()
+        notes: set[Note] = set()
+
         for entity in dirty_set:
             if isinstance(entity, Branch):
                 if entity._model.is_field_changed("note_position"):
-                    refresh_set.add(entity.parent)
+                    assert entity.parent
 
-        return refresh_set
+                    if not entity.parent._is_delete:
+                        notes.add(entity.parent)
+
+        return notes
+
+    def _check_refresh_notes(self, dirty_set: set[BaseEntity]) -> set[Note]:
+        """
+        Return set of notes with created/deleted templates or parent branches.
+        These need to be refreshed to pick up changes to inherited attributes
+        (from templates or ancestor notes) and automatically-added children
+        (from new templates).
+        """
+        from .note import Note
+
+        notes: set[Note] = set()
+
+        for entity in dirty_set:
+            if isinstance(entity, Note) and not entity._is_delete:
+                # check for created/deleted templates
+                templates = entity.relations.get_all(
+                    "template"
+                ) + entity.relations.get_all("workspaceTemplate")
+                if any(
+                    t._is_create
+                    or t._is_delete
+                    or t._model.is_field_changed("value")
+                    for t in templates
+                ):
+                    notes.add(entity)
+                    continue
+
+                # check for created/deleted parent branches
+                if any(
+                    b._is_create or b._is_delete
+                    for b in entity.branches.parents
+                ):
+                    notes.add(entity)
+                    continue
+
+        return notes
 
     def _get_summary(self, dirty_set: set[BaseEntity] | None = None) -> str:
         """

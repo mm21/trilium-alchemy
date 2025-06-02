@@ -572,11 +572,6 @@ def test_template(session: Session, note1: Note, note2: Note):
 
     session.flush()
 
-    # refresh to get inherited attributes
-    inst1.refresh()
-    inst2.refresh()
-    inst3.refresh()
-
     check_instance(inst1)
     check_instance(inst2)
     check_instance(inst3)
