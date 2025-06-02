@@ -8,7 +8,12 @@ import logging
 import typer
 from rich.console import Console
 
-from ..core import Session
+from ..core import Note, Session
+
+__all__ = [
+    "commit_changes",
+    "aggregate_notes",
+]
 
 
 def commit_changes(
@@ -51,3 +56,19 @@ def commit_changes(
 
     # print summary
     logging.info("Committed changes")
+
+
+def aggregate_notes(notes: list[Note]) -> list[Note]:
+    """
+    Aggregate notes and children recursively.
+    """
+    aggregated_notes: list[Note] = []
+    seen_notes: set[Note] = set()
+
+    for note in notes:
+        for n in note.walk():
+            if not n in seen_notes:
+                seen_notes.add(n)
+                aggregated_notes.append(n)
+
+    return aggregated_notes

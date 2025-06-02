@@ -258,7 +258,7 @@ def relation(request: FixtureRequest, session: Session, note: Note):
     # value (target note id) must be provided for relation
     value = marker.args[1]
 
-    model = create_relation(session.api, note, name, value, request.node.name)
+    model = create_relation(session.api, note, name, value)
 
     yield BaseAttribute._from_model(model, session=session, owning_note=note)
 
@@ -602,7 +602,7 @@ def change_branch(api: DefaultApi, branch_id: str):
 
 
 def create_label(
-    api: DefaultApi, note: Note, name: str, value: str
+    api: DefaultApi, note: Note, name: str, value: str, position: int = 10
 ) -> EtapiAttributeModel:
     return create_attribute(
         api,
@@ -611,12 +611,12 @@ def create_label(
         name=name,
         value=value,
         is_inheritable=False,
-        position=10,
+        position=position,
     )
 
 
 def create_relation(
-    api: DefaultApi, note: Note, name: str, value: str, prefix: str
+    api: DefaultApi, note: Note, name: str, value: str, position: int = 10
 ) -> EtapiAttributeModel:
     return create_attribute(
         api,
@@ -625,7 +625,7 @@ def create_relation(
         name=name,
         value=value,
         is_inheritable=False,
-        position=10,
+        position=position,
     )
 
 

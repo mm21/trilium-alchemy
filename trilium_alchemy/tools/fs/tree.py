@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ...core.note.note import Note
 from ...core.session import Session
+from ..utils import aggregate_notes
 from .meta import META_FILENAME
 from .note import dump_note, load_note
 
@@ -72,7 +73,7 @@ def dump_tree(
     dest_dir: Path,
     notes: list[Note],
     *,
-    recursive: bool = True,
+    recurse: bool = True,
     prune: bool = True,
     check_content_hash: bool = False,
 ) -> DumpStats:
@@ -83,7 +84,7 @@ def dump_tree(
     assert dest_dir.is_dir()
 
     dumped_note_dirs: list[Note] = []
-    aggregated_notes = _aggregate_notes(notes) if recursive else notes
+    aggregated_notes = aggregate_notes(notes) if recurse else notes
     stats = DumpStats(note_count=len(aggregated_notes))
 
     # traverse each note
@@ -146,24 +147,6 @@ def load_tree(
                 parent_note += root_notes
 
     return notes
-
-
-def _aggregate_notes(notes: list[Note]) -> list[Note]:
-    """
-    Aggregate notes and children recursively.
-    """
-
-    aggregated_notes: set[Note] = set()
-
-    def walk(note: Note):
-        aggregated_notes.add(note)
-        for child in note.children:
-            walk(child)
-
-    for note in notes:
-        walk(note)
-
-    return sorted(aggregated_notes, key=lambda n: n.note_id)
 
 
 def _find_note_dirs(

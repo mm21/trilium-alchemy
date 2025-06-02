@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 app = MainTyper(
     "fs",
-    help="Operations using TriliumAlchemy's filesystem note format",
+    help="Filesystem operations using TriliumAlchemy's note format",
 )
 
 
@@ -84,7 +84,7 @@ def dump(
     stats = dump_tree(
         dest,
         notes,
-        recursive=not no_recurse,
+        recurse=not no_recurse,
         prune=not no_prune,
         check_content_hash=check_content_hash,
     )

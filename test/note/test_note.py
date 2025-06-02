@@ -12,7 +12,7 @@ from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from trilium_alchemy import *
 
-from ..conftest import check_read_only, note_exists
+from ..conftest import check_read_only, create_label, note_exists
 
 
 class NoteSubclass(Note):
@@ -613,3 +613,34 @@ def test_template(session: Session, note1: Note, note2: Note):
     check_instance(inst1, expect_children=3)
 
     assert inst1.children[2].title == "Test child 3"
+
+
+def test_cleanup_positions(session: Session, note: Note):
+    """
+    Set inconsistent positions and test cleaning them up to intervals of 10.
+    """
+
+    # create attributes directly
+    create_label(session.api, note, "label1", "value1", 1)
+    create_label(session.api, note, "label2", "value2", 3)
+    create_label(session.api, note, "label3", "value3", 10)
+
+    note.refresh()
+    assert len(note.labels.owned) == 3
+    assert session.dirty_count == 0
+
+    label1, label2, label3 = note.labels.owned
+
+    assert label1.position == 1
+    assert label2.position == 3
+    assert label3.position == 10
+
+    note._cleanup_positions()
+    assert session.dirty_count == 3
+
+    assert label1.position == 10
+    assert label2.position == 20
+    assert label3.position == 30
+
+    session.flush()
+    assert session.dirty_count == 0

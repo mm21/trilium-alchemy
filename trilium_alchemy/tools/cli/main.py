@@ -3,10 +3,6 @@ Entry point of `trilium-alchemy` CLI.
 
 Planned commands:
 
-- `notes`
-    - Operations on notes
-    - Re-sync notes with a given template, useful to apply template changes
-    to existing notes with that template
 - `extensions`
     - Manage extensions: List currently installed, install/uninstall/upgrade 
     from filesystem dump/zip/git repo
@@ -32,7 +28,7 @@ from typer import Context, Option
 
 from ...core import Session
 from ..config import InstanceConfig, get_config
-from . import db, fs, tree
+from . import db, fs, note, tree
 from ._utils import MainTyper, console, get_root_context, lookup_param
 
 logging.basicConfig(
@@ -122,6 +118,7 @@ def main(
 
 app.add_typer(db.app)
 app.add_typer(tree.app)
+app.add_typer(note.app)
 app.add_typer(fs.app)
 
 

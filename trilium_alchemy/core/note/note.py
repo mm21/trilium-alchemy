@@ -9,7 +9,7 @@ from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Literal, Self, cast
+from typing import IO, Generator, Literal, Self, cast
 
 import requests
 from trilium_client.exceptions import NotFoundException
@@ -864,6 +864,13 @@ class Note(BaseEntity[NoteModel]):
 
         return imported_note
 
+    def walk(self) -> Generator[Note, None, None]:
+        """
+        Yield this note and all children recursively. Each note will only
+        occur once (clones are skipped).
+        """
+        yield from self._walk(set())
+
     def flush(self):
         """
         Flush note along with its owned attributes.
@@ -1036,6 +1043,18 @@ class Note(BaseEntity[NoteModel]):
             return False
         else:
             return True
+
+    def _walk(self, seen_notes: set[Note]) -> Generator[Note, None, None]:
+        yield self
+
+        for child in self.children:
+            if not child in seen_notes:
+                seen_notes.add(child)
+                yield from child._walk(seen_notes)
+
+    def _cleanup_positions(self):
+        self._attributes.owned._reorder()
+        self._branches.children._reorder()
 
 
 @dataclass

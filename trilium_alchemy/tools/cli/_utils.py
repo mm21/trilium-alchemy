@@ -96,7 +96,7 @@ def lookup_param(ctx: Context, name: str) -> Parameter:
     Lookup param by name.
     """
     param = next((p for p in ctx.command.params if p.name == name), None)
-    assert param
+    assert param, f"Could not find param with name: {name}"
     return param
 
 

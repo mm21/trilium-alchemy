@@ -129,7 +129,7 @@ def import_(
     tree_context.target_note.import_zip(src)
 
 
-@app.command("push")
+@app.command()
 def push(
     ctx: Context,
     note_fqcn: str

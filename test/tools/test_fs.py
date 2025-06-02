@@ -101,7 +101,7 @@ def test_dump_tree(
         print(f"Tree dump stats: {stats}")
 
     note_1 = create_note_1(session, note)
-    stats = dump_tree(tmp_path, [note_1], recursive=True, prune=False)
+    stats = dump_tree(tmp_path, [note_1], recurse=True, prune=False)
 
     print_stats(stats)
     assert stats.note_count == 2
@@ -121,7 +121,7 @@ def test_dump_tree(
     unexpected_file.write_text("")
 
     # dump with pruning
-    stats = dump_tree(tmp_path, [note_1], recursive=True, prune=True)
+    stats = dump_tree(tmp_path, [note_1], recurse=True, prune=True)
 
     print_stats(stats)
     assert stats.note_count == 2
