@@ -510,6 +510,7 @@ def test_transmute(note1: Note, note2: Note):
 
 def test_template(session: Session, note1: Note, note2: Note):
     # note cloned to template and first child of template
+
     @label("childLabel2", "childLabelValue2")
     class TemplateChild2(BaseDeclarativeNote):
         content_ = "Test content 2"
@@ -522,15 +523,15 @@ def test_template(session: Session, note1: Note, note2: Note):
 
     @label("templateLabel")
     @children(TemplateChild1, TemplateChild2)
-    class TemplateTest(BaseTemplateNote):
+    class TemplateContentTest(BaseTemplateNote):
         content_ = "Test content"
 
-    @relation("template", TemplateTest)
+    @relation("template", TemplateContentTest)
     class TemplateInstanceTest(BaseDeclarativeNote):
         pass
 
     # create template
-    template = TemplateTest(session=session)
+    template = TemplateContentTest(session=session)
     template ^= note1
     session.flush()
 
