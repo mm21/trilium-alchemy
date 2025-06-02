@@ -165,7 +165,7 @@ class Cache:
         Recursively add entity's dependencies to set if they're dirty.
         """
         for dep in entity._dependencies:
-            if dep._is_dirty:
+            if dep not in dirty_set and dep._is_dirty:
                 dirty_set.add(dep)
                 self._flush_gather(dep, dirty_set)
 
