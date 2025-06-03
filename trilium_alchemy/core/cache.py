@@ -203,9 +203,9 @@ class Cache:
 
     def _check_refresh_notes(self, dirty_set: set[BaseEntity]) -> set[Note]:
         """
-        Return set of notes with created/deleted templates or parent branches.
-        These need to be refreshed to pick up changes to inherited attributes
-        (from templates or ancestor notes) and automatically-added children
+        Return set of notes with changed relations which affect inherited
+        attributes or children. These need to be refreshed to pick up
+        changes to inherited attributes and automatically-added children
         (from new templates).
         """
         from .note import Note
@@ -227,15 +227,6 @@ class Cache:
                     for r in relations
                 ):
                     notes.add(entity)
-                    continue
-
-                # check for created/deleted parent branches
-                if any(
-                    b._is_create or b._is_delete
-                    for b in entity.branches.parents
-                ):
-                    notes.add(entity)
-                    continue
 
         return notes
 
