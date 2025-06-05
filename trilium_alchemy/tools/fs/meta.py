@@ -34,18 +34,18 @@ class NoteMeta(BaseModel):
     Note metadata used to populate yaml.
     """
 
-    title: str
-    blob_id: str
-    attributes: list[AttributeMeta]
-    children: list[BranchMeta]
+    note_id: str = Field(
+        validation_alias=AliasChoices("note_id", "id"), serialization_alias="id"
+    )
     note_type: str = Field(
         validation_alias=AliasChoices("note_type", "type"),
         serialization_alias="type",
     )
     mime: str
-    note_id: str = Field(
-        validation_alias=AliasChoices("note_id", "id"), serialization_alias="id"
-    )
+    title: str
+    blob_id: str
+    attributes: list[AttributeMeta]
+    children: list[BranchMeta]
 
     @classmethod
     def from_file(cls, file: Path) -> NoteMeta:
