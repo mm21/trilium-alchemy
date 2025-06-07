@@ -21,7 +21,7 @@ from pathlib import Path
 
 import dotenv
 import typer
-from click.exceptions import BadParameter, ClickException, MissingParameter
+from click.exceptions import BadParameter, MissingParameter
 from pydantic import ValidationError
 from rich.logging import RichHandler
 from typer import Context, Option
@@ -128,16 +128,10 @@ def check(ctx: Context):
     Check Trilium connection
     """
     root_context = get_root_context(ctx)
-
-    try:
-        session = root_context.create_session()
-    except Exception as e:
-        logging.error(f"Failed to connect to Trilium: {e}")
-        raise typer.Exit(code=1)
-    else:
-        logging.info(
-            f"Connected to Trilium host '{session.host}', version {session.trilium_version}"
-        )
+    session = root_context.create_session()
+    logging.info(
+        f"Connected to Trilium host '{session.host}', version {session.trilium_version}"
+    )
 
 
 def run():
@@ -155,17 +149,9 @@ class RootContext:
         cls,
         *,
         ctx: Context,
-        instance_name: str | None = None,
-        config_file: Path | None = None,
+        instance_name: str,
+        config_file: Path,
     ) -> RootContext:
-        # ensure config file was passed
-        if not config_file:
-            raise MissingParameter(
-                message="must be passed with --instance",
-                ctx=ctx,
-                param=lookup_param(ctx, "config_file"),
-            )
-
         # ensure config file exists
         if not config_file.is_file():
             raise BadParameter(
@@ -179,7 +165,7 @@ class RootContext:
             config = Config.load_yaml(config_file)
         except (ValueError, ValidationError) as e:
             raise BadParameter(
-                f"failed to load config file: {e}",
+                f"failed to load config file '{config_file}': {e}",
                 ctx=ctx,
                 param=lookup_param(ctx, "config_file"),
             )
@@ -198,8 +184,9 @@ class RootContext:
     def create_session(self) -> Session:
         try:
             return self.instance.create_session()
-        except Exception as e:
-            raise ClickException(f"failed to connect to server: {e}")
+        except Exception:
+            # would have already logged error
+            raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

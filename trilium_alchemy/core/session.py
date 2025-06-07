@@ -41,6 +41,11 @@ Trilium version from which root position base is 0 instead of root__hidden
 branch's position.
 """
 
+REQUEST_TIMEOUT = 10.0
+"""
+Timeout for initial request to get app info.
+"""
+
 
 default_session: Session | None = None
 
@@ -178,15 +183,23 @@ class Session:
         # TODO: hangs if DNS resolution fails; implement timeout manually
         try:
             app_info: AppInfo = self.api.get_app_info(
-                _request_timeout=(3.0, 3.0)
+                _request_timeout=REQUEST_TIMEOUT
             )
-            logging.debug(f"Got Trilium version: {app_info.app_version}")
-        except ApiException:
+        except Exception as e:
+            err = (
+                f"status={e.status}, reason={e.reason}"
+                if isinstance(e, ApiException)
+                else str(e)
+            )
             logging.error(
-                f"Failed to connect to Trilium host '{host}' using token='{self._token}'"
+                f"Failed to connect to Trilium host='{host}' using token='{self._token}': {err}"
             )
             raise
         else:
+            logging.debug(
+                f"Connected to Trilium host '{host}', version {app_info.app_version}"
+            )
+
             # remove non-numeric characters in case of "-beta" suffix, etc
             def parse_digit(val: str) -> int:
                 return int("".join([c for c in val if c.isdigit()]))

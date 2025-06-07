@@ -28,6 +28,10 @@ class BaseYamlModel(BaseModel):
 
         with file.open() as fh:
             model = yaml.safe_load(fh)
+
+        if not isinstance(model, dict):
+            raise ValueError(f"Invalid yaml contents: {model}")
+
         return cls(**model)
 
     def dump_yaml(self, file: Path):
