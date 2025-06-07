@@ -6,19 +6,18 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Self
 
-import yaml
 from pydantic import BaseModel, field_validator, model_validator
 
 from ..core import Session
+from .yaml_model import BaseYamlModel
 
 __all__ = [
     "Config",
     "InstanceConfig",
-    "get_config",
 ]
 
 
-class Config(BaseModel):
+class Config(BaseYamlModel):
     """
     Encapsulates configuration for use in tools.
     """
@@ -75,19 +74,6 @@ class InstanceConfig(BaseModel):
         return Session(
             self.host, token=self.token, password=self.password, default=False
         )
-
-
-def get_config(file: Path) -> Config:
-    """
-    Get config info from given path.
-    """
-    if not file.is_file():
-        raise ValueError(f"file does not exist: '{file}'")
-
-    with file.open() as fh:
-        data = yaml.safe_load(fh)
-
-    return Config(**data)
 
 
 def _validate_dir(value: Any) -> Any:

@@ -166,12 +166,12 @@ def scan_content(root_dir: Path):
         content_file = next((f for f in content_files if f.exists()), None)
         assert content_file
 
-        meta = NoteMeta.from_file(meta_path)
+        meta = NoteMeta.load_yaml(meta_path)
         current_blob_id = get_digest(content_file.read_bytes())
 
         if meta.blob_id != current_blob_id:
             meta.blob_id = current_blob_id
-            meta.to_file(meta_path)
+            meta.dump_yaml(meta_path)
             logging.info(
                 f"Updated metadata with new blob_id for note at '{note_dir}'"
             )

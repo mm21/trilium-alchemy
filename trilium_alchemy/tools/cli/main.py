@@ -27,7 +27,7 @@ from rich.logging import RichHandler
 from typer import Context, Option
 
 from ...core import Session
-from ..config import InstanceConfig, get_config
+from ..config import Config, InstanceConfig
 from . import db, fs, note, tree
 from ._utils import MainTyper, console, get_root_context, lookup_param
 
@@ -176,7 +176,7 @@ class RootContext:
 
         # get config from file
         try:
-            config = get_config(config_file)
+            config = Config.load_yaml(config_file)
         except (ValueError, ValidationError) as e:
             raise BadParameter(
                 f"failed to load config file: {e}",

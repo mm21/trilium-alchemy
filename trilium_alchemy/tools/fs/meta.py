@@ -3,10 +3,8 @@ Note metadata.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Literal
 
-import yaml
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -17,6 +15,7 @@ from pydantic import (
 
 from ...core.note import Note
 from ...core.session import Session
+from ..yaml_model import BaseYamlModel
 
 __all__ = [
     "META_FILENAME",
@@ -30,7 +29,7 @@ Filename containing metadata for filesystem format.
 """
 
 
-class NoteMeta(BaseModel):
+class NoteMeta(BaseYamlModel):
     """
     Note metadata used to populate yaml.
     """
@@ -47,27 +46,6 @@ class NoteMeta(BaseModel):
     blob_id: str
     attributes: list[AttributeMeta]
     children: list[BranchMeta]
-
-    @classmethod
-    def from_file(cls, file: Path) -> NoteMeta:
-        """
-        Populate model from .yaml file.
-        """
-        assert file.is_file()
-
-        with file.open() as fh:
-            data_dict = yaml.safe_load(fh)
-        return NoteMeta(**data_dict)
-
-    def to_file(self, file: Path):
-        """
-        Write model to .yaml file.
-        """
-        data_dict = self.model_dump(by_alias=True)
-        data_str = yaml.safe_dump(
-            data_dict, default_flow_style=False, sort_keys=False
-        )
-        file.write_text(data_str)
 
     @classmethod
     def from_note(cls, note: Note) -> NoteMeta:

@@ -49,11 +49,11 @@ def dump_note(
 
     # get metadata from file
     if meta_path.exists():
-        current_meta = NoteMeta.from_file(meta_path)
+        current_meta = NoteMeta.load_yaml(meta_path)
 
     # write metadata if it doesn't exist or differs from existing metadata
     if meta != current_meta:
-        meta.to_file(meta_path)
+        meta.dump_yaml(meta_path)
         updated = True
 
     # get path to content file for this note
@@ -89,7 +89,7 @@ def load_note(src_dir: Path, session: Session) -> Note:
     assert meta_path.is_file()
 
     # get metadata from file
-    meta = NoteMeta.from_file(meta_path)
+    meta = NoteMeta.load_yaml(meta_path)
 
     note = Note(note_id=meta.note_id, session=session)
     note.title = meta.title
