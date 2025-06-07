@@ -20,6 +20,7 @@ from ...core.session import Session
 
 __all__ = [
     "META_FILENAME",
+    "NoteMeta",
     "dump_note",
 ]
 

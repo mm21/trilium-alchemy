@@ -8,7 +8,13 @@ from pytest import FixtureRequest
 
 from trilium_alchemy import *
 from trilium_alchemy.tools.fs.note import dump_note, load_note
-from trilium_alchemy.tools.fs.tree import DumpStats, dump_tree, load_tree
+from trilium_alchemy.tools.fs.tree import (
+    DumpStats,
+    _map_note_dir,
+    dump_tree,
+    load_tree,
+    scan_content,
+)
 
 from ..conftest import compare_folders
 from ..fs_utils import NOTE_1_ID, check_note_1, create_note_1
@@ -136,6 +142,33 @@ def test_dump_tree(
     unexpected_folder.rmdir()
     unexpected_file.unlink()
     compare_folders(tmp_path, TREE_DUMP_PATH)
+
+    note_1_path = _map_note_dir(note_1)
+
+    content_file = tmp_path / note_1_path / "content.txt"
+
+    orig_content = content_file.read_text()
+    updated_content = "Updated content"
+
+    # manually modify content for note 1
+    content_file.write_text(updated_content)
+
+    # dump again, content should not be updated since the metadata wasn't updated
+    stats = dump_tree(tmp_path, [note_1], recurse=False, prune=False)
+    assert stats.note_count == 1
+    assert stats.update_count == 0
+    assert stats.prune_count == 0
+    assert content_file.read_text() == updated_content
+
+    # scan content to update metadata
+    scan_content(tmp_path)
+
+    # dump again, content should be updated
+    stats = dump_tree(tmp_path, [note_1], recurse=False, prune=False)
+    assert stats.note_count == 1
+    assert stats.update_count == 1
+    assert stats.prune_count == 0
+    assert content_file.read_text() == orig_content
 
     _teardown_note(note_1, request)
 

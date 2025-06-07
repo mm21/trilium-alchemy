@@ -9,15 +9,17 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from ...core.note.content import get_digest
 from ...core.note.note import Note
 from ...core.session import Session
 from ..utils import aggregate_notes
-from .meta import META_FILENAME
+from .meta import META_FILENAME, NoteMeta
 from .note import dump_note, load_note
 
 __all__ = [
     "dump_tree",
     "load_tree",
+    "scan_content",
 ]
 
 NORM_NOTE_ID_SIZE = 32
@@ -149,6 +151,32 @@ def load_tree(
     return notes
 
 
+def scan_content(root_dir: Path):
+    """
+    Scan content files and update metadata if out of date. Use if content
+    files were updated after dumping.
+    """
+
+    note_dirs = _find_note_dirs(root_dir)
+
+    for note_dir in note_dirs:
+        meta_path = note_dir / META_FILENAME
+        content_files = [note_dir / "content.txt", note_dir / "content.bin"]
+
+        content_file = next((f for f in content_files if f.exists()), None)
+        assert content_file
+
+        meta = NoteMeta.from_file(meta_path)
+        current_blob_id = get_digest(content_file.read_bytes())
+
+        if meta.blob_id != current_blob_id:
+            meta.blob_id = current_blob_id
+            meta.to_file(meta_path)
+            logging.info(
+                f"Updated metadata with new blob_id for note at '{note_dir}'"
+            )
+
+
 def _find_note_dirs(
     root_dir: Path, empty_dirs: list[Path] | None = None
 ) -> list[Path]:
@@ -170,12 +198,25 @@ def _find_note_dirs(
             logging.warning(f"Unexpected folder: '{dir_path}'")
             return
 
-        if META_FILENAME in (p.name for p in dir_path.iterdir()):
-            note_dirs.append(dir_path)
-        else:
+        filenames = {p.name for p in dir_path.iterdir()}
+
+        if META_FILENAME not in filenames:
             logging.warning(
                 f"Note folder '{dir_path}' does not contain metadata file"
             )
+            return
+
+        filenames.remove(META_FILENAME)
+
+        if len(filenames) != 1 or not (
+            filenames < {"content.txt", "content.bin"}
+        ):
+            logging.warning(
+                f"Note folder '{dir_path}' contains ambiguous or missing content file: {filenames}"
+            )
+            return
+
+        note_dirs.append(dir_path)
 
     def check_prefix_dir(dir_path: Path) -> bool:
         """
