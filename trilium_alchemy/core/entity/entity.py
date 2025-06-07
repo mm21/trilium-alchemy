@@ -13,11 +13,8 @@ from ..exceptions import *
 from ..session import Session, SessionContainer, normalize_session
 from .model import (
     BaseEntityModel,
-    ExtensionDescriptor,
     FieldDescriptor,
     ModelContainer,
-    ReadOnlyDescriptor,
-    ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
     WriteThroughDescriptor,
 )
@@ -28,11 +25,8 @@ __all__ = [
     "State",
     "EntityIdDescriptor",
     "FieldDescriptor",
-    "ReadOnlyFieldDescriptor",
-    "ReadOnlyDescriptor",
     "WriteThroughDescriptor",
     "WriteOnceDescriptor",
-    "ExtensionDescriptor",
 ]
 
 __rollup__ = [

@@ -396,7 +396,7 @@ class Branch(OrderedEntity[BranchModel]):
             # collect cached and newly created branches
             branches = {
                 entity
-                for entity_id, entity in self._session._cache.entity_map.items()
+                for entity in self._session._cache.entity_map.values()
                 if isinstance(entity, Branch)
             }
 

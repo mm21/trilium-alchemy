@@ -481,7 +481,7 @@ class Note(BaseEntity[NoteModel]):
     @note_type.setter
     def note_type(self, val: str):
         if not val in NOTE_TYPES:
-            logging.warning(f"Invalid note_type: {val}")
+            logging.warning(f"Unknown note_type: {val}")
         self._model.set_field("type", val)
 
     @property
@@ -560,13 +560,10 @@ class Note(BaseEntity[NoteModel]):
     @property
     def branches(self) -> Branches:
         """
-        Getter/setter for branches, both parent and child.
+        Getter for branches, both parents (`.parents`) and children
+        (`.children`).
         """
         return self._branches
-
-    @branches.setter
-    def branches(self, val: list[Branch]):
-        self._branches._setattr(val)
 
     @require_setup_prop
     @property
@@ -937,10 +934,6 @@ class Note(BaseEntity[NoteModel]):
         return (note_id, None)
 
     @classmethod
-    def _is_singleton(cls) -> bool:
-        return False
-
-    @classmethod
     def _from_id(cls, note_id: str, session: Session | None = None) -> Note:
         return Note(note_id=note_id, session=session)
 
@@ -1163,15 +1156,20 @@ class CopyContext:
 def _normalize_template(
     template: Note | type[Note], session: Session | None
 ) -> Relation:
+    from ..declarative.base import BaseDeclarativeNote
+
     target: Note
     template_cls: type[Note] = get_cls(template)
 
     if isinstance(template, ABCMeta):
         # have class
 
+        assert issubclass(
+            template_cls, BaseDeclarativeNote
+        ), f"Template target must be a subclass of BaseDeclarativeNote, got {template_cls}"
         assert (
             template_cls._is_singleton()
-        ), "Template target must be singleton class"
+        ), f"Template target must be singleton class, got {template_cls}"
 
         # instantiate target
         target = template_cls(session=session)

@@ -128,10 +128,6 @@ class NoteModel(BaseEntityModel):
 
     field_entity_id = "note_id"
 
-    fields_alias = {
-        "note_type": "type",
-    }
-
     fields_update = [
         "title",
         "type",

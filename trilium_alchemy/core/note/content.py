@@ -10,38 +10,11 @@ import requests
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..entity import BaseEntity
-from ..entity.model import ExtensionDescriptor, ModelContainer
 from .extension import NoteStatefulExtension
 
 __all__ = [
     "Content",
-    "ContentDescriptor",
 ]
-
-
-class ContentDescriptor(ExtensionDescriptor):
-    """
-    Override `ExtensionDescriptor.__get__` to return the content itself
-    via `Content._get`.
-    """
-
-    def __get__(self, container: ModelContainer, objtype=None):
-        return super().__get__(container, objtype=objtype)._get()
-
-
-class FileDescriptor:
-    def __get__(self, content: Content, objtype=None):
-        # TODO: return file descriptor?
-        raise NotImplementedError()
-
-    def __set__(self, content: Content, path_file: str):
-        if content._is_string:
-            mode = "r"
-        else:
-            mode = "rb"
-
-        fh = open(path_file, mode)
-        content._set(fh.read())
 
 
 class BlobState:
@@ -127,7 +100,8 @@ class Content(NoteStatefulExtension):
         return self._backing.digest != self._working.digest
 
     def _setattr(self, val: Any):
-        self._set(val)
+        # set via _set()
+        raise NotImplementedError
 
     def _setup(self, model: EtapiNoteModel | None):
         """
