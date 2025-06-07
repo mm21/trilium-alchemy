@@ -45,7 +45,10 @@ def test_config(session: Session, tmp_path: Path):
         instances={
             "test-instance": InstanceConfig(
                 host=session.host, token=session._token
-            )
+            ),
+            "bad-instance": InstanceConfig(
+                host=session.host, token="bad_token"
+            ),
         }
     )
     model.dump_yaml(config_path)
@@ -56,9 +59,59 @@ def test_config(session: Session, tmp_path: Path):
             "--instance",
             "test-instance",
             "--config-file",
-            str(config_path),
+            config_path,
             "check",
         ]
+    )
+
+    # missing instance in config file
+    _run(
+        [
+            "--instance",
+            "nonexistent-instance",
+            "--config-file",
+            config_path,
+            "check",
+        ],
+        2,
+    )
+
+    # bad instance in config file (bad token)
+    _run(
+        [
+            "--instance",
+            "bad-instance",
+            "--config-file",
+            config_path,
+            "check",
+        ],
+        1,
+    )
+
+    # nonexistent config file
+    _run(
+        [
+            "--instance",
+            "nonexistent",
+            "--config-file",
+            "nonexistent.yaml",
+            "check",
+        ],
+        2,
+    )
+
+    # invalid config file
+    invalid_config_path = tmp_path / "test-invalid-config.yaml"
+    invalid_config_path.write_text("")
+    _run(
+        [
+            "--instance",
+            "nonexistent",
+            "--config-file",
+            invalid_config_path,
+            "check",
+        ],
+        2,
     )
 
 
@@ -234,7 +287,7 @@ def _restart_trilium(callable: Callable[[], None]):
     time.sleep(5)
 
 
-def _run(cmd: list[str | Path], code: int = 0):
+def _run(cmd: list[str | Path], exit_code: int = 0):
     """
     Run command and verify exit code.
     """
@@ -244,7 +297,7 @@ def _run(cmd: list[str | Path], code: int = 0):
     runner = CliRunner()
     result = runner.invoke(app, args=cmd_norm, catch_exceptions=False)
 
-    assert result.exit_code == code
+    assert result.exit_code == exit_code
 
 
 def _normalize_cmd(cmd: list[str | Path]) -> list[str]:
