@@ -42,7 +42,6 @@ def main(
     data_dir: Path
     | None = Option(
         None,
-        "--data-dir",
         help="Directory containing Trilium database, if not specified in config file",
         envvar="TRILIUM_DATA_DIR",
         exists=True,

@@ -58,43 +58,38 @@ def main(
     ctx: Context,
     host: str = Option(
         ...,
-        "--host",
         help="Trilium host, e.g. http://localhost:8080",
         envvar="TRILIUM_HOST",
     ),
     token: str
     | None = Option(
         None,
-        "--token",
         help="ETAPI token",
         envvar="TRILIUM_TOKEN",
     ),
     password: str
     | None = Option(
         None,
-        "--password",
         help="Trilium password",
         envvar="TRILIUM_PASSWORD",
     ),
-    instance_name: str
+    instance: str
     | None = Option(
         None,
-        "--instance",
         help="Instance name as configured in .yaml",
         envvar="TRILIUM_INSTANCE",
     ),
     config_file: Path
     | None = Option(
         "trilium-alchemy.yaml",
-        "--config-file",
         help=".yaml file containing instance info, only applicable with --instance",
         envvar="TRILIUM_ALCHEMY_CONFIG_FILE",
         dir_okay=False,
     ),
 ):
-    if instance_name:
+    if instance:
         root_context = RootContext.from_config(
-            ctx=ctx, instance_name=instance_name, config_file=config_file
+            ctx=ctx, instance_name=instance, config_file=config_file
         )
     else:
         if not (token or password):
@@ -176,7 +171,7 @@ class RootContext:
             raise BadParameter(
                 f"instance '{instance_name}' not found in '{config_file}'",
                 ctx=ctx,
-                param=lookup_param(ctx, "instance_name"),
+                param=lookup_param(ctx, "instance"),
             )
 
         return RootContext(ctx=ctx, instance=instance, from_file=True)

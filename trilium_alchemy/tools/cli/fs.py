@@ -40,13 +40,11 @@ def dump(
     ),
     note_id: str = Option(
         "root",
-        "--note-id",
         help="Note id to dump",
     ),
     search: str
     | None = Option(
         None,
-        "--search",
         help="Search string to identify note(s) to dump, e.g. '#myProjectRoot'",
     ),
     no_recurse: bool = Option(
@@ -117,13 +115,11 @@ def load(
     ),
     parent_note_id: str = Option(
         None,
-        "--parent-note-id",
         help="Optional note id of parent under which to place loaded notes",
     ),
     parent_search: str
     | None = Option(
         None,
-        "--parent-search",
         help="Optional search string to identify parent under which to place loaded notes, e.g. '#myExtensionsRoot'",
     ),
     dry_run: bool = Option(

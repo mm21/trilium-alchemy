@@ -28,13 +28,11 @@ def main(
     ctx: Context,
     note_id: str = Option(
         "root",
-        "--note-id",
         help="Note id on which to perform operation",
     ),
     search: str
     | None = Option(
         None,
-        "--search",
         help="Search string to identify note on which to perform operation, e.g. '#myProjectRoot'",
     ),
 ):
