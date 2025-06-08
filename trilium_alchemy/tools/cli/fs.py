@@ -62,6 +62,11 @@ def dump(
         "--check-content-hash",
         help="Check hash of content file instead of using dump metadata when determining whether content is out of date",
     ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Don't update filesystem, only log operations",
+    ),
 ):
     """
     Dump notes to destination folder
@@ -87,10 +92,17 @@ def dump(
         recurse=not no_recurse,
         prune=not no_prune,
         check_content_hash=check_content_hash,
+        dry_run=dry_run,
     )
 
     extra = f"{stats.update_count} updated, {stats.prune_count} pruned"
-    logging.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
+
+    if dry_run:
+        logging.info(
+            f"Would dump {stats.note_count} notes to '{dest}' ({extra})"
+        )
+    else:
+        logging.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
 
 
 @app.command()
@@ -115,7 +127,7 @@ def load(
     dry_run: bool = Option(
         False,
         "--dry-run",
-        help="Only show pending changes",
+        help="Only log pending changes",
     ),
     yes: bool = Option(
         False,

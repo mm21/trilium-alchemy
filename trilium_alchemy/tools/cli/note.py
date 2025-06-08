@@ -79,7 +79,7 @@ def cleanup_positions(
     dry_run: bool = Option(
         False,
         "--dry-run",
-        help="Only show pending changes",
+        help="Only log pending changes",
     ),
     yes: bool = Option(
         False,

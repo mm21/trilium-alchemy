@@ -78,6 +78,7 @@ def dump_tree(
     recurse: bool = True,
     prune: bool = True,
     check_content_hash: bool = False,
+    dry_run: bool = False,
 ) -> DumpStats:
     """
     Dump notes to destination folder in prefix tree format.
@@ -91,14 +92,27 @@ def dump_tree(
 
     # traverse each note
     for note in aggregated_notes:
+        updated = False
+
         # map note to folder
         note_dir = dest_dir / _map_note_dir(note)
 
-        # dump note to this folder
-        note_dir.mkdir(parents=True, exist_ok=True)
-        updated = dump_note(
-            note_dir, note, check_content_hash=check_content_hash
-        )
+        # create folder if it doesn't exist
+        if not note_dir.exists():
+            if dry_run:
+                logging.info(f"Would dump {note._str_short} to '{note_dir}'")
+                updated = True
+            else:
+                note_dir.mkdir(parents=True, exist_ok=True)
+
+        if note_dir.exists():
+            # dump note to this folder
+            updated = dump_note(
+                note_dir,
+                note,
+                check_content_hash=check_content_hash,
+                dry_run=dry_run,
+            )
 
         dumped_note_dirs.append(note_dir)
 
@@ -107,7 +121,7 @@ def dump_tree(
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
-        _prune_dirs(dest_dir, dumped_note_dirs, stats)
+        _prune_dirs(dest_dir, dumped_note_dirs, stats, dry_run=dry_run)
 
     return stats
 
@@ -283,7 +297,12 @@ def _map_note_dir(note: Note) -> Path:
     return "/".join(prefixes + [suffix])
 
 
-def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path], stats: DumpStats):
+def _prune_dirs(
+    root_dir: Path,
+    dumped_note_dirs: list[Path],
+    stats: DumpStats,
+    dry_run: bool = False,
+):
     """
     Remove existing paths not belonging to dumped notes.
     """
@@ -297,7 +316,10 @@ def _prune_dirs(root_dir: Path, dumped_note_dirs: list[Path], stats: DumpStats):
     # prune stale note paths and empty dirs
     prune_dirs = stale_note_dirs + empty_dirs
     for path in prune_dirs:
-        _prune_dir(root_dir, path)
+        if dry_run:
+            logging.info(f"Would prune folder: '{path}'")
+        else:
+            _prune_dir(root_dir, path)
         stats.prune_count += 1
 
 
@@ -309,6 +331,7 @@ def _prune_dir(root_dir: Path, path: Path):
     if not path.exists() or root_dir == path:
         return
 
+    assert path.is_relative_to(root_dir)
     shutil.rmtree(path)
 
     # if parent is empty, prune it as well

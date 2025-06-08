@@ -922,12 +922,15 @@ class Note(BaseEntity[NoteModel]):
 
     @property
     def _str_short(self):
-        title = self.title.replace("'", "\\'")
-        return f"Note('{title}', note_id='{self.note_id}')"
+        return f"Note('{self._title_escape}', note_id='{self.note_id}')"
 
     @property
     def _str_safe(self):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
+
+    @property
+    def _title_escape(self) -> str:
+        return self.title.replace("'", "\\'")
 
     @classmethod
     def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:

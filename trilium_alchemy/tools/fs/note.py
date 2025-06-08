@@ -3,6 +3,7 @@ Filesystem operations on a single note.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from ...core.attribute import BaseAttribute, Label, Relation
@@ -19,11 +20,16 @@ __all__ = [
 
 
 def dump_note(
-    dest_dir: Path, note: Note, *, check_content_hash: bool = False
+    dest_dir: Path,
+    note: Note,
+    *,
+    check_content_hash: bool = False,
+    dry_run: bool = False,
 ) -> bool:
     """
     Dump note to destination folder, returning whether the folder was updated.
     """
+    assert dest_dir.is_dir()
 
     updated = False
 
@@ -53,7 +59,12 @@ def dump_note(
 
     # write metadata if it doesn't exist or differs from existing metadata
     if meta != current_meta:
-        meta.dump_yaml(meta_path)
+        if dry_run:
+            logging.info(
+                f"Would write metadata for {note._str_short}: '{meta_path}'"
+            )
+        else:
+            meta.dump_yaml(meta_path)
         updated = True
 
     # get path to content file for this note
@@ -66,16 +77,26 @@ def dump_note(
         else (current_meta.blob_id if current_meta else None)
     )
     if not content_file.exists() or current_blob_id != note.blob_id:
-        if note.is_string:
-            content_file.write_text(note.content_str)
+        if dry_run:
+            logging.info(
+                f"Would write content for {note._str_short}: '{meta_path}'"
+            )
         else:
-            content_file.write_bytes(note.content_bin)
+            if note.is_string:
+                content_file.write_text(note.content_str)
+            else:
+                content_file.write_bytes(note.content_bin)
         updated = True
 
     # prune extra files if different from content_path
     # - would only occur if note content type was changed
     for path in [p for p in extra_paths if p.name != content_file.name]:
-        path.unlink()
+        if dry_run:
+            logging.info(
+                f"Would delete obsolete content file for {note._str_short}: '{path}'"
+            )
+        else:
+            path.unlink()
 
     return updated
 

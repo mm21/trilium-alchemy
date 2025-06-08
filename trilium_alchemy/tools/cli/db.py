@@ -200,7 +200,7 @@ def restore(
     dry_run: bool = Option(
         False,
         "--dry-run",
-        help="Don't copy, only print source/destination paths",
+        help="Don't copy, only log source/destination paths",
     ),
     yes: bool = Option(
         False,

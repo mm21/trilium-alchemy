@@ -107,6 +107,14 @@ def test_dump_tree(
         print(f"Tree dump stats: {stats}")
 
     note_1 = create_note_1(session, note)
+
+    # dump with dry run
+    stats = dump_tree(tmp_path, [note_1], dry_run=True)
+    assert stats.note_count == 2
+    assert stats.update_count == 2
+    assert stats.prune_count == 0
+
+    # initial dump
     stats = dump_tree(tmp_path, [note_1], recurse=True, prune=False)
 
     print_stats(stats)
@@ -126,8 +134,14 @@ def test_dump_tree(
     unexpected_pruned_folder.mkdir()
     unexpected_file.write_text("")
 
+    # dump with dry run
+    stats = dump_tree(tmp_path, [note_1], dry_run=True)
+    assert stats.note_count == 2
+    assert stats.update_count == 0
+    assert stats.prune_count == 1
+
     # dump with pruning
-    stats = dump_tree(tmp_path, [note_1], recurse=True, prune=True)
+    stats = dump_tree(tmp_path, [note_1])
 
     print_stats(stats)
     assert stats.note_count == 2
