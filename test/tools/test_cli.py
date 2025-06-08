@@ -42,17 +42,30 @@ def test_check():
 
 def test_config(session: Session, tmp_path: Path):
     config_path = tmp_path / "test-config.yaml"
+    root_data_dir = tmp_path / "root-data-dir"
+
+    root_data_dir.mkdir()
+
+    test_instance_data_dir = root_data_dir / "test-instance"
+    test_instance_data_dir.mkdir()
+
+    # explicitly set this one
+    bad_instance_data_dir = root_data_dir / "test-instance-data"
+    bad_instance_data_dir.mkdir()
 
     # generate a config file dynamically with connection info
     model = Config(
+        root_data_dir=root_data_dir,
         instances={
             "test-instance": InstanceConfig(
                 host=session.host, token=session._token
             ),
             "bad-instance": InstanceConfig(
-                host=session.host, token="bad_token"
+                host=session.host,
+                token="bad_token",
+                data_dir=bad_instance_data_dir,
             ),
-        }
+        },
     )
     model.dump_yaml(config_path)
 
@@ -66,6 +79,38 @@ def test_config(session: Session, tmp_path: Path):
             "check",
         ]
     )
+
+    # do a dummy database restore to verify data dirs
+    dummy_db = tmp_path / "dummy-document.db"
+    dummy_db.write_bytes(b"")
+
+    _run(
+        [
+            "--instance",
+            "test-instance",
+            "--config-file",
+            config_path,
+            "db",
+            "restore",
+            "-y",
+            dummy_db,
+        ]
+    )
+    assert (test_instance_data_dir / "document.db").is_file()
+
+    _run(
+        [
+            "--instance",
+            "bad-instance",
+            "--config-file",
+            config_path,
+            "db",
+            "restore",
+            "-y",
+            dummy_db,
+        ]
+    )
+    assert (bad_instance_data_dir / "document.db").is_file()
 
     # missing instance in config file
     _run(

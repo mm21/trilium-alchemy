@@ -6,7 +6,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Self
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from ..core import Session
 from .yaml_model import BaseYamlModel
@@ -22,16 +27,23 @@ class Config(BaseYamlModel):
     Encapsulates configuration for use in tools.
     """
 
-    instances: dict[str, InstanceConfig]
-
     root_data_dir: Path | None = None
     """
     Root folder for per-instance Trilium data dirs.
     """
 
+    instances: dict[str, InstanceConfig]
+    """
+    Mapping of instance names to configs.
+    """
+
     @field_validator("root_data_dir", mode="before")
     def validate_root_data_dir(cls, value: Any) -> Any:
         return _validate_dir(value)
+
+    @field_serializer("root_data_dir")
+    def serialize_root_data_dir(self, value: Path | None) -> str | None:
+        return str(value) if isinstance(value, Path) else value
 
     @model_validator(mode="after")
     def validate_instances(self) -> Self:
@@ -60,6 +72,10 @@ class InstanceConfig(BaseModel):
     @field_validator("data_dir", mode="before")
     def validate_data_dir(cls, value: Any) -> Any:
         return _validate_dir(value)
+
+    @field_serializer("data_dir")
+    def serialize_data_dir(self, value: Path | None) -> str | None:
+        return str(value) if isinstance(value, Path) else value
 
     @model_validator(mode="after")
     def validate_token_or_password(self) -> Self:
