@@ -20,11 +20,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
-import typer
 from click.exceptions import BadParameter, MissingParameter
 from pydantic import ValidationError
 from rich.logging import RichHandler
-from typer import Context, Option
+from typer import Context, Exit, Option
 
 from ...core import Session
 from ..config import Config, InstanceConfig
@@ -181,7 +180,7 @@ class RootContext:
             return self.instance.create_session()
         except Exception:
             # would have already logged error
-            raise typer.Exit(code=1)
+            raise Exit(code=1)
 
 
 if __name__ == "__main__":

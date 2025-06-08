@@ -12,13 +12,18 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import typer
-from typer import Argument, Context, Option
+from typer import Argument, Context, Exit, Option
 
 from ...core.exceptions import ValidationError
 from ..fs.tree import dump_tree, load_tree, scan_content
 from ..utils import commit_changes
-from ._utils import MainTyper, get_notes, get_root_context, lookup_param
+from ._utils import (
+    MainTyper,
+    console,
+    get_notes,
+    get_root_context,
+    lookup_param,
+)
 
 if TYPE_CHECKING:
     pass
@@ -137,7 +142,6 @@ def load(
     """
     Load notes from dump folder and optionally add as children of given parent
     """
-    from .main import console
 
     root_context = get_root_context(ctx)
     session = root_context.create_session()
@@ -163,7 +167,7 @@ def load(
     except ValidationError as e:
         errors = "\n".join(e.errors)
         logging.error(f"Found errors upon loading notes:\n{errors}")
-        raise typer.Exit(code=1)
+        raise Exit(code=1)
 
     commit_changes(session, console, dry_run=dry_run, yes=yes)
 

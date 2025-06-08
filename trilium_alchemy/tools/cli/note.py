@@ -7,12 +7,17 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from click import MissingParameter
-from typer import Context, Option
+from typer import Context, Exit, Option
 
 from ...core import Note, Session
-from ..utils import aggregate_notes, commit_changes
-from ._utils import MainTyper, get_notes, get_root_context, lookup_param
+from ..utils import commit_changes, recurse_notes
+from ._utils import (
+    MainTyper,
+    console,
+    get_notes,
+    get_root_context,
+    lookup_param,
+)
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -36,10 +41,10 @@ def main(
         None,
         help="Search string to identify note(s) on which to perform operation, e.g. '#myProjectRoot'",
     ),
-    no_recurse: bool = Option(
+    recurse: bool = Option(
         False,
-        "--no-recurse",
-        help="Don't recurse into child notes",
+        "--recurse",
+        help="Recurse into child notes",
     ),
 ):
     root_context = get_root_context(ctx)
@@ -50,53 +55,11 @@ def main(
         session=session,
         note_id=note_id,
         search=search,
-        no_recurse=no_recurse,
+        recurse=recurse,
     )
 
     # replace with new context
     ctx.obj = note_context
-
-
-@app.command()
-def cleanup_positions(
-    ctx: Context,
-    dry_run: bool = Option(
-        False,
-        "--dry-run",
-        help="Only log pending changes",
-    ),
-    yes: bool = Option(
-        False,
-        "-y",
-        "--yes",
-        help="Don't ask for confirmation before committing changes",
-    ),
-):
-    """
-    Set attribute and branch positions to intervals of 10, starting with 10
-    """
-    from .main import console
-
-    note_context = _get_note_context(ctx)
-
-    # get notes
-    notes = get_notes(
-        ctx.parent,
-        note_context.session,
-        note_id=note_context.note_id or "root",
-        search=note_context.search,
-        note_id_param=lookup_param(ctx.parent, "note_id"),
-        search_param=lookup_param(ctx.parent, "search"),
-    )
-
-    aggregated_notes = (
-        aggregate_notes(notes) if not note_context.no_recurse else notes
-    )
-
-    for note in aggregated_notes:
-        note._cleanup_positions()
-
-    commit_changes(note_context.session, console, dry_run=dry_run, yes=yes)
 
 
 @app.command()
@@ -125,9 +88,8 @@ def sync_template(
     ),
 ):
     """
-    Sync notes with specified template, or first ~template relation if no template provided; select all notes with given template if no notes provided
+    Sync notes with specified template, or first ~template relation if no template provided; select all applicable notes if none passed
     """
-    from .main import console
 
     note_context = _get_note_context(ctx)
 
@@ -155,7 +117,7 @@ def sync_template(
             logging.error(
                 f"Template note does not have #template or #workspaceTemplate label: {template._str_short}"
             )
-            return
+            raise Exit(1)
 
     # select notes if provided
     if note_context.note_id or note_context.search:
@@ -169,55 +131,47 @@ def sync_template(
         )
         assert len(notes)
 
-    # at this point we should have a template and/or selected notes
-    if not (notes or template):
-        raise MissingParameter(
-            message="--note-id/--search and/or --template-note-id/--template-search must be passed",
-            ctx=ctx,
-            param_hint=[
-                "note-id",
-                "search",
-                "template-note-id",
-                "template-search",
-            ],
-            param_type="option",
-        )
+    # dispatch operation now that inputs have been validated
+    _sync_template(note_context.session, notes=notes, template=template)
 
-    if not notes:
-        assert template
-        assert template.note_id
+    commit_changes(note_context.session, console, dry_run=dry_run, yes=yes)
 
-        # if we don't have any notes, get all notes with the selected template
-        notes = note_context.session.search(f"~template={template.note_id}")
 
-        if not len(notes):
-            logging.error(
-                f"No notes found with ~template relation to {template._str_short}"
-            )
-            return
+@app.command()
+def cleanup_positions(
+    ctx: Context,
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only log pending changes",
+    ),
+    yes: bool = Option(
+        False,
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before committing changes",
+    ),
+):
+    """
+    Set attribute and branch positions to intervals of 10, starting with 10
+    """
 
-    # now we should have notes, but possibly not a template
-    for note in notes:
-        # select template
-        if template:
-            # ensure this note has a ~template relation to this template
-            if not template in note.relations.get_targets("template"):
-                logging.warning(
-                    f"Note {note._str_short} does not have a ~template relation to {template._str_short}"
-                )
-                continue
+    note_context = _get_note_context(ctx)
 
-            selected_template = template
-        else:
-            selected_template = note.relations.get_target("template")
-            if not selected_template:
-                logging.warning(
-                    f"Note {note._str_short} does not have a ~template relation"
-                )
-                continue
+    # get notes
+    notes = get_notes(
+        ctx.parent,
+        note_context.session,
+        note_id=note_context.note_id or "root",
+        search=note_context.search,
+        note_id_param=lookup_param(ctx.parent, "note_id"),
+        search_param=lookup_param(ctx.parent, "search"),
+    )
 
-        # sync this note with this template
-        note.sync_template(selected_template)
+    aggregated_notes = recurse_notes(notes) if note_context.recurse else notes
+
+    for note in aggregated_notes:
+        note._cleanup_positions()
 
     commit_changes(note_context.session, console, dry_run=dry_run, yes=yes)
 
@@ -228,10 +182,79 @@ class NoteContext:
     session: Session
     note_id: str | None
     search: str | None
-    no_recurse: bool
+    recurse: bool
 
 
 def _get_note_context(ctx: Context) -> NoteContext:
     note_context = ctx.obj
     assert isinstance(note_context, NoteContext)
     return note_context
+
+
+def _sync_template(
+    session: Session,
+    *,
+    notes: list[Note] | None = None,
+    template: Note | None = None,
+):
+    """
+    Invoke template sync operation after validating input.
+    """
+
+    notes_norm: list[Note]
+
+    # if no notes passed, look them up from the template (if any)
+    if notes is None:
+        if template:
+            assert template.note_id
+
+            # find all notes with selected template
+            notes_norm = session.search(f"~template.noteId={template.note_id}")
+
+            if not len(notes_norm):
+                logging.error(
+                    f"No notes found with ~template={template._str_short}"
+                )
+                raise Exit(1)
+        else:
+            # find all notes with any template
+            notes_norm = session.search("~template")
+
+        # ensure some notes were found
+        if not len(notes_norm):
+            template_desc = (
+                f"~template={template._str_short}"
+                if template
+                else "any ~template"
+            )
+            logging.error(f"No notes found with {template_desc}")
+            raise Exit(1)
+    else:
+        notes_norm = notes
+        assert len(notes_norm)
+
+    # now we have notes to sync, but possibly not a template
+    for note in notes:
+        selected_template: Note
+
+        # select template
+        if template:
+            # ensure this note has a ~template relation to this template
+            if not template in note.relations.get_targets("template"):
+                logging.warning(
+                    f"Note {note._str_short} does not have ~template={template._str_short}"
+                )
+                continue
+
+            selected_template = template
+        else:
+            # select first ~template relation
+            selected_template = note.relations.get_target("template")
+            if not selected_template:
+                logging.warning(
+                    f"Note {note._str_short} does not have a ~template relation"
+                )
+                continue
+
+        # sync this note with this template
+        note.sync_template(selected_template)

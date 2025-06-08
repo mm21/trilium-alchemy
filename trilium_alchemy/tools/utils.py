@@ -12,7 +12,7 @@ from ..core import Note, Session
 
 __all__ = [
     "commit_changes",
-    "aggregate_notes",
+    "recurse_notes",
 ]
 
 
@@ -58,9 +58,9 @@ def commit_changes(
     logging.info("Committed changes")
 
 
-def aggregate_notes(notes: list[Note]) -> list[Note]:
+def recurse_notes(notes: list[Note]) -> list[Note]:
     """
-    Aggregate notes and children recursively.
+    Recurse into children and aggregate notes.
     """
     aggregated_notes: list[Note] = []
     seen_notes: set[Note] = set()

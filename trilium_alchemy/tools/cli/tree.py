@@ -11,7 +11,13 @@ from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
 from ..utils import commit_changes
-from ._utils import MainTyper, get_notes, get_root_context, lookup_param
+from ._utils import (
+    MainTyper,
+    console,
+    get_notes,
+    get_root_context,
+    lookup_param,
+)
 
 if TYPE_CHECKING:
     from .main import RootContext
@@ -150,7 +156,6 @@ def push(
     """
     Push declarative note subtree to target note
     """
-    from .main import console
 
     tree_context = _get_tree_context(ctx)
     root_note_fqcn = tree_context.root_context.instance.root_note_fqcn
