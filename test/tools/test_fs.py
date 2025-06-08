@@ -17,12 +17,13 @@ from trilium_alchemy.tools.fs.tree import (
 )
 
 from ..conftest import compare_folders
-from ..fs_utils import NOTE_1_ID, check_note_1, create_note_1
-
-FS_DUMPS_PATH = Path(__file__).parent / "fs-dumps"
-
-NOTE_1_DUMP_PATH = FS_DUMPS_PATH / "note-1"
-TREE_DUMP_PATH = FS_DUMPS_PATH / "tree"
+from .fs_utils import (
+    NOTE_1_DUMP_PATH,
+    NOTE_1_ID,
+    TREE_DUMP_PATH,
+    check_note_1,
+    create_note_1,
+)
 
 
 def test_dump_note(

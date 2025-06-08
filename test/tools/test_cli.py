@@ -13,7 +13,8 @@ from trilium_alchemy import *
 from trilium_alchemy.tools.cli.main import app
 from trilium_alchemy.tools.config import Config, InstanceConfig
 
-from ..conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN
+from ..conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN, compare_folders
+from .fs_utils import NOTE_1_ID, TREE_DUMP_PATH, create_note_1
 
 
 class LogHandler(logging.Handler):
@@ -30,6 +31,8 @@ class LogHandler(logging.Handler):
 # register handler so we can get access to recent logs for verification
 log_handler = LogHandler()
 logging.getLogger().addHandler(log_handler)
+
+runner = CliRunner()
 
 
 def test_check():
@@ -86,6 +89,7 @@ def test_config(session: Session, tmp_path: Path):
             "check",
         ],
         1,
+        log_level=logging.CRITICAL,
     )
 
     # nonexistent config file
@@ -269,6 +273,40 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
     assert len(session.root.children) == 0
 
 
+def test_fs(session: Session, note: Note, tmp_path: Path):
+    # add a label to parent note so we can search for it later
+    note["note1_parent"] = ""
+
+    note_1 = create_note_1(session, note)
+    session.flush()
+
+    # dump with dry run
+    _run(["fs", "dump", "--note-id", NOTE_1_ID, "--dry-run", tmp_path])
+    assert next(tmp_path.iterdir(), None) is None
+
+    # dump and compare
+    _run(["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
+    compare_folders(tmp_path, TREE_DUMP_PATH)
+
+    # load and ensure no changes were made
+    _run(["fs", "load", tmp_path], log_level=logging.INFO)
+    assert log_handler.test_logs[-1] == "No changes to commit"
+
+    # delete and then load
+    note_1.delete()
+    session.flush()
+
+    # ensure load with no parents fails (no need for error in test logs)
+    _run(["fs", "load", "-y", tmp_path], 1, log_level=logging.CRITICAL)
+
+    # load with parent
+    _run(["fs", "load", "--parent-search", "#note1_parent", "-y", tmp_path])
+
+    # load again and ensure no changes were made
+    _run(["fs", "load", tmp_path], log_level=logging.INFO)
+    assert log_handler.test_logs[-1] == "No changes to commit"
+
+
 def _restart_trilium(callable: Callable[[], None]):
     """
     Restart Trilium using docker, invoking the provided callback while shutdown.
@@ -303,7 +341,7 @@ def _run(
     if log_level is not None:
         logging.getLogger().setLevel(log_level)
 
-    runner = CliRunner()
+    # invoke command
     result = runner.invoke(app, args=cmd_norm, catch_exceptions=False)
 
     if prev_log_level is not None:

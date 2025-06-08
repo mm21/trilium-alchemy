@@ -2,6 +2,8 @@
 Utilities for testing filesystem dump/load-related functionality.
 """
 
+from pathlib import Path
+
 from trilium_alchemy import *
 
 __all__ = [
@@ -9,6 +11,9 @@ __all__ = [
     "NOTE_1_BLOB_ID",
     "NOTE_2_ID",
     "NOTE_2_BLOB_ID",
+    "FS_DUMPS_PATH",
+    "NOTE_1_DUMP_PATH",
+    "TREE_DUMP_PATH",
     "create_note_1",
     "check_note_1",
 ]
@@ -18,6 +23,11 @@ NOTE_1_BLOB_ID = "7XJSwh6apxkriWy2bX9P"
 
 NOTE_2_ID = "note_2"
 NOTE_2_BLOB_ID = "zEin5JG8PQ4s4EMeDl5p"
+
+
+FS_DUMPS_PATH = Path(__file__).parent / "fs-dumps"
+NOTE_1_DUMP_PATH = FS_DUMPS_PATH / "note-1"
+TREE_DUMP_PATH = FS_DUMPS_PATH / "tree"
 
 
 def create_note_1(session: Session, parent: Note) -> Note:
