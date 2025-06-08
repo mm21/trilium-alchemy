@@ -21,7 +21,7 @@ __all__ = [
 
 
 class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
-    def get_target(self, name: str) -> relation.Relation | None:
+    def get_target(self, name: str) -> Note | None:
         """
         Get target of first relation with provided name.
         """
