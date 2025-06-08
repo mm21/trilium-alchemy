@@ -138,8 +138,8 @@ def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
     assert now_path.is_file()
     now_path.unlink()
 
-    # backup with auto-name
-    _run(["db", "backup", "--auto-name"])
+    # backup with auto-name, setting log level so we get the info log
+    _run(["db", "backup", "--auto-name"], log_level=logging.INFO)
 
     # get generated name from logs
     auto_name_log = log_handler.test_logs[-1]
@@ -287,15 +287,27 @@ def _restart_trilium(callable: Callable[[], None]):
     time.sleep(5)
 
 
-def _run(cmd: list[str | Path], exit_code: int = 0):
+def _run(
+    cmd: list[str | Path], exit_code: int = 0, log_level: int | None = None
+):
     """
     Run command and verify exit code.
     """
     cmd_norm = _normalize_cmd(cmd)
     print(f"Running: trilium-alchemy {' '.join(cmd_norm)}")
 
+    # backup/restore log level if applicable
+    prev_log_level = (
+        logging.getLogger().level if log_level is not None else None
+    )
+    if log_level is not None:
+        logging.getLogger().setLevel(log_level)
+
     runner = CliRunner()
     result = runner.invoke(app, args=cmd_norm, catch_exceptions=False)
+
+    if prev_log_level is not None:
+        logging.getLogger().setLevel(prev_log_level)
 
     assert result.exit_code == exit_code
 
