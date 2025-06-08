@@ -13,7 +13,14 @@ from trilium_alchemy import *
 from trilium_alchemy.tools.cli.main import app
 from trilium_alchemy.tools.config import Config, InstanceConfig
 
-from ..conftest import BACKUP_PATH, DB_PATH, HOST, TOKEN, compare_folders
+from ..conftest import (
+    BACKUP_PATH,
+    DB_PATH,
+    HOST,
+    TOKEN,
+    compare_folders,
+    create_label,
+)
 from .fs_utils import NOTE_1_ID, TREE_DUMP_PATH, create_note_1
 
 
@@ -350,6 +357,33 @@ def test_fs(session: Session, note: Note, tmp_path: Path):
     # load again and ensure no changes were made
     _run(["fs", "load", tmp_path], log_level=logging.INFO)
     assert log_handler.test_logs[-1] == "No changes to commit"
+
+
+def test_note(session: Session, note: Note):
+    create_label(session.api, note, "label1", "value1", 1)
+    create_label(session.api, note, "label2", "value2", 3)
+    create_label(session.api, note, "label3", "value3", 10)
+
+    note.refresh()
+    assert len(note.labels.owned) == 3
+    assert session.dirty_count == 0
+
+    label1, label2, label3 = note.labels.owned
+
+    assert label1.position == 1
+    assert label2.position == 3
+    assert label3.position == 10
+
+    # run command to cleanup positions
+    _run(["note", "--search", "#label1", "cleanup-positions", "-y"])
+
+    # refresh note and check
+    note.refresh()
+    assert session.dirty_count == 0
+
+    assert label1.position == 10
+    assert label2.position == 20
+    assert label3.position == 30
 
 
 def _restart_trilium(callable: Callable[[], None]):
