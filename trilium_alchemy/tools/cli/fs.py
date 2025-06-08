@@ -12,8 +12,10 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import typer
 from typer import Argument, Context, Option
 
+from ...core.exceptions import ValidationError
 from ..fs.tree import dump_tree, load_tree
 from ..utils import commit_changes
 from ._utils import MainTyper, get_notes, get_root_context, lookup_param
@@ -115,14 +117,14 @@ def load(
     ),
     parent_note_id: str = Option(
         None,
-        "--parent_note-id",
-        help="Note id of parent under which to place loaded notes",
+        "--parent-note-id",
+        help="Optional note id of parent under which to place loaded notes",
     ),
     parent_search: str
     | None = Option(
         None,
-        "--search",
-        help="Search string to identify parent under which to place loaded notes, e.g. '#myExtensionsRoot'",
+        "--parent-search",
+        help="Optional search string to identify parent under which to place loaded notes, e.g. '#myExtensionsRoot'",
     ),
     dry_run: bool = Option(
         False,
@@ -160,5 +162,11 @@ def load(
     else:
         parent_note = None
 
-    _ = load_tree(src, session, parent_note=parent_note)
+    try:
+        _ = load_tree(src, session, parent_note=parent_note)
+    except ValidationError as e:
+        errors = "\n".join(e.errors)
+        logging.error(f"Found errors upon loading notes:\n{errors}")
+        raise typer.Exit(code=1)
+
     commit_changes(session, console, dry_run=dry_run, yes=yes)

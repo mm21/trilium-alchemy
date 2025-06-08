@@ -9,6 +9,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from ...core.exceptions import ValidationError
 from ...core.note.content import get_digest
 from ...core.note.note import Note
 from ...core.session import Session
@@ -145,22 +146,41 @@ def load_tree(
         note = load_note(note_dir, session)
         notes.append(note)
 
+    # get top-level notes to ensure they will have a parent
+    root_notes = _find_root_notes(notes)
+
     # if parent given, find relative root notes and add as children
     if parent_note:
         children: set[Note] = set(parent_note.children)
-        root_notes = _find_root_notes(notes)
 
         # validate relative root notes
         invalid_root_notes = {parent_note, session.root}
+        errors: list[str] = []
+
         for note in root_notes:
-            assert (
-                note not in invalid_root_notes
-            ), f"Cannot add note {note} as a child of {parent_note}"
+            if note in invalid_root_notes:
+                errors.append(
+                    f"Cannot add note {note._str_short} as a child of {parent_note._str_short}, would create a cycle"
+                )
+
+        if len(errors):
+            raise ValidationError(errors)
 
         # add children sorted by title, if not already present
         for note in sorted(root_notes, key=lambda n: n.title):
             if note not in children:
                 parent_note += root_notes
+    else:
+        errors: list[str] = []
+
+        for note in root_notes:
+            if not len(note.parents):
+                errors.append(
+                    f"Cannot load note {note._str_short} as it has no parents"
+                )
+
+        if len(errors):
+            raise ValidationError(errors)
 
     return notes
 
