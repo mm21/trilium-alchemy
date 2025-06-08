@@ -16,7 +16,7 @@ import typer
 from typer import Argument, Context, Option
 
 from ...core.exceptions import ValidationError
-from ..fs.tree import dump_tree, load_tree
+from ..fs.tree import dump_tree, load_tree, scan_content
 from ..utils import commit_changes
 from ._utils import MainTyper, get_notes, get_root_context, lookup_param
 
@@ -71,7 +71,7 @@ def dump(
     ),
 ):
     """
-    Dump notes to destination folder
+    Dump notes to folder
     """
 
     root_context = get_root_context(ctx)
@@ -139,7 +139,7 @@ def load(
     ),
 ):
     """
-    Load notes from source folder and optionally add as children of given parent
+    Load notes from dump folder and optionally add as children of given parent
     """
     from .main import console
 
@@ -170,3 +170,22 @@ def load(
         raise typer.Exit(code=1)
 
     commit_changes(session, console, dry_run=dry_run, yes=yes)
+
+
+@app.command()
+def scan(
+    dump_dir: Path = Argument(
+        help="Dump folder as previously passed to dump command",
+        exists=True,
+        file_okay=False,
+    ),
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Don't update filesystem, only log operations",
+    ),
+):
+    """
+    Scan dump folder for content file changes and update metadata if out of date
+    """
+    scan_content(dump_dir, dry_run=dry_run)

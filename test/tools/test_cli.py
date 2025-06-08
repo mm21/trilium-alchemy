@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 from trilium_alchemy import *
 from trilium_alchemy.tools.cli.main import app
 from trilium_alchemy.tools.config import Config, InstanceConfig
+from trilium_alchemy.tools.fs.tree import _map_note_dir
 
 from ..conftest import (
     BACKUP_PATH,
@@ -357,6 +358,26 @@ def test_fs(session: Session, note: Note, tmp_path: Path):
     # load again and ensure no changes were made
     _run(["fs", "load", tmp_path], log_level=logging.INFO)
     assert log_handler.test_logs[-1] == "No changes to commit"
+
+    note_1_path = _map_note_dir(note_1)
+    content_file = tmp_path / note_1_path / "content.txt"
+
+    orig_content = content_file.read_text()
+    updated_content = "Updated content"
+
+    # manually modify content for note 1
+    content_file.write_text(updated_content)
+
+    # scan content to update metadata, dry run first
+    _run(["fs", "scan", "--dry-run", tmp_path])
+    assert content_file.read_text() == updated_content
+
+    _run(["fs", "scan", tmp_path])
+
+    # dump again, content should be updated
+    _run(["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
+    assert content_file.read_text() == orig_content
+    compare_folders(tmp_path, TREE_DUMP_PATH)
 
 
 def test_note(session: Session, note: Note):

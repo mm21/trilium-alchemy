@@ -185,13 +185,13 @@ def load_tree(
     return notes
 
 
-def scan_content(root_dir: Path):
+def scan_content(dump_dir: Path, *, dry_run: bool = False):
     """
     Scan content files and update metadata if out of date. Use if content
     files were updated after dumping.
     """
 
-    note_dirs = _find_note_dirs(root_dir)
+    note_dirs = _find_note_dirs(dump_dir)
 
     for note_dir in note_dirs:
         meta_path = note_dir / META_FILENAME
@@ -204,15 +204,23 @@ def scan_content(root_dir: Path):
         current_blob_id = get_digest(content_file.read_bytes())
 
         if meta.blob_id != current_blob_id:
-            meta.blob_id = current_blob_id
-            meta.dump_yaml(meta_path)
-            logging.info(
-                f"Updated metadata with new blob_id for note at '{note_dir}'"
-            )
+            title = meta.title.replace("'", "\\'")
+            note = f"Note('{title}', note_id='{meta.note_id}')"
+
+            if dry_run:
+                logging.info(
+                    f"Would update metadata with new blob_id for {note} at '{note_dir}'"
+                )
+            else:
+                meta.blob_id = current_blob_id
+                meta.dump_yaml(meta_path)
+                logging.info(
+                    f"Updated metadata with new blob_id for {note} at '{note_dir}'"
+                )
 
 
 def _find_note_dirs(
-    root_dir: Path, empty_dirs: list[Path] | None = None
+    dump_dir: Path, empty_dirs: list[Path] | None = None
 ) -> list[Path]:
     """
     Walk prefix tree folder and return valid note folders, logging warnings
@@ -288,7 +296,7 @@ def _find_note_dirs(
                 if check_prefix_dir(path):
                     recurse(path, depth=depth + 1)
 
-    recurse(root_dir)
+    recurse(dump_dir)
 
     return note_dirs
 
@@ -318,7 +326,7 @@ def _map_note_dir(note: Note) -> Path:
 
 
 def _prune_dirs(
-    root_dir: Path,
+    dump_dir: Path,
     dumped_note_dirs: list[Path],
     stats: DumpStats,
     dry_run: bool = False,
@@ -328,7 +336,7 @@ def _prune_dirs(
     """
 
     empty_dirs: list[Path] = []
-    note_dirs = _find_note_dirs(root_dir, empty_dirs)
+    note_dirs = _find_note_dirs(dump_dir, empty_dirs)
 
     # determine which note paths to prune
     stale_note_dirs = sorted(set(note_dirs) - set(dumped_note_dirs))
@@ -339,25 +347,25 @@ def _prune_dirs(
         if dry_run:
             logging.info(f"Would prune folder: '{path}'")
         else:
-            _prune_dir(root_dir, path)
+            _prune_dir(dump_dir, path)
         stats.prune_count += 1
 
 
-def _prune_dir(root_dir: Path, path: Path):
+def _prune_dir(dump_dir: Path, path: Path):
     """
     Remove this folder and empty parent folders.
     """
 
-    if not path.exists() or root_dir == path:
+    if not path.exists() or dump_dir == path:
         return
 
-    assert path.is_relative_to(root_dir)
+    assert path.is_relative_to(dump_dir)
     shutil.rmtree(path)
 
     # if parent is empty, prune it as well
     parent = path.parent
     if next(parent.iterdir(), None) is None:
-        _prune_dir(root_dir, parent)
+        _prune_dir(dump_dir, parent)
 
 
 def _normalize_note_id(note_id: str) -> str:

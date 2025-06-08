@@ -159,7 +159,6 @@ def test_dump_tree(
     compare_folders(tmp_path, TREE_DUMP_PATH)
 
     note_1_path = _map_note_dir(note_1)
-
     content_file = tmp_path / note_1_path / "content.txt"
 
     orig_content = content_file.read_text()
