@@ -149,6 +149,11 @@ def load_tree(
     notes: list[Note] = []
     note_dirs = _find_note_dirs(src_dir, logger=logger)
 
+    if not len(note_dirs):
+        raise ValidationError(
+            [f"Folder does not contain any notes: '{src_dir}'"]
+        )
+
     # load notes
     for note_dir in note_dirs:
         note = load_note(note_dir, session)
