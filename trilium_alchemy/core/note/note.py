@@ -921,6 +921,35 @@ class Note(BaseEntity[NoteModel]):
         return list(self.branches) + list(self.attributes.owned)
 
     @property
+    def _str_summary_extra_pre(self) -> list[str]:
+        """
+        Get note paths for summary print.
+        """
+        paths_ret: list[str] = []
+
+        for path in self.paths:
+            if len(path) > 1:
+                paths_ret.append(
+                    " > ".join(
+                        [f"'{note._title_escape}'" for note in path[:-1]]
+                    )
+                )
+
+        return paths_ret
+
+    @property
+    def _str_summary_extra_post(self) -> list[str]:
+        """
+        Get content state for summary print.
+        """
+        blob_ids: list[str] = [f"'{self._content._backing.digest}'"]
+
+        if self._content._is_changed:
+            blob_ids.append(f"'{self._content._working.digest}'")
+
+        return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
+
+    @property
     def _str_short(self):
         note_id = f"'{self.note_id}'" if self.note_id else None
         return f"Note('{self._title_escape}', note_id={note_id})"

@@ -179,7 +179,26 @@ class BaseEntity[ModelT: BaseEntityModel](
         values.
         """
         indent = f"\n{' '*4}"
-        return f"{self.str_short}{indent}{self._state}{indent}{self._model}"
+        return indent.join(
+            [self.str_short]
+            + self._str_summary_extra_pre
+            + [str(self._state), str(self._model)]
+            + self._str_summary_extra_post
+        )
+
+    @property
+    def _str_summary_extra_pre(self) -> list[str]:
+        """
+        Get extra lines to be inserted at beginning of summary.
+        """
+        return []
+
+    @property
+    def _str_summary_extra_post(self) -> list[str]:
+        """
+        Get extra lines to be inserted at end of summary.
+        """
+        return []
 
     @property
     @abstractmethod
