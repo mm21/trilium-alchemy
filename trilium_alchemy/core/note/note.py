@@ -194,6 +194,7 @@ class Note(BaseEntity[NoteModel]):
         title: str | None = None,
         note_type: str | None = None,
         mime: str | None = None,
+        *,
         attributes: Iterable[BaseAttribute] | None = None,
         parents: Iterable[Note | Branch] | Note | Branch | None = None,
         children: Iterable[Note | Branch] | None = None,
