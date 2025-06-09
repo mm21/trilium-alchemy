@@ -221,17 +221,17 @@ def test_list_insert(session: Session, note: Note):
     note.attributes.owned.insert(0, label2)
     assert len(note.attributes.owned) == 3
 
-    assert label2.position == 1
-    assert label1.position == 10
-    assert relation1.position == 20
+    assert label2.position == 10
+    assert label1.position == 20
+    assert relation1.position == 30
 
     assert note.attributes.owned[0] is label2
     assert note.attributes.owned[1] is label1
     assert note.attributes.owned[2] is relation1
 
-    assert not label1._is_update
+    assert label1._is_update
     assert label2._is_create
-    assert not relation1._is_update
+    assert relation1._is_update
 
     session.flush()
 

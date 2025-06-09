@@ -635,9 +635,9 @@ def test_cleanup_positions(session: Session, note: Note):
     note.attributes.owned.insert(1, label1_2)
 
     assert label1.position == 1
-    assert label1_2.position == 2
-    assert label2.position == 3
-    assert label3.position == 10
+    assert label1_2.position == 11
+    assert label2.position == 21
+    assert label3.position == 31
 
     note._cleanup_positions()
     assert session.dirty_count == 4

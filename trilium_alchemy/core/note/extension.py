@@ -289,7 +289,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._entity_list = None
 
     # get position for provided index
-    def _get_position(self, index: int, cleanup: bool = False) -> int:
+    def _get_position(self, index: int) -> int:
         assert self._entity_list is not None
 
         if index > 0:
@@ -299,18 +299,7 @@ class BaseEntityList[EntityT: OrderedEntity](
             # if first, get position as base + 10
             prev_position = self._get_position_base()
 
-        assert index <= len(self._entity_list) - 1
-
-        # check if there is an entity at the next position
-        if index == len(self._entity_list) - 1 or cleanup:
-            # no next entity
-            offset = 10
-        else:
-            # have next entity, add minimal offset to avoid likelihood of
-            # needing more entity updates
-            offset = 1
-
-        return prev_position + offset
+        return prev_position + 10
 
     def _get_position_base(self) -> int:
         return 0
@@ -320,9 +309,6 @@ class BaseEntityList[EntityT: OrderedEntity](
         Assign positions starting with provided index.
         """
         assert self._entity_list is not None
-
-        # always cleanup declarative notes
-        cleanup = cleanup or self._entity._force_position_cleanup
 
         for i in range(index, len(self._entity_list)):
             current_position = self._entity_list[i]._position
@@ -335,22 +321,14 @@ class BaseEntityList[EntityT: OrderedEntity](
                 else None
             )
 
-            next_is_create = (
-                self._entity_list[i + 1]._is_create
-                if i < len(self._entity_list) - 1
-                else False
-            )
-
             needs_update = (
                 prev_position is not None and current_position <= prev_position
             ) or (
                 next_position is not None and current_position >= next_position
             )
 
-            if needs_update or cleanup or next_is_create:
-                self._entity_list[i]._position = self._get_position(
-                    i, cleanup=cleanup or next_is_create
-                )
+            if needs_update or cleanup or self._entity._force_position_cleanup:
+                self._entity_list[i]._position = self._get_position(i)
 
 
 class BaseEntitySet[EntityT: BaseEntity](

@@ -236,8 +236,8 @@ def test_refresh_note_ordering(session: Session, note: Note):
     # swap child positions
     note.branches.children = [branch2, branch1]
 
-    assert branch1.position == 10
-    assert branch2.position == 1
+    assert branch1.position == 20
+    assert branch2.position == 10
 
     session.flush()
     session.refresh_note_ordering(note)
