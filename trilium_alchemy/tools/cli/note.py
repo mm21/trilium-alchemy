@@ -210,12 +210,6 @@ def _sync_template(
 
             # find all notes with selected template
             notes_norm = session.search(f"~template.noteId={template.note_id}")
-
-            if not len(notes_norm):
-                logger.error(
-                    f"No notes found with ~template={template._str_short}"
-                )
-                raise Exit(1)
         else:
             # find all notes with any template
             notes_norm = session.search("~template")
@@ -227,8 +221,7 @@ def _sync_template(
                 if template
                 else "any ~template"
             )
-            logger.error(f"No notes found with {template_desc}")
-            raise Exit(1)
+            logger.warning(f"No notes found with {template_desc}")
     else:
         notes_norm = notes
         assert len(notes_norm)
@@ -252,7 +245,7 @@ def _sync_template(
             selected_template = note.relations.get_target("template")
             if not selected_template:
                 logger.warning(
-                    f"Note {note._str_short} does not have a ~template relation"
+                    f"Note {note._str_short} does not have a ~template"
                 )
                 continue
 
