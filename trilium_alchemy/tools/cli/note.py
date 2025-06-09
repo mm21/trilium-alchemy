@@ -234,7 +234,7 @@ def _sync_template(
         assert len(notes_norm)
 
     # now we have notes to sync, but possibly not a template
-    for note in notes:
+    for note in notes_norm:
         selected_template: Note
 
         # select template

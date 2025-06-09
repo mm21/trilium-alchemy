@@ -407,6 +407,88 @@ def test_fs(
     compare_folders(tmp_path, TREE_DUMP_PATH)
 
 
+def test_note_sync_template(
+    request: FixtureRequest, session: Session, note: Note
+):
+    def modify_template(template: Note):
+        """
+        Add a child note to this template.
+        """
+        child = Note(
+            f"{template.title} - Child {len(template.children) + 1}",
+            session=session,
+        )
+        child ^= template
+        session.flush()
+
+    def check_instance(instance: Note, template: Note):
+        """
+        Ensure instance is in sync with template.
+        """
+        # pick up changes from CLI
+        instance.refresh()
+
+        assert len(instance.children) == len(template.children)
+        for instance_child, template_child in zip(
+            iter(instance.children), iter(template.children)
+        ):
+            assert instance_child.title == template_child.title
+
+    # create test templates
+    template1 = Note("Test template", parents=note, session=session)
+    template1["template"] = ""
+
+    template2 = Note("Test workspace template", parents=note, session=session)
+    template2["workspaceTemplate"] = ""
+
+    session.flush()
+
+    modify_template(template1)
+    modify_template(template2)
+
+    # test no notes matching any template
+    _run(request, ["note", "sync-template", "-y"], 1)
+
+    # create template instance
+    inst1 = Note(
+        "Template instance 1", parents=note, template=template1, session=session
+    )
+    session.flush()
+    assert inst1.relations.get_target("template") is template1
+
+    check_instance(inst1, template1)
+
+    # modify template
+    modify_template(template1)
+
+    # test note matching any template
+    _run(request, ["note", "sync-template", "-y"])
+
+    # instance should be updated
+    check_instance(inst1, template1)
+
+    # TODO:
+    # - modify template again
+    # - run note sync-template --template-search [...]
+    # - check inst1 modified
+
+    # TODO:
+    # - create another note with ~template=template
+    #       template_inst2 = Note("Template instance 2", template=template, session=session)
+    # - modify template again
+    # run note --note-id [...] sync-template --template-note-id [...]
+    # - check inst2 modified, inst1 not modified
+
+    # TODO:
+    # - create workspace_template_inst1
+    # - modify template, workspace_template
+    # - run note --note-id-search [inst2 label] sync-template
+    # - check inst2 modified, inst1 not modified
+    # - modify template
+    # - run note sync-template --template-note-search [workspace_template label]
+    # - check inst1 modified, inst2 not modified
+
+
 def test_note_cleanup_positions(
     request: FixtureRequest, session: Session, note: Note
 ):
