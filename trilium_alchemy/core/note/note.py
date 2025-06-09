@@ -922,7 +922,8 @@ class Note(BaseEntity[NoteModel]):
 
     @property
     def _str_short(self):
-        return f"Note('{self._title_escape}', note_id='{self.note_id}')"
+        note_id = f"'{self.note_id}'" if self.note_id else None
+        return f"Note('{self._title_escape}', note_id={note_id})"
 
     @property
     def _str_safe(self):

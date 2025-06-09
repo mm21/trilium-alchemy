@@ -115,7 +115,7 @@ def sync_template(
             or "workspaceTemplate" in template.labels
         ):
             logger.error(
-                f"Template note does not have #template or #workspaceTemplate label: {template._str_short}"
+                f"Template note does not have '#template' or '#workspaceTemplate' label: {template._str_short}"
             )
             raise Exit(1)
 
