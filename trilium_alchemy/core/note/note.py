@@ -52,10 +52,18 @@ STRING_NOTE_TYPES = [
 Keep in sync with isStringNote() (src/services/utils.js).
 """
 
-NOTE_TYPES = STRING_NOTE_TYPES + [
+BIN_NOTE_TYPES = [
     "file",
     "image",
 ]
+"""
+Binary note types.
+"""
+
+NOTE_TYPES = STRING_NOTE_TYPES + BIN_NOTE_TYPES
+"""
+All note types.
+"""
 
 STRING_MIME_TYPES = {
     "application/javascript",
@@ -96,10 +104,12 @@ def is_string(note_type: str, mime: str) -> bool:
     Encapsulates logic for checking if a note is considered string type
     according to Trilium.
 
-    This should be kept in sync with src/services/utils.js:isStringNote()
+    This should be generally kept in sync with
+    `src/services/utils.js:isStringNote()`, although checking if not a binary
+    type so as to be more future-proof for when other string types are added.
     """
     return (
-        note_type in STRING_NOTE_TYPES
+        note_type not in BIN_NOTE_TYPES
         or mime.startswith("text/")
         or mime in STRING_MIME_TYPES
     )
