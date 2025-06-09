@@ -4,6 +4,8 @@ Utilities for testing filesystem dump/load-related functionality.
 
 from pathlib import Path
 
+from pytest import FixtureRequest
+
 from trilium_alchemy import *
 
 __all__ = [
@@ -34,6 +36,8 @@ def create_note_1(session: Session, parent: Note) -> Note:
     """
     Create note1 tree with specific note ids.
     """
+
+    assert not Note._exists(session, NOTE_1_ID)
 
     note_1 = Note(
         title="Note 1",
@@ -100,3 +104,14 @@ def check_note_1(note: Note, state: State):
     assert child_branch
     assert child_branch.state is state
     assert child_branch.prefix == "Test prefix"
+
+
+def teardown_note_1(request: FixtureRequest, session: Session):
+    """
+    Delete this note if skipping note teardown. Otherwise, subsequent tests
+    using note 1 will fail due to it already existing.
+    """
+    if request.config.getoption("--skip-teardown") and Note._exists(
+        session, NOTE_1_ID
+    ):
+        session.api.delete_note_by_id(NOTE_1_ID)

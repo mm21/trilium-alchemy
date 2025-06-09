@@ -109,7 +109,7 @@ class BranchModel(BaseEntityModel):
     fields_default = {
         "prefix": "",
         "is_expanded": False,
-        "note_position": 0,
+        "note_position": 10,
     }
 
 

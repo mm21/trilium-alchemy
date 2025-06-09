@@ -630,12 +630,22 @@ def test_cleanup_positions(session: Session, note: Note):
     assert label2.position == 3
     assert label3.position == 10
 
+    # insert a new label to check that positions didn't get cleaned up
+    label1_2 = Label("label1_2", session=session)
+    note.attributes.owned.insert(1, label1_2)
+
+    assert label1.position == 1
+    assert label1_2.position == 2
+    assert label2.position == 3
+    assert label3.position == 10
+
     note._cleanup_positions()
-    assert session.dirty_count == 3
+    assert session.dirty_count == 4
 
     assert label1.position == 10
-    assert label2.position == 20
-    assert label3.position == 30
+    assert label1_2.position == 20
+    assert label2.position == 30
+    assert label3.position == 40
 
     session.flush()
     assert session.dirty_count == 0

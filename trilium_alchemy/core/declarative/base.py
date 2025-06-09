@@ -465,6 +465,8 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     Whether to take the title as the stem of the filename.
     """
 
+    _force_position_cleanup: bool = True
+
     @property
     def note_id_seed_final(self) -> str | None:
         """

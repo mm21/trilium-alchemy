@@ -305,9 +305,9 @@ def test_slice(session: Session, note: Note):
     assert label1.name == "label1"
     assert label2.name == "label2"
 
-    assert label0.position == 10
-    assert label1.position == 20
-    assert label2.position == 30
+    assert label0.position == 1
+    assert label1.position == 10
+    assert label2.position == 20
 
     assert label3._is_delete
 

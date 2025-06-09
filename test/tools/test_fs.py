@@ -23,6 +23,7 @@ from .fs_utils import (
     TREE_DUMP_PATH,
     check_note_1,
     create_note_1,
+    teardown_note_1,
 )
 
 
@@ -62,7 +63,7 @@ def test_dump_note(
     dump_note(tmp_path, note_1, check_content_hash=True)
     assert content_txt_path.read_text() == "Changed content"
 
-    _teardown_note(request, note_1)
+    teardown_note_1(request, session)
 
 
 def test_load_note(request: FixtureRequest, session: Session, note: Note):
@@ -94,7 +95,7 @@ def test_load_note(request: FixtureRequest, session: Session, note: Note):
     assert session.dirty_count == 0
     check_note_1(note_1, State.CLEAN)
 
-    _teardown_note(request, note_1)
+    teardown_note_1(request, session)
 
 
 def test_dump_tree(
@@ -184,7 +185,7 @@ def test_dump_tree(
     assert stats.prune_count == 0
     assert content_file.read_text() == orig_content
 
-    _teardown_note(request, note_1)
+    teardown_note_1(request, session)
 
 
 def test_load_tree(request: FixtureRequest, session: Session, note: Note):
@@ -201,14 +202,4 @@ def test_load_tree(request: FixtureRequest, session: Session, note: Note):
     assert len(note.children)
     assert note.children[0] is note_1
 
-    _teardown_note(request, note_1)
-
-
-def _teardown_note(request: FixtureRequest, note: Note):
-    """
-    Delete this note if skipping note teardown. Otherwise, subsequent tests
-    using note 1 will fail due to it already existing.
-    """
-    if request.config.getoption("--skip-teardown"):
-        note.delete()
-        note.flush()
+    teardown_note_1(request, session)

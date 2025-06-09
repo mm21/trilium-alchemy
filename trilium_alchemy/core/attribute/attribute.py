@@ -114,7 +114,7 @@ class AttributeModel(BaseEntityModel):
     fields_default = {
         "value": "",
         "is_inheritable": False,
-        "position": 0,
+        "position": 10,
     }
 
 

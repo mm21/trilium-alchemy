@@ -1091,8 +1091,8 @@ class Note(BaseEntity[NoteModel]):
                 yield from child._walk(seen_notes)
 
     def _cleanup_positions(self):
-        self._attributes.owned._reorder()
-        self._branches.children._reorder()
+        self._attributes.owned._set_positions(cleanup=True)
+        self._branches.children._set_positions(cleanup=True)
 
 
 @dataclass

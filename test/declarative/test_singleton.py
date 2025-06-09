@@ -235,11 +235,20 @@ def check_inherited_attributes(note: Note):
         assert len(note.attributes.inherited) == 2
         label1, label2 = note.attributes.inherited
 
-        assert label1.name == "hideChildrenOverview"
-        assert label1.value == ""
+        assert label1.name in {"hideChildrenOverview", "mapType"}
 
-        assert label2.name == "mapType"
-        assert label2.value == "link"
+        if label1.name == "hideChildrenOverview":
+            hco = label1
+            mt = label2
+        else:
+            hco = label2
+            mt = label1
+
+        assert hco.name == "hideChildrenOverview"
+        assert hco.value == ""
+
+        assert mt.name == "mapType"
+        assert mt.value == "link"
 
     # recurse into children
     for branch in note.branches.children:

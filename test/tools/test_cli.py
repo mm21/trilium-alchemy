@@ -22,7 +22,7 @@ from ..conftest import (
     compare_folders,
     create_label,
 )
-from .fs_utils import NOTE_1_ID, TREE_DUMP_PATH, create_note_1
+from .fs_utils import NOTE_1_ID, TREE_DUMP_PATH, create_note_1, teardown_note_1
 
 DIVIDER = "=" * 40
 
@@ -417,6 +417,8 @@ def test_fs(
     _run(request, ["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
     assert content_file.read_text() == orig_content
     compare_folders(tmp_path, TREE_DUMP_PATH)
+
+    teardown_note_1(request, session)
 
 
 def test_note_sync_template(

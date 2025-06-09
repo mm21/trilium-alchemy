@@ -55,6 +55,8 @@ class BaseEntity[ModelT: BaseEntityModel](
     # type used to create _model
     _model_cls: type[ModelT]
 
+    _force_position_cleanup: bool = False
+
     def __new__(
         cls,
         # entity id, or None to create new one

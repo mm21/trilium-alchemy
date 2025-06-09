@@ -538,9 +538,9 @@ def change_note(api: DefaultApi, note_id: str) -> None:
     api.patch_note_by_id(note_id, model)
 
     # change attributes
-    for attribute in note.attributes:
-        if attribute.note_id == note_id:
-            change_attribute(api, attribute)
+    owned_attrs = [a for a in note.attributes if a.note_id == note_id]
+    for i, attribute in enumerate(owned_attrs):
+        change_attribute(api, attribute, len(owned_attrs) - i)
 
     # change child branches
     for branch_id in note.child_branch_ids:
@@ -577,12 +577,14 @@ def note_cleanup(note: Note):
     note.flush()
 
 
-def change_attribute(api: DefaultApi, attribute: EtapiAttributeModel):
+def change_attribute(
+    api: DefaultApi, attribute: EtapiAttributeModel, position: int
+):
     assert attribute.type in {"label", "relation"}
 
     model = EtapiAttributeModel(
         value=f"{attribute.value}_new" if attribute.type == "label" else None,
-        position=attribute.position + 10,
+        position=position,
     )
 
     # commit changes

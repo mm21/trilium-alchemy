@@ -1,20 +1,19 @@
+"""
+Test basic CRUD capability of owned attributes.
+"""
+
 from pytest import mark
 
 from trilium_alchemy import *
 
 from ..conftest import attribute_exists, check_read_only
 
-"""
-Test basic CRUD capability of owned attributes.
-"""
-
-"""
-Update existing label.
-"""
-
 
 @mark.label("label1", "value1")
 def test_label_update(session: Session, label: Label):
+    """
+    Update existing label.
+    """
     assert label._is_clean
 
     label.value = "value2"
@@ -38,23 +37,19 @@ def test_label_update(session: Session, label: Label):
     assert label.position == 20
 
 
-"""
-Update isInheritable for existing label.
-"""
-
-
 @mark.label("label1", "value1")
 def test_label_update_inheritable(label: Label):
+    """
+    Update isInheritable for existing label.
+    """
     _test_attribute_update_inheritable(label)
-
-
-"""
-Update existing relation.
-"""
 
 
 @mark.relation("relation1", "root")
 def test_relation_update(session: Session, note: Note, relation: Relation):
+    """
+    Update existing relation.
+    """
     assert relation._is_clean
 
     assert relation.target is not None
@@ -82,13 +77,11 @@ def test_relation_update(session: Session, note: Note, relation: Relation):
     assert relation.position == 20
 
 
-"""
-Update isInheritable for existing relation.
-"""
-
-
 @mark.relation("relation1", "root")
 def test_relation_update_inheritable(relation: Relation):
+    """
+    Update isInheritable for existing relation.
+    """
     _test_attribute_update_inheritable(relation)
 
 
@@ -135,13 +128,11 @@ def test_relation_update_target_new(session: Session, relation: Relation):
     note_new.flush()
 
 
-"""
-Delete existing label.
-"""
-
-
 @mark.label("label1", "value1")
 def test_label_delete(session: Session, label: Label):
+    """
+    Delete existing label.
+    """
     assert label._is_clean
 
     label.delete()
@@ -153,13 +144,11 @@ def test_label_delete(session: Session, label: Label):
     assert attribute_exists(session.api, label.attribute_id) is False
 
 
-"""
-Delete existing relation.
-"""
-
-
 @mark.relation("relation1", "root")
 def test_relation_delete(session: Session, relation: Relation):
+    """
+    Delete existing relation.
+    """
     assert relation._is_clean
 
     relation.delete()
@@ -171,12 +160,10 @@ def test_relation_delete(session: Session, relation: Relation):
     assert attribute_exists(session.api, relation.attribute_id) is False
 
 
-"""
-Create new label/relation and add to list.
-"""
-
-
 def test_list_create(session: Session, note: Note):
+    """
+    Create new label/relation and add to list.
+    """
     assert len(note.attributes.owned) == 0
 
     # set relation target to root
@@ -218,14 +205,12 @@ def test_list_create(session: Session, note: Note):
     assert relation.target is root
 
 
-"""
-Insert new label as first attribute of note containing existing label/relation.
-"""
-
-
 @mark.attribute("label1", "value1")
 @mark.attribute("relation1", "root", type="relation")
 def test_list_insert(session: Session, note: Note):
+    """
+    Insert new label as first attribute of note containing existing label/relation.
+    """
     assert len(note.attributes.owned) == 2
 
     label1 = note.attributes.owned[0]
@@ -236,17 +221,17 @@ def test_list_insert(session: Session, note: Note):
     note.attributes.owned.insert(0, label2)
     assert len(note.attributes.owned) == 3
 
-    assert label2.position == 10
-    assert label1.position == 20
-    assert relation1.position == 30
+    assert label2.position == 1
+    assert label1.position == 10
+    assert relation1.position == 20
 
     assert note.attributes.owned[0] is label2
     assert note.attributes.owned[1] is label1
     assert note.attributes.owned[2] is relation1
 
-    assert label1._is_update
+    assert not label1._is_update
     assert label2._is_create
-    assert relation1._is_update
+    assert not relation1._is_update
 
     session.flush()
 
@@ -262,18 +247,13 @@ def test_list_insert(session: Session, note: Note):
     assert note.attributes.owned[1] is label1
     assert note.attributes.owned[2] is relation1
 
-    for index in range(len(note.attributes.owned)):
-        assert note.attributes.owned[index].position == (index + 1) * 10
-
-
-"""
-Update existing label/relation.
-"""
-
 
 @mark.attribute("label1", "value1")
 @mark.attribute("relation1", "root", type="relation")
 def test_list_update(session: Session, note: Note):
+    """
+    Update existing label/relation.
+    """
     assert len(note.attributes.owned) == 2
 
     label = note.attributes.owned[0]
@@ -306,14 +286,12 @@ def test_list_update(session: Session, note: Note):
     assert relation_modified_after > relation_modified_before
 
 
-"""
-Delete existing label/relation.
-"""
-
-
 @mark.attribute("label1")
 @mark.attribute("relation1", "root", type="relation")
 def test_list_delete(session: Session, note: Note):
+    """
+    Delete existing label/relation.
+    """
     assert len(note.attributes.owned) == 2
     label = note.attributes.owned[0]
     relation = note.attributes.owned[1]
@@ -325,8 +303,8 @@ def test_list_delete(session: Session, note: Note):
 
     assert label._is_delete
 
-    assert relation._is_update
-    assert relation.position == 10
+    assert relation._is_clean
+    assert relation.position == 20
 
     del note.attributes.owned[0]
     assert relation._is_delete
@@ -365,16 +343,14 @@ def attribute_update(attr: BaseAttribute):
     assert attr._is_clean
 
 
-"""
-Common routine to check update of isInheritable for label/relation.
-
-isInheritable uses a different code path since it can't be changed -- the
-attribute needs to be deleted and created again, so need to have separate 
-tests for it.
-"""
-
-
 def _test_attribute_update_inheritable(attr: BaseAttribute):
+    """
+    Common routine to check update of isInheritable for label/relation.
+
+    isInheritable uses a different code path since it can't be changed -- the
+    attribute needs to be deleted and created again, so need to have separate
+    tests for it.
+    """
     assert attr._is_clean
 
     attr.inheritable = True
