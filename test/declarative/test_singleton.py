@@ -78,9 +78,6 @@ def check_child1(branch: Branch, state: State):
     assert len(note.branches.parents) == 2
 
 
-# TODO: ensure declaratively adding children fails when leaf = True
-
-
 @relation("child1", TemplateChild1)
 class TemplateChild2(BaseDeclarativeNote):
     singleton = True
@@ -107,11 +104,12 @@ def check_child2(branch: Branch, state: State):
     assert note.note_type == "render"
     assert note.mime == ""
 
-    assert len(note.attributes.owned) == 1
+    assert len(note.attributes.owned) == 2
     assert note.attributes.owned[0].name == "child1"
     assert note.attributes.owned[0].target.note_id == id_hash(
         f"{__name__}.TemplateChild1"
     )
+    assert note.attributes.owned[1].name == "triliumAlchemyDeclarativeLeaf"
 
     assert len(note.branches.children) == 0
     assert len(note.branches.parents) == 2

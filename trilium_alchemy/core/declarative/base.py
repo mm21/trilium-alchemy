@@ -554,6 +554,13 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                     )
                 )
 
+        # add #triliumAlchemyDeclarativeLeaf for leaf singleton declarative
+        # notes, allowing the user to e.g. selectively dump them to filesystem
+        if note_id is not None and self.leaf:
+            attributes.append(
+                self.create_declarative_label("triliumAlchemyDeclarativeLeaf")
+            )
+
         container.attributes = attributes
 
         if not self.leaf:
