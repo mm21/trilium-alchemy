@@ -240,6 +240,18 @@ def test_db(
     # backup to same file, overwriting it
     _run(request, ["db", "backup", "--dest", backup_path, "--overwrite"])
 
+    # attempt to backup to nonexistent folder
+    _run(
+        request,
+        [
+            "db",
+            "backup",
+            "--dest",
+            tmp_path / "nonexistent_dir" / "nonexistent.db",
+        ],
+        2,
+    )
+
     # add another note to root
     session.root += Note("test note 2", session=session)
     session.flush()
@@ -414,79 +426,157 @@ def test_note_sync_template(
         """
         Add a child note to this template.
         """
-        child = Note(
+        template += Note(
             f"{template.title} - Child {len(template.children) + 1}",
             session=session,
         )
-        child ^= template
         session.flush()
 
-    def check_instance(instance: Note, template: Note):
+    def check_instance(instance: Note, template: Note, same: bool = True):
         """
         Ensure instance is in sync with template.
         """
         # pick up changes from CLI
         instance.refresh()
 
-        assert len(instance.children) == len(template.children)
-        for instance_child, template_child in zip(
-            iter(instance.children), iter(template.children)
-        ):
-            assert instance_child.title == template_child.title
+        if same:
+            assert len(instance.children) == len(template.children)
+            for instance_child, template_child in zip(
+                iter(instance.children), iter(template.children)
+            ):
+                assert instance_child.title == template_child.title
+        else:
+            assert len(instance.children) != len(template.children)
 
-    # create test templates
-    template1 = Note("Test template", parents=note, session=session)
+    # create templates
+    template1 = Note("Test template", session=session)
     template1["template"] = ""
-
-    template2 = Note("Test workspace template", parents=note, session=session)
+    template1["template1"] = ""
+    template2 = Note("Test workspace template", session=session)
     template2["workspaceTemplate"] = ""
+    template2["template2"] = ""
+    template3 = Note("Test template 3", session=session)
+    template3["template"] = ""
 
+    note += [template1, template2, template3]
     session.flush()
-
-    modify_template(template1)
-    modify_template(template2)
 
     # test no notes matching any template
-    _run(request, ["note", "sync-template", "-y"], 1)
-
-    # create template instance
-    inst1 = Note(
-        "Template instance 1", parents=note, template=template1, session=session
-    )
-    session.flush()
-    assert inst1.relations.get_target("template") is template1
-
-    check_instance(inst1, template1)
-
-    # modify template
-    modify_template(template1)
-
-    # test note matching any template
     _run(request, ["note", "sync-template", "-y"])
 
-    # instance should be updated
-    check_instance(inst1, template1)
+    # create template instances
+    inst1 = Note("Instance 1", template=template1, session=session)
+    inst1["inst1"] = ""
+    inst2 = Note("Instance 2", template=template2, session=session)
+    inst2["inst2"] = ""
 
-    # TODO:
-    # - modify template again
-    # - run note sync-template --template-search [...]
-    # - check inst1 modified
+    note += [inst1, inst2]
+    session.flush()
 
-    # TODO:
-    # - create another note with ~template=template
-    #       template_inst2 = Note("Template instance 2", template=template, session=session)
-    # - modify template again
-    # run note --note-id [...] sync-template --template-note-id [...]
-    # - check inst2 modified, inst1 not modified
+    def modify_templates():
+        modify_template(template1)
+        modify_template(template2)
 
-    # TODO:
-    # - create workspace_template_inst1
-    # - modify template, workspace_template
-    # - run note --note-id-search [inst2 label] sync-template
-    # - check inst2 modified, inst1 not modified
-    # - modify template
-    # - run note sync-template --template-note-search [workspace_template label]
-    # - check inst1 modified, inst2 not modified
+    def check_instances(same_inst1: bool = True, same_inst2: bool = True):
+        check_instance(inst1, template1, same=same_inst1)
+        check_instance(inst2, template2, same=same_inst2)
+
+    # sync notes matching any template
+    modify_templates()
+    _run(request, ["note", "sync-template", "-y"])
+    check_instances()
+
+    # sync template1 by template search
+    modify_templates()
+    _run(
+        request,
+        [
+            "note",
+            "sync-template",
+            "--template-search",
+            "#template #template1",
+            "-y",
+        ],
+    )
+    check_instances(True, False)
+
+    # sync inst2 by note search
+    modify_templates()
+    _run(request, ["note", "--search", "#inst2", "sync-template", "-y"])
+    check_instances(False, True)
+
+    # sync both instances again
+    _run(request, ["note", "sync-template", "-y"])
+    check_instances()
+
+    # attempt to sync inst1 with template2
+    _run(
+        request,
+        [
+            "note",
+            "--note-id",
+            inst1.note_id,
+            "sync-template",
+            "--template-note-id",
+            template2.note_id,
+            "-y",
+        ],
+    )
+
+    # sync note which does not have any template
+    _run(
+        request,
+        ["note", "--note-id", note.note_id, "sync-template", "-y"],
+    )
+
+    # sync template without any instances
+    _run(
+        request,
+        [
+            "note",
+            "sync-template",
+            "--template-note-id",
+            template3.note_id,
+            "-y",
+        ],
+    )
+
+    # sync invalid template
+    _run(
+        request,
+        ["note", "sync-template", "--template-note-id", inst1.note_id, "-y"],
+        1,
+    )
+
+    # sync nonexistent template
+    _run(
+        request,
+        ["note", "sync-template", "--template-note-id", "nonexistent_id", "-y"],
+        2,
+    )
+    _run(
+        request,
+        [
+            "note",
+            "sync-template",
+            "--template-search",
+            "#nonexistent_label",
+            "-y",
+        ],
+        2,
+    )
+
+    # sync nonexistent note
+    _run(
+        request,
+        ["note", "--note-id", "nonexistent_id", "sync-template", "-y"],
+        2,
+    )
+    _run(
+        request,
+        ["note", "--search", "#nonexistent_label", "sync-template", "-y"],
+        2,
+    )
 
 
 def test_note_cleanup_positions(
@@ -592,7 +682,7 @@ def _run(
 
     if print_stdout:
         print(DIVIDER)
-        print(f"$ trilium-alchemy {_get_shell_cmd(cmd_norm)}\n")
+        print(f"$ trilium-alchemy {_get_shell_cmd(cmd_norm)}")
 
     # invoke command
     result = runner.invoke(app, args=cmd_norm, catch_exceptions=False)
