@@ -945,17 +945,19 @@ class Note(BaseEntity[NoteModel]):
                     )
                 )
 
-        return paths_ret
+        return sorted(paths_ret)
 
     @property
     def _str_summary_extra_post(self) -> list[str]:
         """
         Get content state for summary print.
         """
-        blob_ids: list[str] = [f"'{self._content._backing.digest}'"]
+        blob_ids: list[str] = []
 
-        if self._content._is_changed:
-            blob_ids.append(f"'{self._content._working.digest}'")
+        if self._content._is_changed and not self._is_create:
+            blob_ids.append(f"'{self._content._backing.digest}'")
+
+        blob_ids.append(f"'{self._content.blob_id}'")
 
         return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
 
