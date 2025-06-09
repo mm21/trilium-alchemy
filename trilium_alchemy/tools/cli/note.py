@@ -3,7 +3,6 @@ Operations on one or more notes, not necessarily within the same subtree.
 """
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -16,6 +15,7 @@ from ._utils import (
     console,
     get_notes,
     get_root_context,
+    logger,
     lookup_param,
 )
 
@@ -114,7 +114,7 @@ def sync_template(
             "template" in template.labels
             or "workspaceTemplate" in template.labels
         ):
-            logging.error(
+            logger.error(
                 f"Template note does not have #template or #workspaceTemplate label: {template._str_short}"
             )
             raise Exit(1)
@@ -212,7 +212,7 @@ def _sync_template(
             notes_norm = session.search(f"~template.noteId={template.note_id}")
 
             if not len(notes_norm):
-                logging.error(
+                logger.error(
                     f"No notes found with ~template={template._str_short}"
                 )
                 raise Exit(1)
@@ -227,7 +227,7 @@ def _sync_template(
                 if template
                 else "any ~template"
             )
-            logging.error(f"No notes found with {template_desc}")
+            logger.error(f"No notes found with {template_desc}")
             raise Exit(1)
     else:
         notes_norm = notes
@@ -241,7 +241,7 @@ def _sync_template(
         if template:
             # ensure this note has a ~template relation to this template
             if not template in note.relations.get_targets("template"):
-                logging.warning(
+                logger.warning(
                     f"Note {note._str_short} does not have ~template={template._str_short}"
                 )
                 continue
@@ -251,7 +251,7 @@ def _sync_template(
             # select first ~template relation
             selected_template = note.relations.get_target("template")
             if not selected_template:
-                logging.warning(
+                logger.warning(
                     f"Note {note._str_short} does not have a ~template relation"
                 )
                 continue

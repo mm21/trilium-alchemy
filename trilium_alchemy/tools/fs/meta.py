@@ -20,7 +20,6 @@ from ..yaml_model import BaseYamlModel
 __all__ = [
     "META_FILENAME",
     "NoteMeta",
-    "dump_note",
 ]
 
 META_FILENAME = "meta.yaml"

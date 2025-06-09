@@ -69,12 +69,17 @@ def pytest_addoption(parser: Parser):
     parser.addoption(
         "--clobber",
         action="store_true",
-        help="Allow tests to delete any existing notes. Do not use on production Trilium instance; your notes will be deleted.",
+        help="Allow tests to delete any existing notes; do not use on production Trilium instance as your notes will be deleted",
     )
     parser.addoption(
         "--skip-teardown",
         action="store_true",
         help="Skip teardown of test notes for manual inspection",
+    )
+    parser.addoption(
+        "--cli-stdout",
+        action="store_true",
+        help="Print stdout of CLI commands",
     )
 
 
@@ -123,7 +128,7 @@ def cleanup_tree(request: FixtureRequest):
 
 
 @fixture(autouse=True, scope="session")
-def session_setup(request):
+def session_setup(request: FixtureRequest):
     """
     Ensure there are no non-system notes under root; these may be clobbered by
     a testcase.

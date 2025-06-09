@@ -7,6 +7,7 @@ import hashlib
 import logging
 import shutil
 from dataclasses import dataclass
+from logging import Logger
 from pathlib import Path
 
 from ...core.exceptions import ValidationError
@@ -76,6 +77,7 @@ def dump_tree(
     dest_dir: Path,
     notes: list[Note],
     *,
+    logger: Logger | None = None,
     recurse: bool = True,
     prune: bool = True,
     check_content_hash: bool = False,
@@ -87,6 +89,7 @@ def dump_tree(
 
     assert dest_dir.is_dir()
 
+    logger = logger or logging.getLogger()
     dumped_note_dirs: list[Note] = []
     aggregated_notes = recurse_notes(notes) if recurse else notes
     stats = DumpStats(note_count=len(aggregated_notes))
@@ -101,7 +104,7 @@ def dump_tree(
         # create folder if it doesn't exist
         if not note_dir.exists():
             if dry_run:
-                logging.info(f"Would dump {note._str_short} to '{note_dir}'")
+                logger.info(f"Would dump {note._str_short} to '{note_dir}'")
                 updated = True
             else:
                 note_dir.mkdir(parents=True, exist_ok=True)
@@ -111,6 +114,7 @@ def dump_tree(
             updated = dump_note(
                 note_dir,
                 note,
+                logger=logger,
                 check_content_hash=check_content_hash,
                 dry_run=dry_run,
             )
@@ -122,7 +126,9 @@ def dump_tree(
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
-        _prune_dirs(dest_dir, dumped_note_dirs, stats, dry_run=dry_run)
+        _prune_dirs(
+            dest_dir, dumped_note_dirs, stats, logger=logger, dry_run=dry_run
+        )
 
     return stats
 
@@ -131,6 +137,7 @@ def load_tree(
     src_dir: Path,
     session: Session,
     *,
+    logger: Logger | None = None,
     parent_note: Note | None = None,
 ) -> list[Note]:
     """
@@ -138,8 +145,9 @@ def load_tree(
     children of parent note.
     """
 
+    logger = logger or logging.getLogger()
     notes: list[Note] = []
-    note_dirs = _find_note_dirs(src_dir)
+    note_dirs = _find_note_dirs(src_dir, logger=logger)
 
     # load notes
     for note_dir in note_dirs:
@@ -185,13 +193,16 @@ def load_tree(
     return notes
 
 
-def scan_content(dump_dir: Path, *, dry_run: bool = False):
+def scan_content(
+    dump_dir: Path, *, logger: Logger | None = None, dry_run: bool = False
+):
     """
     Scan content files and update metadata if out of date. Use if content
     files were updated after dumping.
     """
 
-    note_dirs = _find_note_dirs(dump_dir)
+    logger = logger or logging.getLogger()
+    note_dirs = _find_note_dirs(dump_dir, logger=logger)
 
     for note_dir in note_dirs:
         meta_path = note_dir / META_FILENAME
@@ -208,19 +219,19 @@ def scan_content(dump_dir: Path, *, dry_run: bool = False):
             note = f"Note('{title}', note_id='{meta.note_id}')"
 
             if dry_run:
-                logging.info(
+                logger.info(
                     f"Would update metadata with new blob_id for {note} at '{note_dir}'"
                 )
             else:
                 meta.blob_id = current_blob_id
                 meta.dump_yaml(meta_path)
-                logging.info(
+                logger.info(
                     f"Updated metadata with new blob_id for {note} at '{note_dir}'"
                 )
 
 
 def _find_note_dirs(
-    dump_dir: Path, empty_dirs: list[Path] | None = None
+    dump_dir: Path, empty_dirs: list[Path] | None = None, *, logger: Logger
 ) -> list[Path]:
     """
     Walk prefix tree folder and return valid note folders, logging warnings
@@ -237,13 +248,13 @@ def _find_note_dirs(
 
         # ensure name is of expected length
         if len(dir_path.name) != SUFFIX_SIZE:
-            logging.warning(f"Unexpected folder: '{dir_path}'")
+            logger.warning(f"Unexpected folder: '{dir_path}'")
             return
 
         filenames = {p.name for p in dir_path.iterdir()}
 
         if META_FILENAME not in filenames:
-            logging.warning(
+            logger.warning(
                 f"Note folder '{dir_path}' does not contain metadata file"
             )
             return
@@ -253,7 +264,7 @@ def _find_note_dirs(
         if len(filenames) != 1 or not (
             filenames < {"content.txt", "content.bin"}
         ):
-            logging.warning(
+            logger.warning(
                 f"Note folder '{dir_path}' contains ambiguous or missing content file: {filenames}"
             )
             return
@@ -267,7 +278,7 @@ def _find_note_dirs(
 
         # ensure name is of expected length
         if len(dir_path.name) != PREFIX_SIZE:
-            logging.warning(f"Unexpected folder: '{dir_path}'")
+            logger.warning(f"Unexpected folder: '{dir_path}'")
             return False
 
         # check for empty folder
@@ -280,14 +291,14 @@ def _find_note_dirs(
         for path in dir_path.iterdir():
             # ensure not a file
             if path.is_file():
-                logging.warning(f"Unexpected file: '{path}'")
+                logger.warning(f"Unexpected file: '{path}'")
                 continue
 
             # ensure dir name is a hex string
             try:
                 int(path.name, base=16)
             except ValueError:
-                logging.warning(f"Unexpected folder: '{path}'")
+                logger.warning(f"Unexpected folder: '{path}'")
                 continue
 
             if depth == TREE_DEPTH:
@@ -329,6 +340,8 @@ def _prune_dirs(
     dump_dir: Path,
     dumped_note_dirs: list[Path],
     stats: DumpStats,
+    *,
+    logger: Logger,
     dry_run: bool = False,
 ):
     """
@@ -336,7 +349,7 @@ def _prune_dirs(
     """
 
     empty_dirs: list[Path] = []
-    note_dirs = _find_note_dirs(dump_dir, empty_dirs)
+    note_dirs = _find_note_dirs(dump_dir, empty_dirs, logger=logger)
 
     # determine which note paths to prune
     stale_note_dirs = sorted(set(note_dirs) - set(dumped_note_dirs))
@@ -345,7 +358,7 @@ def _prune_dirs(
     prune_dirs = stale_note_dirs + empty_dirs
     for path in prune_dirs:
         if dry_run:
-            logging.info(f"Would prune folder: '{path}'")
+            logger.info(f"Would prune folder: '{path}'")
         else:
             _prune_dir(dump_dir, path)
         stats.prune_count += 1

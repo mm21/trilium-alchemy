@@ -5,7 +5,6 @@ Implements a cache of Trilium entities.
 from __future__ import annotations
 
 import graphlib
-import logging
 from typing import TYPE_CHECKING, Iterable
 
 from .exceptions import ValidationError, _ValidationError
@@ -74,10 +73,10 @@ class Cache:
         self._validate(dirty_set - dirty_set_old)
 
         if not len(dirty_set):
-            logging.debug("No dirty entities to flush")
+            self._session._logger.debug("No dirty entities to flush")
             return
 
-        logging.debug(
+        self._session._logger.debug(
             f"Flushing {len(dirty_set)} entities: {self._get_summary(dirty_set)}"
         )
 
@@ -148,7 +147,7 @@ class Cache:
             assert entity is self.entity_map[entity._entity_id]
         else:
             self.entity_map[entity._entity_id] = entity
-            logging.debug(
+            self._session._logger.debug(
                 f"Added to cache: entity_id={entity._entity_id}, type={type(entity)}"
             )
 

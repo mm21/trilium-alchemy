@@ -7,11 +7,11 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from functools import cached_property
-from typing import TYPE_CHECKING, Callable, Literal, cast
+from logging import Logger
+from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
 
 import requests
 from trilium_client import ApiClient, Configuration, DefaultApi
@@ -126,12 +126,19 @@ class Session:
     Root note.
     """
 
+    _logger: Logger
+    """
+    Logger to use.
+    """
+
     def __init__(
         self,
         host: str,
         token: str | None = None,
+        *,
         password: str | None = None,
         default: bool = True,
+        logger: Logger | None = None,
     ):
         """
         Either `token` or `password` is required; if both are provided, `token`
@@ -141,8 +148,11 @@ class Session:
         :param token: ETAPI token
         :param password: Trilium password, if no token provided
         :param default: Register this as the default session; in this case, `session` may be omitted from entity constructors
+        :param logger: Logger to use, or `None` to use default logger
         """
         from .note.note import Note
+
+        self._logger = logger or logging.getLogger()
 
         # ensure no existing default session, if requested to use as default
         if default:
@@ -191,12 +201,12 @@ class Session:
                 if isinstance(e, ApiException)
                 else str(e)
             )
-            logging.error(
+            self._logger.error(
                 f"Failed to connect to Trilium host='{host}' using token='{self._token}': {err}"
             )
             raise
         else:
-            logging.debug(
+            self._logger.debug(
                 f"Connected to Trilium host '{host}', version {app_info.app_version}"
             )
 
@@ -217,15 +227,15 @@ class Session:
         self._root = Note(note_id="root", session=self)
 
     def __enter__(self):
-        logging.debug(f"Entering context: {self}")
+        self._logger.debug(f"Entering context: {self}")
         return self
 
     def __exit__(self, exc_type, exc_val, traceback):
         if exc_type:
-            logging.error(f"Exiting context with error: {self}")
+            self._logger.error(f"Exiting context with error: {self}")
             return
 
-        logging.debug(f"Exiting context: {self}")
+        self._logger.debug(f"Exiting context: {self}")
 
         # flush pending changes
         self.flush()
@@ -322,7 +332,7 @@ class Session:
 
         # print debug info, if any
         if response.debug_info:
-            logging.debug(f"Got search debug: {response.debug_info}")
+            self._logger.debug(f"Got search debug: {response.debug_info}")
 
         return [
             Note._from_model(model, session=self) for model in response.results
@@ -464,7 +474,7 @@ class Session:
 
         if self._logout_pending:
             if self.dirty_count:
-                logging.warning(
+                self._logger.warning(
                     f"Logging out with {self.dirty_count} dirty entities"
                 )
 
@@ -574,7 +584,7 @@ class Session:
             elif isinstance(entity, BaseAttribute):
                 note = entity.note
                 if not note:
-                    logging.warning(
+                    self._logger.warning(
                         f"Attribute has no note: {entity.str_summary}"
                     )
                     continue
@@ -586,7 +596,7 @@ class Session:
 
                 parent = entity.parent
                 if not parent:
-                    logging.warning(
+                    self._logger.warning(
                         f"Branch has no parent note: {entity.str_summary}"
                     )
                     continue

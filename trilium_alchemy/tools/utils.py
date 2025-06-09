@@ -3,8 +3,6 @@ Utilities for generic tool-related functionality.
 """
 from __future__ import annotations
 
-import logging
-
 import typer
 from rich.console import Console
 
@@ -33,13 +31,13 @@ def commit_changes(
     ```
     """
     if not session._cache.dirty_set:
-        logging.info("No changes to commit")
+        session._logger.info("No changes to commit")
         return
 
     dirty_summary = session.get_dirty_summary()
     overall_summary = session._cache._get_summary()
 
-    logging.info("Pending changes:")
+    session._logger.info("Pending changes:")
     console.print(
         f"{dirty_summary}{'\n' if dirty_summary else ''}Summary: {overall_summary}"
     )
@@ -55,7 +53,7 @@ def commit_changes(
     session.flush()
 
     # print summary
-    logging.info("Committed changes")
+    session._logger.info("Committed changes")
 
 
 def recurse_notes(notes: list[Note]) -> list[Note]:

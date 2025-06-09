@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Self
 
@@ -85,7 +84,7 @@ class EtapiDriver(BranchDriver):
             self.session.api.delete_branch_by_id(self.branch.branch_id)
         except ServiceException as e:
             # saw this once but haven't been able to repro
-            logging.error(f"Failed to delete branch: {e}")
+            self.session._logger.error(f"Failed to delete branch: {e}")
 
 
 class FileDriver(BranchDriver):

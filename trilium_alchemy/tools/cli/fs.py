@@ -8,7 +8,6 @@ Possible dump option: --build-hierarchy [dest: Path]
 """
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +21,7 @@ from ._utils import (
     console,
     get_notes,
     get_root_context,
+    logger,
     lookup_param,
 )
 
@@ -100,14 +100,14 @@ def dump(
         dry_run=dry_run,
     )
 
-    extra = f"{stats.update_count} updated, {stats.prune_count} pruned"
+    extra = f"{stats.update_count} written, {stats.prune_count} pruned"
 
     if dry_run:
-        logging.info(
+        logger.info(
             f"Would dump {stats.note_count} notes to '{dest}' ({extra})"
         )
     else:
-        logging.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
+        logger.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
 
 
 @app.command()
@@ -163,10 +163,10 @@ def load(
         parent_note = None
 
     try:
-        _ = load_tree(src, session, parent_note=parent_note)
+        _ = load_tree(src, session, logger=logger, parent_note=parent_note)
     except ValidationError as e:
         errors = "\n".join(e.errors)
-        logging.error(f"Found errors upon loading notes:\n{errors}")
+        logger.error(f"Found errors upon loading notes:\n{errors}")
         raise Exit(code=1)
 
     commit_changes(session, console, dry_run=dry_run, yes=yes)
@@ -188,4 +188,4 @@ def scan(
     """
     Scan dump folder for content file changes and update metadata if out of date
     """
-    scan_content(dump_dir, dry_run=dry_run)
+    scan_content(dump_dir, logger=logger, dry_run=dry_run)

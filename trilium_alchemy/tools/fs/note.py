@@ -4,6 +4,7 @@ Filesystem operations on a single note.
 from __future__ import annotations
 
 import logging
+from logging import Logger
 from pathlib import Path
 
 from ...core.attribute import BaseAttribute, Label, Relation
@@ -23,6 +24,7 @@ def dump_note(
     dest_dir: Path,
     note: Note,
     *,
+    logger: Logger | None = None,
     check_content_hash: bool = False,
     dry_run: bool = False,
 ) -> bool:
@@ -31,6 +33,7 @@ def dump_note(
     """
     assert dest_dir.is_dir()
 
+    logger = logger or logging.getLogger()
     updated = False
 
     # collect files/folders in destination besides meta.yaml
@@ -60,7 +63,7 @@ def dump_note(
     # write metadata if it doesn't exist or differs from existing metadata
     if meta != current_meta:
         if dry_run:
-            logging.info(
+            logger.info(
                 f"Would write metadata for {note._str_short}: '{meta_path}'"
             )
         else:
@@ -78,7 +81,7 @@ def dump_note(
     )
     if not content_file.exists() or current_blob_id != note.blob_id:
         if dry_run:
-            logging.info(
+            logger.info(
                 f"Would write content for {note._str_short}: '{meta_path}'"
             )
         else:
@@ -92,7 +95,7 @@ def dump_note(
     # - would only occur if note content type was changed
     for path in [p for p in extra_paths if p.name != content_file.name]:
         if dry_run:
-            logging.info(
+            logger.info(
                 f"Would delete obsolete content file for {note._str_short}: '{path}'"
             )
         else:

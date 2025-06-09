@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
-import logging
 import string
 from abc import ABCMeta
 from collections.abc import Iterable
@@ -481,7 +480,7 @@ class Note(BaseEntity[NoteModel]):
     @note_type.setter
     def note_type(self, val: str):
         if not val in NOTE_TYPES:
-            logging.warning(f"Unknown note_type: {val}")
+            self.session._logger.warning(f"Unknown note_type: {val}")
         self._model.set_field("type", val)
 
     @property

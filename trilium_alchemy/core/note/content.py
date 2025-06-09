@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import logging
 from io import IOBase
 from typing import IO, Any
 
@@ -202,7 +201,7 @@ class Content(NoteStatefulExtension):
 
         headers = self._note._session._etapi_headers.copy()
 
-        logging.debug(
+        self._note.session._logger.debug(
             f"Flushing content for {self._note}, is_string={self._is_string}"
         )
 

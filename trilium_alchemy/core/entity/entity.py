@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
@@ -298,7 +297,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         Commit changes to Trilium database for this object.
         """
 
-        logging.debug(f"Flushing: {self.str_summary}")
+        self.session._logger.debug(f"Flushing: {self.str_summary}")
 
         model_new: BaseModel | None = None
         gen: Generator | None = None
@@ -311,7 +310,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         elif self._is_orphan:
             # bail out if a dependency was abandoned
             # TODO: specify which dependency was abandoned
-            logging.warning(
+            self.session._logger.warning(
                 f"Orphaned entity not being flushed since a dependency was abandoned: {self.str_summary}"
             )
         else:
@@ -323,7 +322,7 @@ class BaseEntity[ModelT: BaseEntityModel](
                 ):
                     model_new, gen = self._model.flush(sorter)
             except (NotFoundException, ApiException) as e:
-                logging.warning(
+                self.session._logger.warning(
                     f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
                 )
             else:

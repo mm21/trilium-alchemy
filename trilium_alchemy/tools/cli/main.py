@@ -15,34 +15,18 @@ Planned commands:
 """
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
 from click.exceptions import BadParameter, MissingParameter
 from pydantic import ValidationError
-from rich.logging import RichHandler
 from typer import Context, Exit, Option
 
 from ...core import Session
 from ..config import Config, InstanceConfig
 from . import db, fs, note, tree
-from ._utils import MainTyper, console, get_root_context, lookup_param
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[
-        RichHandler(
-            console=console,
-            rich_tracebacks=True,
-            show_level=True,
-            show_time=True,
-            show_path=False,
-        )
-    ],
-)
+from ._utils import MainTyper, get_root_context, logger, lookup_param
 
 dotenv.load_dotenv()
 
@@ -123,7 +107,7 @@ def check(ctx: Context):
     """
     root_context = get_root_context(ctx)
     session = root_context.create_session()
-    logging.info(
+    logger.info(
         f"Connected to Trilium host '{session.host}', version {session.trilium_version}"
     )
 
@@ -177,7 +161,7 @@ class RootContext:
 
     def create_session(self) -> Session:
         try:
-            return self.instance.create_session()
+            return self.instance.create_session(logger=logger)
         except Exception:
             # would have already logged error
             raise Exit(code=1)

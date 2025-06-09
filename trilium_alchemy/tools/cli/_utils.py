@@ -5,10 +5,12 @@ Utilities specific to CLI functionality.
 from __future__ import annotations
 
 import datetime
+import logging
 from typing import TYPE_CHECKING
 
 from click import BadParameter, Parameter
 from rich.console import Console
+from rich.logging import RichHandler
 from typer import Context, Typer
 
 from ...core import Note, Session
@@ -18,6 +20,20 @@ if TYPE_CHECKING:
 
 
 console = Console()
+
+rich_handler = RichHandler(
+    console=console,
+    rich_tracebacks=True,
+    show_level=True,
+    show_time=True,
+    show_path=False,
+)
+rich_handler.setFormatter(logging.Formatter("%(message)s"))
+
+logger = logging.getLogger("trilium-alchemy")
+logger.setLevel(logging.INFO)
+logger.addHandler(rich_handler)
+logger.propagate = False
 
 
 class MainTyper(Typer):

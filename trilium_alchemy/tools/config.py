@@ -3,6 +3,7 @@ Interface to configuration as persisted in .yaml file.
 """
 from __future__ import annotations
 
+from logging import Logger
 from pathlib import Path
 from typing import Any, Self
 
@@ -83,12 +84,16 @@ class InstanceConfig(BaseModel):
             raise ValueError("either token or password must be provided")
         return self
 
-    def create_session(self) -> Session:
+    def create_session(self, *, logger: Logger) -> Session:
         """
         Get session from this instance's fields.
         """
         return Session(
-            self.host, token=self.token, password=self.password, default=False
+            self.host,
+            token=self.token,
+            password=self.password,
+            default=False,
+            logger=logger,
         )
 
 

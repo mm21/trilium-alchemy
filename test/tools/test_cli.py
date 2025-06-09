@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from pytest import skip
+from pytest import FixtureRequest, skip
 from typer.testing import CliRunner
 
 from trilium_alchemy import *
@@ -24,8 +24,14 @@ from ..conftest import (
 )
 from .fs_utils import NOTE_1_ID, TREE_DUMP_PATH, create_note_1
 
+DIVIDER = "=" * 40
+
 
 class LogHandler(logging.Handler):
+    """
+    Handler to create a list of logs for testcases to access for verification.
+    """
+
     test_logs: list[str]
 
     def __init__(self):
@@ -36,9 +42,9 @@ class LogHandler(logging.Handler):
         self.test_logs.append(record.message)
 
 
-# register handler so we can get access to recent logs for verification
+# create and register handler
 log_handler = LogHandler()
-logging.getLogger().addHandler(log_handler)
+logging.getLogger("trilium-alchemy").addHandler(log_handler)
 
 runner = CliRunner()
 
@@ -48,7 +54,7 @@ def test_check():
     subprocess.check_call(["trilium-alchemy", "check"])
 
 
-def test_config(session: Session, tmp_path: Path):
+def test_config(request: FixtureRequest, session: Session, tmp_path: Path):
     config_path = tmp_path / "test-config.yaml"
     root_data_dir = tmp_path / "root-data-dir"
 
@@ -79,13 +85,14 @@ def test_config(session: Session, tmp_path: Path):
 
     # test connection using config file
     _run(
+        request,
         [
             "--instance",
             "test-instance",
             "--config-file",
             config_path,
             "check",
-        ]
+        ],
     )
 
     # do a dummy database restore to verify data dirs
@@ -93,6 +100,7 @@ def test_config(session: Session, tmp_path: Path):
     dummy_db.write_bytes(b"")
 
     _run(
+        request,
         [
             "--instance",
             "test-instance",
@@ -102,11 +110,12 @@ def test_config(session: Session, tmp_path: Path):
             "restore",
             "-y",
             dummy_db,
-        ]
+        ],
     )
     assert (test_instance_data_dir / "document.db").is_file()
 
     _run(
+        request,
         [
             "--instance",
             "bad-instance",
@@ -116,12 +125,13 @@ def test_config(session: Session, tmp_path: Path):
             "restore",
             "-y",
             dummy_db,
-        ]
+        ],
     )
     assert (bad_instance_data_dir / "document.db").is_file()
 
     # missing instance in config file
     _run(
+        request,
         [
             "--instance",
             "nonexistent-instance",
@@ -134,6 +144,7 @@ def test_config(session: Session, tmp_path: Path):
 
     # bad instance in config file (bad token)
     _run(
+        request,
         [
             "--instance",
             "bad-instance",
@@ -142,11 +153,11 @@ def test_config(session: Session, tmp_path: Path):
             "check",
         ],
         1,
-        log_level=logging.CRITICAL,
     )
 
     # nonexistent config file
     _run(
+        request,
         [
             "--instance",
             "nonexistent",
@@ -161,6 +172,7 @@ def test_config(session: Session, tmp_path: Path):
     invalid_config_path = tmp_path / "test-invalid-config.yaml"
     invalid_config_path.write_text("")
     _run(
+        request,
         [
             "--instance",
             "nonexistent",
@@ -172,7 +184,12 @@ def test_config(session: Session, tmp_path: Path):
     )
 
 
-def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
+def test_db(
+    request: FixtureRequest,
+    session: Session,
+    tmp_path: Path,
+    skip_teardown: bool,
+):
     if skip_teardown:
         skip("Expects an empty tree")
 
@@ -191,12 +208,12 @@ def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
     now_path = BACKUP_PATH / f"backup-{now}.db"
     assert not now_path.is_file()
 
-    _run(["db", "backup", "--name", now, "--verify"])
+    _run(request, ["db", "backup", "--name", now, "--verify"])
     assert now_path.is_file()
     now_path.unlink()
 
-    # backup with auto-name, setting log level so we get the info log
-    _run(["db", "backup", "--auto-name"], log_level=logging.INFO)
+    # backup with auto-name
+    _run(request, ["db", "backup", "--auto-name"])
 
     # get generated name from logs
     auto_name_log = log_handler.test_logs[-1]
@@ -211,17 +228,17 @@ def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
     assert backup_path.is_file()
 
     # backup to folder w/file having unique name
-    _run(["db", "backup", "--dest", tmp_path])
+    _run(request, ["db", "backup", "--dest", tmp_path])
 
     # backup to specific file
     backup_path = tmp_path / "test.db"
-    _run(["db", "backup", "--dest", backup_path])
+    _run(request, ["db", "backup", "--dest", backup_path])
 
     # attempt to backup to same file
-    _run(["db", "backup", "--dest", backup_path], 2)
+    _run(request, ["db", "backup", "--dest", backup_path], 2)
 
     # backup to same file, overwriting it
-    _run(["db", "backup", "--dest", backup_path, "--overwrite"])
+    _run(request, ["db", "backup", "--dest", backup_path, "--overwrite"])
 
     # add another note to root
     session.root += Note("test note 2", session=session)
@@ -233,11 +250,11 @@ def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
         assert not DB_PATH.exists()
 
         # test dry run
-        _run(["db", "restore", "--dry-run", backup_path])
+        _run(request, ["db", "restore", "--dry-run", backup_path])
         assert not DB_PATH.exists()
 
         # actually restore
-        _run(["db", "restore", "-y", backup_path])
+        _run(request, ["db", "restore", "-y", backup_path])
         assert DB_PATH.is_file()
 
     _restart_trilium(restore)
@@ -248,14 +265,19 @@ def test_db(session: Session, tmp_path: Path, skip_teardown: bool):
     assert session2.root.children[0].title == "test note"
 
     # attempt to restore a nonexistent file
-    _run(["db", "restore", tmp_path / "nonexistent.db"], 2)
+    _run(request, ["db", "restore", tmp_path / "nonexistent.db"], 2)
 
     # cleanup
     session2.root.children[0].delete()
     session2.flush()
 
 
-def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
+def test_tree(
+    request: FixtureRequest,
+    session: Session,
+    tmp_path: Path,
+    skip_teardown: bool,
+):
     if skip_teardown:
         skip("Expects an empty tree")
 
@@ -271,19 +293,19 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
 
     # export root
     root_path = tmp_path / "root.zip"
-    _run(["tree", "export", root_path])
+    _run(request, ["tree", "export", root_path])
     assert root_path.is_file()
 
     # export by label
     label_path = tmp_path / "label.zip"
-    _run(["tree", "--search", "#testLabel", "export", label_path])
+    _run(request, ["tree", "--search", "#testLabel", "export", label_path])
     assert label_path.is_file()
 
     # attempt to export to same file
-    _run(["tree", "export", root_path], 2)
+    _run(request, ["tree", "export", root_path], 2)
 
     # export to same file, overwriting it
-    _run(["tree", "export", "--overwrite", root_path])
+    _run(request, ["tree", "export", "--overwrite", root_path])
 
     # delete note
     note.delete()
@@ -291,7 +313,7 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
     assert len(session.root.children) == 0
 
     # import root
-    _run(["tree", "import", root_path])
+    _run(request, ["tree", "import", root_path])
 
     session.root.refresh()
     assert len(session.root.children) == 1
@@ -306,7 +328,7 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
     assert len(note.children) == 0
 
     # import by label
-    _run(["tree", "--search", "#testLabel", "import", label_path])
+    _run(request, ["tree", "--search", "#testLabel", "import", label_path])
 
     note.refresh()
     assert len(note.children) == 1
@@ -315,10 +337,10 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
     assert note.children[0].children[0].title == "test note 2"
 
     # attempt to import by label with multiple labels
-    _run(["tree", "--search", "#testLabel", "import", label_path], 2)
+    _run(request, ["tree", "--search", "#testLabel", "import", label_path], 2)
 
     # attempt to import a nonexistent file
-    _run(["tree", "import", tmp_path / "nonexistent.zip"], 2)
+    _run(request, ["tree", "import", tmp_path / "nonexistent.zip"], 2)
 
     # cleanup
     note.delete()
@@ -326,7 +348,9 @@ def test_tree(session: Session, tmp_path: Path, skip_teardown: bool):
     assert len(session.root.children) == 0
 
 
-def test_fs(session: Session, note: Note, tmp_path: Path):
+def test_fs(
+    request: FixtureRequest, session: Session, note: Note, tmp_path: Path
+):
     # add a label to parent note so we can search for it later
     note["note1_parent"] = ""
 
@@ -334,29 +358,32 @@ def test_fs(session: Session, note: Note, tmp_path: Path):
     session.flush()
 
     # dump with dry run
-    _run(["fs", "dump", "--note-id", NOTE_1_ID, "--dry-run", tmp_path])
+    _run(request, ["fs", "dump", "--note-id", NOTE_1_ID, "--dry-run", tmp_path])
     assert next(tmp_path.iterdir(), None) is None
 
     # dump and compare
-    _run(["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
+    _run(request, ["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
     compare_folders(tmp_path, TREE_DUMP_PATH)
 
     # load and ensure no changes were made
-    _run(["fs", "load", tmp_path], log_level=logging.INFO)
+    _run(request, ["fs", "load", tmp_path])
     assert log_handler.test_logs[-1] == "No changes to commit"
 
     # delete and then load
     note_1.delete()
     session.flush()
 
-    # ensure load with no parents fails (no need for error in test logs)
-    _run(["fs", "load", "-y", tmp_path], 1, log_level=logging.CRITICAL)
+    # ensure load with no parents fails
+    _run(request, ["fs", "load", "-y", tmp_path], 1)
 
     # load with parent
-    _run(["fs", "load", "--parent-search", "#note1_parent", "-y", tmp_path])
+    _run(
+        request,
+        ["fs", "load", "--parent-search", "#note1_parent", "-y", tmp_path],
+    )
 
     # load again and ensure no changes were made
-    _run(["fs", "load", tmp_path], log_level=logging.INFO)
+    _run(request, ["fs", "load", tmp_path])
     assert log_handler.test_logs[-1] == "No changes to commit"
 
     note_1_path = _map_note_dir(note_1)
@@ -369,42 +396,86 @@ def test_fs(session: Session, note: Note, tmp_path: Path):
     content_file.write_text(updated_content)
 
     # scan content to update metadata, dry run first
-    _run(["fs", "scan", "--dry-run", tmp_path])
+    _run(request, ["fs", "scan", "--dry-run", tmp_path])
     assert content_file.read_text() == updated_content
 
-    _run(["fs", "scan", tmp_path])
+    _run(request, ["fs", "scan", tmp_path])
 
     # dump again, content should be updated
-    _run(["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
+    _run(request, ["fs", "dump", "--note-id", NOTE_1_ID, tmp_path])
     assert content_file.read_text() == orig_content
     compare_folders(tmp_path, TREE_DUMP_PATH)
 
 
-def test_note(session: Session, note: Note):
+def test_note_cleanup_positions(
+    request: FixtureRequest, session: Session, note: Note
+):
+    # create child note to verify recursion
+    child = Note("Test child", session=session)
+    child ^= note
+    session.flush()
+
     create_label(session.api, note, "label1", "value1", 1)
     create_label(session.api, note, "label2", "value2", 3)
     create_label(session.api, note, "label3", "value3", 10)
 
+    create_label(session.api, child, "child_label1", "value1", 1)
+    create_label(session.api, child, "child_label2", "value2", 2)
+    create_label(session.api, child, "child_label3", "value3", 3)
+
     note.refresh()
-    assert len(note.labels.owned) == 3
+    child.refresh()
     assert session.dirty_count == 0
 
     label1, label2, label3 = note.labels.owned
+    child_label1, child_label2, child_label3 = child.labels.owned
 
     assert label1.position == 1
     assert label2.position == 3
     assert label3.position == 10
+    assert child_label1.position == 1
+    assert child_label2.position == 2
+    assert child_label3.position == 3
 
-    # run command to cleanup positions
-    _run(["note", "--search", "#label1", "cleanup-positions", "-y"])
+    # run command to cleanup positions without recursing
+    _run(request, ["note", "--search", "#label1", "cleanup-positions", "-y"])
 
-    # refresh note and check
+    # refresh notes and check
     note.refresh()
+    child.refresh()
     assert session.dirty_count == 0
 
     assert label1.position == 10
     assert label2.position == 20
     assert label3.position == 30
+    assert child_label1.position == 1
+    assert child_label2.position == 2
+    assert child_label3.position == 3
+
+    # run command to cleanup positions with recursing
+    _run(
+        request,
+        [
+            "note",
+            "--search",
+            "#label1",
+            "--recurse",
+            "cleanup-positions",
+            "-y",
+        ],
+    )
+
+    # refresh notes and check
+    note.refresh()
+    child.refresh()
+    assert session.dirty_count == 0
+
+    assert label1.position == 10
+    assert label2.position == 20
+    assert label3.position == 30
+    assert child_label1.position == 10
+    assert child_label2.position == 20
+    assert child_label3.position == 30
 
 
 def _restart_trilium(callable: Callable[[], None]):
@@ -426,29 +497,38 @@ def _restart_trilium(callable: Callable[[], None]):
 
 
 def _run(
-    cmd: list[str | Path], exit_code: int = 0, log_level: int | None = None
+    request: FixtureRequest,
+    cmd: list[str | Path],
+    exit_code: int = 0,
 ):
     """
     Run command and verify exit code.
     """
-    cmd_norm = _normalize_cmd(cmd)
-    print(f"Running: trilium-alchemy {' '.join(cmd_norm)}")
 
-    # backup/restore log level if applicable
-    prev_log_level = (
-        logging.getLogger().level if log_level is not None else None
-    )
-    if log_level is not None:
-        logging.getLogger().setLevel(log_level)
+    cmd_norm = _normalize_cmd(cmd)
+    print_stdout = bool(request.config.getoption("--cli-stdout"))
+
+    if print_stdout:
+        print(DIVIDER)
+        print(f"$ trilium-alchemy {_get_shell_cmd(cmd_norm)}\n")
 
     # invoke command
     result = runner.invoke(app, args=cmd_norm, catch_exceptions=False)
 
-    if prev_log_level is not None:
-        logging.getLogger().setLevel(prev_log_level)
+    if print_stdout:
+        print(result.stdout.strip())
+        print(DIVIDER)
 
     assert result.exit_code == exit_code
 
 
 def _normalize_cmd(cmd: list[str | Path]) -> list[str]:
     return [str(c) for c in cmd]
+
+
+def _get_shell_cmd(cmd: list[str]) -> str:
+    """
+    Get command in the form it could be run in a shell, including required
+    quotes.
+    """
+    return " ".join(f'"{c}"' if " " in c else c for c in cmd)

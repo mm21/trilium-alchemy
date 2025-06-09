@@ -27,7 +27,7 @@ from .fs_utils import (
 
 
 def test_dump_note(
-    session: Session, note: Note, tmp_path: Path, request: FixtureRequest
+    request: FixtureRequest, session: Session, note: Note, tmp_path: Path
 ):
     """
     Dump a single note and verify output, also verifying overwrite.
@@ -62,10 +62,10 @@ def test_dump_note(
     dump_note(tmp_path, note_1, check_content_hash=True)
     assert content_txt_path.read_text() == "Changed content"
 
-    _teardown_note(note_1, request)
+    _teardown_note(request, note_1)
 
 
-def test_load_note(session: Session, note: Note, request: FixtureRequest):
+def test_load_note(request: FixtureRequest, session: Session, note: Note):
     """
     Load a single note and verify it.
     """
@@ -94,11 +94,11 @@ def test_load_note(session: Session, note: Note, request: FixtureRequest):
     assert session.dirty_count == 0
     check_note_1(note_1, State.CLEAN)
 
-    _teardown_note(note_1, request)
+    _teardown_note(request, note_1)
 
 
 def test_dump_tree(
-    session: Session, note: Note, tmp_path: Path, request: FixtureRequest
+    request: FixtureRequest, session: Session, note: Note, tmp_path: Path
 ):
     """
     Dump note hierarchy to folder.
@@ -184,10 +184,10 @@ def test_dump_tree(
     assert stats.prune_count == 0
     assert content_file.read_text() == orig_content
 
-    _teardown_note(note_1, request)
+    _teardown_note(request, note_1)
 
 
-def test_load_tree(session: Session, note: Note, request: FixtureRequest):
+def test_load_tree(request: FixtureRequest, session: Session, note: Note):
     """
     Load note hierarchy from folder.
     """
@@ -201,10 +201,10 @@ def test_load_tree(session: Session, note: Note, request: FixtureRequest):
     assert len(note.children)
     assert note.children[0] is note_1
 
-    _teardown_note(note_1, request)
+    _teardown_note(request, note_1)
 
 
-def _teardown_note(note: Note, request: FixtureRequest):
+def _teardown_note(request: FixtureRequest, note: Note):
     """
     Delete this note if skipping note teardown. Otherwise, subsequent tests
     using note 1 will fail due to it already existing.

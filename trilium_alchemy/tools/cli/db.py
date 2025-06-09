@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import logging
 import os
 import shutil
 from dataclasses import dataclass
@@ -18,6 +17,7 @@ from ._utils import (
     format_file_datetime,
     format_seconds,
     get_root_context,
+    logger,
     lookup_param,
 )
 
@@ -180,14 +180,14 @@ def backup(
         verify_str = ""
         backup_str = backup_filename
 
-    logging.info(f"Wrote backup: '{backup_str}'{verify_str}")
+    logger.info(f"Wrote backup: '{backup_str}'{verify_str}")
 
     if dest_file:
         assert backup_path
 
         # copy backup to destination
         shutil.copyfile(backup_path, dest_file)
-        logging.info(f"Copied backup: '{backup_path}' -> '{dest_file}'")
+        logger.info(f"Copied backup: '{backup_path}' -> '{dest_file}'")
 
 
 @app.command()
@@ -228,18 +228,18 @@ def restore(
     copy_str = f"'{src}' -> '{dest}'"
 
     if dry_run:
-        logging.info(f"Would restore backup: {copy_str}")
+        logger.info(f"Would restore backup: {copy_str}")
         return
 
     if not yes:
-        logging.info(f"Will restore backup: {copy_str}")
+        logger.info(f"Will restore backup: {copy_str}")
         if not typer.confirm("Proceed with copy?"):
             return
 
     # copy backup to database in trilium data dir
     shutil.copyfile(src, dest)
 
-    logging.info(f"Restored backup: {copy_str}")
+    logger.info(f"Restored backup: {copy_str}")
 
 
 @dataclass(kw_only=True)

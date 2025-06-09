@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,6 +15,7 @@ from ._utils import (
     console,
     get_notes,
     get_root_context,
+    logger,
     lookup_param,
 )
 
@@ -110,7 +110,7 @@ def export(
         dest, export_format=export_format, overwrite=overwrite
     )
 
-    logging.info(
+    logger.info(
         f"Exported note '{tree_context.target_note.title}' (note_id='{tree_context.target_note.note_id}') -> '{dest}'"
     )
 
