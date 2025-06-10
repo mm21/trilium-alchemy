@@ -284,7 +284,7 @@ def test_db(
     session2.flush()
 
 
-def test_tree(
+def test_tree_export_import(
     request: FixtureRequest,
     session: Session,
     tmp_path: Path,
@@ -358,6 +358,52 @@ def test_tree(
     note.delete()
     session.flush()
     assert len(session.root.children) == 0
+
+
+def test_tree_cleanup_positions(
+    request: FixtureRequest, session: Session, note: Note
+):
+    # create child note to verify recursion
+    child = Note("Test child", session=session)
+    child ^= note
+    session.flush()
+
+    create_label(session.api, note, "label1", "value1", 1)
+    create_label(session.api, note, "label2", "value2", 3)
+    create_label(session.api, note, "label3", "value3", 10)
+
+    create_label(session.api, child, "child_label1", "value1", 1)
+    create_label(session.api, child, "child_label2", "value2", 2)
+    create_label(session.api, child, "child_label3", "value3", 3)
+
+    note.refresh()
+    child.refresh()
+    assert session.dirty_count == 0
+
+    label1, label2, label3 = note.labels.owned
+    child_label1, child_label2, child_label3 = child.labels.owned
+
+    assert label1.position == 1
+    assert label2.position == 3
+    assert label3.position == 10
+    assert child_label1.position == 1
+    assert child_label2.position == 2
+    assert child_label3.position == 3
+
+    # run command to cleanup positions
+    _run(request, ["tree", "--search", "#label1", "cleanup-positions", "-y"])
+
+    # refresh notes and check
+    note.refresh()
+    child.refresh()
+    assert session.dirty_count == 0
+
+    assert label1.position == 10
+    assert label2.position == 20
+    assert label3.position == 30
+    assert child_label1.position == 10
+    assert child_label2.position == 20
+    assert child_label3.position == 30
 
 
 def test_fs(
@@ -579,77 +625,6 @@ def test_note_sync_template(
         ["note", "--search", "#nonexistent_label", "sync-template", "-y"],
         2,
     )
-
-
-def test_note_cleanup_positions(
-    request: FixtureRequest, session: Session, note: Note
-):
-    # create child note to verify recursion
-    child = Note("Test child", session=session)
-    child ^= note
-    session.flush()
-
-    create_label(session.api, note, "label1", "value1", 1)
-    create_label(session.api, note, "label2", "value2", 3)
-    create_label(session.api, note, "label3", "value3", 10)
-
-    create_label(session.api, child, "child_label1", "value1", 1)
-    create_label(session.api, child, "child_label2", "value2", 2)
-    create_label(session.api, child, "child_label3", "value3", 3)
-
-    note.refresh()
-    child.refresh()
-    assert session.dirty_count == 0
-
-    label1, label2, label3 = note.labels.owned
-    child_label1, child_label2, child_label3 = child.labels.owned
-
-    assert label1.position == 1
-    assert label2.position == 3
-    assert label3.position == 10
-    assert child_label1.position == 1
-    assert child_label2.position == 2
-    assert child_label3.position == 3
-
-    # run command to cleanup positions without recursing
-    _run(request, ["note", "--search", "#label1", "cleanup-positions", "-y"])
-
-    # refresh notes and check
-    note.refresh()
-    child.refresh()
-    assert session.dirty_count == 0
-
-    assert label1.position == 10
-    assert label2.position == 20
-    assert label3.position == 30
-    assert child_label1.position == 1
-    assert child_label2.position == 2
-    assert child_label3.position == 3
-
-    # run command to cleanup positions with recursing
-    _run(
-        request,
-        [
-            "note",
-            "--search",
-            "#label1",
-            "--recurse",
-            "cleanup-positions",
-            "-y",
-        ],
-    )
-
-    # refresh notes and check
-    note.refresh()
-    child.refresh()
-    assert session.dirty_count == 0
-
-    assert label1.position == 10
-    assert label2.position == 20
-    assert label3.position == 30
-    assert child_label1.position == 10
-    assert child_label2.position == 20
-    assert child_label3.position == 30
 
 
 def _restart_trilium(callable: Callable[[], None]):

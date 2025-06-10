@@ -9,7 +9,7 @@ from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
-from ..utils import commit_changes
+from ..utils import commit_changes, recurse_notes
 from ._utils import (
     MainTyper,
     console,
@@ -196,6 +196,34 @@ def push(
     _ = tree_context.target_note.transmute(note_cls)
 
     # print summary and commit changes
+    commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
+
+
+@app.command()
+def cleanup_positions(
+    ctx: Context,
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only log pending changes",
+    ),
+    yes: bool = Option(
+        False,
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before committing changes",
+    ),
+):
+    """
+    Set attribute and branch positions to intervals of 10, starting with 10
+    """
+
+    tree_context = _get_tree_context(ctx)
+    notes = recurse_notes([tree_context.target_note])
+
+    for note in notes:
+        note._cleanup_positions()
+
     commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
 
 

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from typer import Context, Exit, Option
 
 from ...core import Note, Session
-from ..utils import commit_changes, recurse_notes
+from ..utils import commit_changes
 from ._utils import (
     MainTyper,
     console,
@@ -41,11 +41,6 @@ def main(
         None,
         help="Search string to identify note(s) on which to perform operation, e.g. '#myProjectRoot'",
     ),
-    recurse: bool = Option(
-        False,
-        "--recurse",
-        help="Recurse into child notes",
-    ),
 ):
     root_context = get_root_context(ctx)
     session = root_context.create_session()
@@ -55,7 +50,6 @@ def main(
         session=session,
         note_id=note_id,
         search=search,
-        recurse=recurse,
     )
 
     # replace with new context
@@ -137,52 +131,12 @@ def sync_template(
     commit_changes(note_context.session, console, dry_run=dry_run, yes=yes)
 
 
-@app.command()
-def cleanup_positions(
-    ctx: Context,
-    dry_run: bool = Option(
-        False,
-        "--dry-run",
-        help="Only log pending changes",
-    ),
-    yes: bool = Option(
-        False,
-        "-y",
-        "--yes",
-        help="Don't ask for confirmation before committing changes",
-    ),
-):
-    """
-    Set attribute and branch positions to intervals of 10, starting with 10
-    """
-
-    note_context = _get_note_context(ctx)
-
-    # get notes
-    notes = get_notes(
-        ctx.parent,
-        note_context.session,
-        note_id=note_context.note_id or "root",
-        search=note_context.search,
-        note_id_param=lookup_param(ctx.parent, "note_id"),
-        search_param=lookup_param(ctx.parent, "search"),
-    )
-
-    aggregated_notes = recurse_notes(notes) if note_context.recurse else notes
-
-    for note in aggregated_notes:
-        note._cleanup_positions()
-
-    commit_changes(note_context.session, console, dry_run=dry_run, yes=yes)
-
-
 @dataclass(kw_only=True)
 class NoteContext:
     root_context: RootContext
     session: Session
     note_id: str | None
     search: str | None
-    recurse: bool
 
 
 def _get_note_context(ctx: Context) -> NoteContext:
