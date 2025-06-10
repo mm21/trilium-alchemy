@@ -185,11 +185,11 @@ def push(
         module = importlib.import_module(module_path)
         note_cls = getattr(module, obj_name)
     except (ImportError, AttributeError) as e:
-        raise BadParameter(f"failed to import '{fqcn}': {e}")
+        raise ClickException(f"failed to import '{fqcn}': {e}")
 
     if not issubclass(note_cls, BaseDeclarativeNote):
-        raise BadParameter(
-            f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls} ({type(note_cls)})"
+        raise ClickException(
+            f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls}"
         )
 
     # transmute note to have imported subclass, invoking its init

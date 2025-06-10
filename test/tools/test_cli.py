@@ -1,7 +1,9 @@
 import datetime
 import logging
+import os
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Callable
@@ -68,7 +70,7 @@ def test_config(request: FixtureRequest, session: Session, tmp_path: Path):
     bad_instance_data_dir.mkdir()
 
     # generate a config file dynamically with connection info
-    model = Config(
+    config = Config(
         root_data_dir=root_data_dir,
         instances={
             "test-instance": InstanceConfig(
@@ -81,7 +83,7 @@ def test_config(request: FixtureRequest, session: Session, tmp_path: Path):
             ),
         },
     )
-    model.dump_yaml(config_path)
+    config.dump_yaml(config_path)
 
     # test connection using config file
     _run(
@@ -358,6 +360,90 @@ def test_tree_export_import(
     note.delete()
     session.flush()
     assert len(session.root.children) == 0
+
+
+def test_tree_push(
+    request: FixtureRequest, session: Session, note: Note, tmp_path: Path
+):
+    sys.path.append(f"{os.getcwd()}/examples/event-tracker")
+
+    # push declarative tree
+    _run(
+        request,
+        [
+            "tree",
+            "--note-id",
+            note.note_id,
+            "push",
+            "-y",
+            "event_tracker.root.Root",
+        ],
+    )
+
+    # FQCN from config file
+    config_path = tmp_path / "test-config.yaml"
+    config = Config(
+        instances={
+            "test-instance": InstanceConfig(
+                host=session.host,
+                token=session._token,
+                root_note_fqcn="event_tracker.root.Root",
+            ),
+        },
+    )
+    config.dump_yaml(config_path)
+
+    _run(
+        request,
+        [
+            "--instance",
+            "test-instance",
+            "--config-file",
+            config_path,
+            "tree",
+            "--note-id",
+            note.note_id,
+            "push",
+            "-y",
+        ],
+        1,
+    )
+
+    # missing FQCN
+    _run(request, ["tree", "--note-id", note.note_id, "push", "-y"], 2)
+
+    # invalid FQCNs
+    _run(
+        request,
+        ["tree", "--note-id", note.note_id, "push", "-y", "invalid_pkg"],
+        1,
+    )
+    _run(
+        request,
+        [
+            "tree",
+            "--note-id",
+            note.note_id,
+            "push",
+            "-y",
+            "invalid_pkg.invalid_mod",
+        ],
+        1,
+    )
+
+    # importable, but not declarative note
+    _run(
+        request,
+        [
+            "tree",
+            "--note-id",
+            note.note_id,
+            "push",
+            "-y",
+            "trilium_alchemy.core.session.Session",
+        ],
+        1,
+    )
 
 
 def test_tree_cleanup_positions(
