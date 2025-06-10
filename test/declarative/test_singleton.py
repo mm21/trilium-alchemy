@@ -286,9 +286,6 @@ def check_root(root: SingletonRoot, state: State):
     check_template(root.branches.children[0], state)
     check_subclass(root.branches.children[1], state)
 
-    # for newer trilium versions
-    assert root._session._root_position_base == 0
-
     # check positions of children
     for idx in range(len(root.branches.children)):
         branch = root.branches.children[idx]

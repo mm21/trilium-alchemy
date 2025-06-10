@@ -9,7 +9,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from functools import cached_property
 from logging import Logger
 from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
 
@@ -17,7 +16,6 @@ import requests
 from trilium_client import ApiClient, Configuration, DefaultApi
 from trilium_client.exceptions import ApiException
 from trilium_client.models.app_info import AppInfo
-from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.models.login201_response import Login201Response
 from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
@@ -34,12 +32,6 @@ if TYPE_CHECKING:
 
 __all__ = ["Session"]
 
-
-TRILIUM_VERSION_ROOT_POSITION_NORM = (0, 91, 6)
-"""
-Trilium version from which root position base is 0 instead of root__hidden
-branch's position.
-"""
 
 REQUEST_TIMEOUT = 10.0
 """
@@ -637,25 +629,6 @@ class Session:
         `/etapi`.
         """
         return f"{self.host}/etapi"
-
-    @cached_property
-    def _root_position_base(self) -> int:
-        """
-        Return the base position for root note children.
-
-        For older Trilium versions, if child branch positions aren't
-        above root__hidden branch, the hidden subtree can be selected in the UI
-        when a note range is selected.
-        """
-
-        if self._trilium_version_tuple >= TRILIUM_VERSION_ROOT_POSITION_NORM:
-            return 0
-
-        model: EtapiBranchModel = self.api.get_branch_by_id("root__hidden")
-        assert model is not None
-        assert isinstance(model.note_position, int)
-
-        return model.note_position
 
     @property
     def _is_default(self) -> bool:

@@ -288,21 +288,20 @@ class BaseEntityList[EntityT: OrderedEntity](
     def _teardown(self):
         self._entity_list = None
 
-    # get position for provided index
     def _get_position(self, index: int) -> int:
+        """
+        Get position for the provided index.
+        """
         assert self._entity_list is not None
 
         if index > 0:
             # if not first, get position from index before it
             prev_position = self._entity_list[index - 1]._position
         else:
-            # if first, get position as base + 10
-            prev_position = self._get_position_base()
+            # if first, start from 10
+            prev_position = 0
 
         return prev_position + 10
-
-    def _get_position_base(self) -> int:
-        return 0
 
     def _set_positions(self, index: int = 0, cleanup: bool = False):
         """
