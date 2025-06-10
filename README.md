@@ -33,6 +33,7 @@ Python SDK and CLI toolkit for [TriliumNext Notes](https://github.com/TriliumNex
     - [Adding children](#adding-children)
     - [Mixin subclasses](#mixin-subclasses)
     - [Setting content from file](#setting-content-from-file)
+    - [Leaf notes](#leaf-notes)
 
 ## Documentation
 
@@ -261,7 +262,7 @@ class MyNote(BaseDeclarativeNote):
     pass
 ```
 
-When you subclass {obj}`BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
+When you subclass `BaseDeclarativeNote`, you're saying that attributes and child branches will be maintained by the class definition itself. Therefore any existing attributes or children will be deleted or modified to reflect the class.
 
 ### Setting fields
 
@@ -400,3 +401,17 @@ class MyFrontendScript(BaseDeclarativeNote):
 ```
 
 The filename is relative to the package or subpackage the class is defined in. Currently accessing parent paths (`".."`) is not supported.
+
+### Leaf notes
+
+If you design a note hierarchy using this approach, you might want to designate some "folder" notes to hold notes maintained in the UI. Set `BaseDeclarativeNote.leaf` to indicate this, in which case existing children are kept intact and using `children` or `child` will raise an exception.
+
+For example, this would be necessary for a list of contacts:
+
+```python
+@label("sorted")
+class Contacts(BaseDeclarativeNote):
+    icon = "bx bx-group"
+    singleton = True
+    leaf = True
+```
