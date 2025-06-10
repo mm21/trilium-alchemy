@@ -144,6 +144,16 @@ def task_doc(copy: bool) -> Task:
         dest = os.environ.get("TRILIUM_ALCHEMY_DOCS_DIR")
         assert dest, f"Environment variable TRILIUM_ALCHEMY_DOCS_DIR not set"
 
+        dest_path = Path(dest)
+        assert dest_path.is_dir()
+
+        # clean destination
+        for path in dest_path.iterdir():
+            if path.is_file():
+                path.unlink()
+            else:
+                shutil.rmtree(path)
+
         shutil.copytree(DOC_HTML_PATH, dest, dirs_exist_ok=True)
 
         print(f"\nCopied: {DOC_HTML_PATH} -> {dest}")
