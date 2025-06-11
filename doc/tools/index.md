@@ -89,7 +89,7 @@ The prefix tree structure provides several benefits:
 
 Each note folder contains exactly two files:
 
-#### `meta.yaml`: Note metadata
+#### Note metadata: `meta.yaml`
 
 Contains structured metadata about the note:
 
@@ -137,8 +137,6 @@ The filesystem format supports bidirectional synchronization:
   - Otherwise content changes would not be propagated back to Trilium as content comparison is done based on hashes rather than raw data
 - Useful after manual filesystem edits
 
-This format enables version control integration, bulk editing, and external processing of notes while maintaining full fidelity with the original note structure.
-
 ## Example use cases
 
 The following illustrates some common use cases, not covering all available options and functionality.
@@ -151,6 +149,27 @@ Work with multiple Trilium instances using config files:
 # check connection using specific instance from config
 trilium-alchemy --instance my-private-notes --config-file my-config.yaml check
 trilium-alchemy --instance my-public-notes --config-file my-config.yaml check
+```
+
+### Filesystem dump/load
+
+Synchronize notes with filesystem representation as described above:
+
+```bash
+# dump entire note tree to filesystem
+trilium-alchemy fs dump /path/to/fs-tree
+
+# load filesystem dump back to Trilium
+trilium-alchemy fs load /path/to/fs-tree
+
+# dump subtree to filesystem
+trilium-alchemy fs dump --search "#myCoolProject" /path/to/my-cool-project
+
+# load subtree from filesystem and place as child of specific parent note
+trilium-alchemy fs load --parent-search "#myProjects" /path/to/my-cool-project
+
+# scan filesystem for content changes and update metadata
+trilium-alchemy fs scan /path/to/fs-tree
 ```
 
 ### Database backup/restore
@@ -186,13 +205,13 @@ Export and import note trees as `.zip` archives:
 trilium-alchemy tree export /path/to/my-notes.zip
 
 # export specific subtree by search
-trilium-alchemy tree --search "#myProjectRoot" export /path/to/my-project-notes.zip
+trilium-alchemy tree --search "#myCoolProject" export /path/to/my-cool-project.zip
 
 # import notes to root
 trilium-alchemy tree import /path/to/my-notes.zip
 
 # import subtree as child of specific note by search
-trilium-alchemy tree --search "#myExtensions" import /path/to/my-extension.zip
+trilium-alchemy tree --search "#myProjects" import /path/to/my-cool-project.zip
 ```
 
 ### Template sync
@@ -209,33 +228,13 @@ trilium-alchemy note sync-template
 trilium-alchemy note sync-template --template-search "#template #task"
 ```
 
-Template sync automatically:
+Template sync performs the following recursively:
 - Adds new child notes from template to instances
-- Recreates any cloning structure in the template
 - Reorders child notes matched by title
+- Recreates any cloning structure in the template
 - Preserves instance-specific modifications (places extra child notes at end)
-- Works with both regular templates (`#template`) and workspace templates (`#workspaceTemplate`)
 
-### Filesystem dump/load
-
-Synchronize notes with filesystem representation as described above:
-
-```bash
-# dump entire note tree to filesystem
-trilium-alchemy fs dump /path/to/fs-tree
-
-# load filesystem dump back to Trilium
-trilium-alchemy fs load /path/to/fs-tree
-
-# dump subtree to filesystem
-trilium-alchemy fs dump --search "#myCoolProject" /path/to/my-cool-project
-
-# load subtree from filesystem and place as child of specific parent note
-trilium-alchemy fs load --parent-search "#myProjects" /path/to/my-cool-project
-
-# scan filesystem for content changes and update metadata
-trilium-alchemy fs scan /path/to/fs-tree
-```
+This feature works with both regular templates (`#template`) and workspace templates (`#workspaceTemplate`).
 
 ## Usage
 

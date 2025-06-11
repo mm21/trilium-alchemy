@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from .note.note import Note
 
 __all__ = ["Session"]
+__canonical_syms__ = __all__
 
 
 REQUEST_TIMEOUT = 10.0
@@ -241,6 +242,9 @@ class Session:
 
     @property
     def trilium_version(self) -> str:
+        """
+        Trilium version received from server upon session creation.
+        """
         return self._trilium_version
 
     def flush(

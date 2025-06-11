@@ -94,10 +94,10 @@ def main(
     ctx.obj = root_context
 
 
+app.add_typer(fs.app)
 app.add_typer(db.app)
 app.add_typer(tree.app)
 app.add_typer(note.app)
-app.add_typer(fs.app)
 
 
 @app.command()
