@@ -5,6 +5,7 @@
 :maxdepth: 2
 :hidden:
 
+template-notes
 event-tracker
 ```
 
