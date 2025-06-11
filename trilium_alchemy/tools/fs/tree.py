@@ -182,7 +182,7 @@ def load_tree(
         # add children sorted by title, if not already present
         for note in sorted(root_notes, key=lambda n: n.title):
             if note not in children:
-                parent_note += root_notes
+                parent_note += note
     else:
         errors: list[str] = []
 
