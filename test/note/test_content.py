@@ -2,6 +2,8 @@ from pytest import mark
 
 from trilium_alchemy import *
 
+TEXT_FILE_CONTENT = "<p>Test content</p>"
+
 
 def test_text_empty(session: Session, note: Note):
     """
@@ -89,7 +91,19 @@ def test_bin(session: Session, note: Note):
     assert note.content == BLOB
 
 
-TEXT_FILE_CONTENT = "<p>Test content</p>"
+def test_refresh(session: Session, note: Note):
+    note1 = Note(
+        title="Note 1",
+        parents=note,
+        content="<p>Hello, world!</p>",
+        session=session,
+    )
+
+    blob_id = note1.blob_id
+
+    # ensure note model is refreshed with new blob_id
+    note1.flush()
+    assert note1.blob_id == blob_id
 
 
 @mark.temp_file(TEXT_FILE_CONTENT)

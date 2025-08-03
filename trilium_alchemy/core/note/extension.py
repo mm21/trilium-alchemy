@@ -201,7 +201,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._entity_list[s] = v
 
         self._resolve_changes(set(entities_del), set(v))
-        self._reorder()
+        self._set_positions()
         self._validate()
 
     @overload
@@ -221,7 +221,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         del self._entity_list[s]
 
         [self._unbind_entity(entity) for entity in entities_del]
-        self._reorder()
+        self._set_positions()
         self._validate()
 
     def __iter__(self) -> Iterator[EntityT]:
@@ -234,7 +234,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._entity_list.insert(i, entity)
 
         self._bind_entity(entity)
-        self._reorder(i)
+        self._set_positions(i)
         self._validate()
 
     def _contains(self, entity: EntityT) -> bool:
@@ -250,8 +250,8 @@ class BaseEntityList[EntityT: OrderedEntity](
 
         entity_set: set[EntityT] = set()
         entity: EntityT
-        position_prev: int = -1
-        for i, entity in enumerate(self._entity_list):
+        prev_position: int = -1
+        for entity in self._entity_list:
             # ensure entity hasn't been seen before
             assert (
                 entity not in entity_set
@@ -259,11 +259,11 @@ class BaseEntityList[EntityT: OrderedEntity](
 
             # ensure positions are consistent
             assert (
-                entity._position > position_prev
-            ), f"Entity {entity} has position {entity._position} <= previous entity {position_prev}; possibly already placed in list owned by {self._note}"
+                entity._position > prev_position
+            ), f"Entity {entity} has position {entity._position} <= previous entity {prev_position}; possibly already placed in list owned by {self._note}"
 
             entity_set.add(entity)
-            position_prev = entity._position
+            prev_position = entity._position
 
     @check_bailout
     def _setattr(self, new_list: list[EntityT]):
@@ -282,33 +282,52 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._entity_list = normalized_list
 
         self._resolve_changes(set(entity_list_prev), set(normalized_list))
-        self._reorder()
+        self._set_positions()
         self._validate()
 
     def _teardown(self):
         self._entity_list = None
 
-    # get position for provided index
-    def _get_position(self, index: int, base: int = 0) -> int:
+    def _get_position(self, index: int) -> int:
+        """
+        Get position for the provided index.
+        """
         assert self._entity_list is not None
 
         if index > 0:
             # if not first, get position from index before it
-            position_prev = self._entity_list[index - 1]._position
+            prev_position = self._entity_list[index - 1]._position
         else:
-            # if first, get position as base + 10
-            position_prev = base
+            # if first, start from 10
+            prev_position = 0
 
-        return position_prev + 10
+        return prev_position + 10
 
-    def _reorder(self, index: int = 0):
+    def _set_positions(self, index: int = 0, cleanup: bool = False):
         """
         Assign positions starting with provided index.
         """
         assert self._entity_list is not None
 
         for i in range(index, len(self._entity_list)):
-            self._entity_list[i]._position = self._get_position(i)
+            current_position = self._entity_list[i]._position
+            prev_position = (
+                self._entity_list[i - 1]._position if i > 0 else None
+            )
+            next_position = (
+                self._entity_list[i + 1]._position
+                if i < len(self._entity_list) - 1
+                else None
+            )
+
+            needs_update = (
+                prev_position is not None and current_position <= prev_position
+            ) or (
+                next_position is not None and current_position >= next_position
+            )
+
+            if needs_update or cleanup or self._entity._force_position_cleanup:
+                self._entity_list[i]._position = self._get_position(i)
 
 
 class BaseEntitySet[EntityT: BaseEntity](

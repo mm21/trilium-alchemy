@@ -6,6 +6,7 @@ it with example notes imperatively.
 import logging
 import os
 import sys
+from pathlib import Path
 
 import dotenv
 from rich.console import Console
@@ -69,7 +70,7 @@ def exit(msg: str):
 # maintain their data under notes designated as "leaf" notes, while leveraging
 # a reusable and shareable base hierarchy.
 # ------------------------------------------------------------------------------
-setup_declarative()
+setup_declarative(Path(__file__).parent.parent)
 
 # ------------------------------------------------------------------------------
 # Use imperative approach to generate example data. This mimics notes manually

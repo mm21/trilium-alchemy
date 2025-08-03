@@ -3,12 +3,15 @@ Utilities for generic tool-related functionality.
 """
 from __future__ import annotations
 
-import logging
-
 import typer
 from rich.console import Console
 
-from ..core import Session
+from ..core import Note, Session
+
+__all__ = [
+    "commit_changes",
+    "recurse_notes",
+]
 
 
 def commit_changes(
@@ -28,13 +31,13 @@ def commit_changes(
     ```
     """
     if not session._cache.dirty_set:
-        logging.info("No changes to commit")
+        session._logger.info("No changes to commit")
         return
 
-    dirty_summary = session.dirty_summary
+    dirty_summary = session.get_dirty_summary()
     overall_summary = session._cache._get_summary()
 
-    logging.info("Pending changes:")
+    session._logger.info("Pending changes:")
     console.print(
         f"{dirty_summary}{'\n' if dirty_summary else ''}Summary: {overall_summary}"
     )
@@ -50,4 +53,20 @@ def commit_changes(
     session.flush()
 
     # print summary
-    logging.info("Committed changes")
+    session._logger.info("Committed changes")
+
+
+def recurse_notes(notes: list[Note]) -> list[Note]:
+    """
+    Recurse into children and aggregate notes.
+    """
+    aggregated_notes: list[Note] = []
+    seen_notes: set[Note] = set()
+
+    for note in notes:
+        for n in note.walk():
+            if not n in seen_notes:
+                seen_notes.add(n)
+                aggregated_notes.append(n)
+
+    return aggregated_notes

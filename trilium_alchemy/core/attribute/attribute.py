@@ -114,7 +114,7 @@ class AttributeModel(BaseEntityModel):
     fields_default = {
         "value": "",
         "is_inheritable": False,
-        "position": 0,
+        "position": 10,
     }
 
 
@@ -338,5 +338,12 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             if index != 0:
                 for i in range(index):
                     deps.add(self._note.attributes.owned[i])
+
+        # add dependency on child branches to avoid extra children getting
+        # created
+        # - children from templates will get created if the note does not
+        # already have children
+        for branch in self._note.branches.children:
+            deps.add(branch)
 
         return deps

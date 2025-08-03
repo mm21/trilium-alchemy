@@ -18,7 +18,7 @@ classifiers = [
 description = "Python SDK and CLI toolkit for TriliumNext Notes, compatible with Trilium Notes"
 name = "trilium-alchemy"
 readme = "README.pypi.md"
-version = "0.6.1"
+version = "0.7.0"
 
 [project.urls]
 documentation = "https://mm21.github.io/trilium-alchemy/"
@@ -37,7 +37,7 @@ python = "^3.12"
 python-dotenv = "^1.0.1"
 pyyaml = "^6.0.2"
 requests = "^2.31.0"
-trilium-client = "^0.1.1"
+trilium-client = "^0.1.2"
 typer = "^0.15.2"
 
 [tool.poetry.group.dev.dependencies]

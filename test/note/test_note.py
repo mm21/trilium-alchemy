@@ -12,7 +12,7 @@ from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from trilium_alchemy import *
 
-from ..conftest import check_read_only, note_exists
+from ..conftest import check_read_only, create_label, note_exists
 
 
 class NoteSubclass(Note):
@@ -183,15 +183,14 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     # flush note1 and its label1
     note1.flush()
 
-    assert session.dirty_count == 3
+    assert session.dirty_count == 2
     assert note2.attributes.get("label1")._is_dirty
 
     note2.flush()
 
-    assert session.dirty_count == 2
+    assert session.dirty_count == 1
     assert note2.attributes.get("label1")._is_clean
 
-    branch.flush()
     parent_branch.flush()
     assert session.dirty_count == 0
 
@@ -510,6 +509,7 @@ def test_transmute(note1: Note, note2: Note):
 
 def test_template(session: Session, note1: Note, note2: Note):
     # note cloned to template and first child of template
+
     @label("childLabel2", "childLabelValue2")
     class TemplateChild2(BaseDeclarativeNote):
         content_ = "Test content 2"
@@ -522,15 +522,15 @@ def test_template(session: Session, note1: Note, note2: Note):
 
     @label("templateLabel")
     @children(TemplateChild1, TemplateChild2)
-    class TemplateTest(BaseTemplateNote):
+    class TemplateContentTest(BaseTemplateNote):
         content_ = "Test content"
 
-    @relation("template", TemplateTest)
+    @relation("template", TemplateContentTest)
     class TemplateInstanceTest(BaseDeclarativeNote):
         pass
 
     # create template
-    template = TemplateTest(session=session)
+    template = TemplateContentTest(session=session)
     template ^= note1
     session.flush()
 
@@ -571,11 +571,6 @@ def test_template(session: Session, note1: Note, note2: Note):
 
     session.flush()
 
-    # refresh to get inherited attributes
-    inst1.refresh()
-    inst2.refresh()
-    inst3.refresh()
-
     check_instance(inst1)
     check_instance(inst2)
     check_instance(inst3)
@@ -613,3 +608,44 @@ def test_template(session: Session, note1: Note, note2: Note):
     check_instance(inst1, expect_children=3)
 
     assert inst1.children[2].title == "Test child 3"
+
+
+def test_cleanup_positions(session: Session, note: Note):
+    """
+    Set inconsistent positions and test cleaning them up to intervals of 10.
+    """
+
+    # create attributes directly
+    create_label(session.api, note, "label1", "value1", 1)
+    create_label(session.api, note, "label2", "value2", 3)
+    create_label(session.api, note, "label3", "value3", 10)
+
+    note.refresh()
+    assert len(note.labels.owned) == 3
+    assert session.dirty_count == 0
+
+    label1, label2, label3 = note.labels.owned
+
+    assert label1.position == 1
+    assert label2.position == 3
+    assert label3.position == 10
+
+    # insert a new label to check that positions didn't get cleaned up
+    label1_2 = Label("label1_2", session=session)
+    note.attributes.owned.insert(1, label1_2)
+
+    assert label1.position == 1
+    assert label1_2.position == 11
+    assert label2.position == 21
+    assert label3.position == 31
+
+    note._cleanup_positions()
+    assert session.dirty_count == 4
+
+    assert label1.position == 10
+    assert label1_2.position == 20
+    assert label2.position == 30
+    assert label3.position == 40
+
+    session.flush()
+    assert session.dirty_count == 0

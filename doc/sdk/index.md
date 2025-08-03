@@ -8,7 +8,6 @@
 intro
 working-with-notes/index
 declarative-notes/index
-extensions
 ```
 
 This section guides you through the ways you can interact with Trilium using TriliumAlchemy.

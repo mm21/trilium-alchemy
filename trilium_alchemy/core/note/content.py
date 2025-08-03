@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import logging
 from io import IOBase
 from typing import IO, Any
 
@@ -10,38 +9,11 @@ import requests
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..entity import BaseEntity
-from ..entity.model import ExtensionDescriptor, ModelContainer
 from .extension import NoteStatefulExtension
 
 __all__ = [
     "Content",
-    "ContentDescriptor",
 ]
-
-
-class ContentDescriptor(ExtensionDescriptor):
-    """
-    Override `ExtensionDescriptor.__get__` to return the content itself
-    via `Content._get`.
-    """
-
-    def __get__(self, container: ModelContainer, objtype=None):
-        return super().__get__(container, objtype=objtype)._get()
-
-
-class FileDescriptor:
-    def __get__(self, content: Content, objtype=None):
-        # TODO: return file descriptor?
-        raise NotImplementedError()
-
-    def __set__(self, content: Content, path_file: str):
-        if content._is_string:
-            mode = "r"
-        else:
-            mode = "rb"
-
-        fh = open(path_file, mode)
-        content._set(fh.read())
 
 
 class BlobState:
@@ -127,7 +99,8 @@ class Content(NoteStatefulExtension):
         return self._backing.digest != self._working.digest
 
     def _setattr(self, val: Any):
-        self._set(val)
+        # set via _set()
+        raise NotImplementedError
 
     def _setup(self, model: EtapiNoteModel | None):
         """
@@ -142,7 +115,7 @@ class Content(NoteStatefulExtension):
             else:
                 self._backing.blob = b""
 
-            self._backing.digest = self._get_digest(self._backing.blob)
+            self._backing.digest = get_digest(self._backing.blob)
         else:
             # get digest from model, only fetch content if accessed by user
             assert (
@@ -182,7 +155,7 @@ class Content(NoteStatefulExtension):
         blob: str | bytes = self._normalize_blob(blob)
 
         self._working.blob = blob
-        self._working.digest = self._get_digest(blob)
+        self._working.digest = get_digest(blob)
 
         # could potentially change clean/dirty state, so reevaluate
         self._note._check_state()
@@ -215,17 +188,20 @@ class Content(NoteStatefulExtension):
 
         self._backing.blob = blob
 
-    def _flush(self):
+    def _flush(self) -> EtapiNoteModel:
         """
-        Push note content to server.
+        Push note content to server and return the updated note model.
         """
 
         blob: str | bytes = self._working.blob
         assert blob is not None
 
+        digest = self._working.digest
+        assert digest is not None
+
         headers = self._note._session._etapi_headers.copy()
 
-        logging.debug(
+        self._note.session._logger.debug(
             f"Flushing content for {self._note}, is_string={self._is_string}"
         )
 
@@ -250,10 +226,14 @@ class Content(NoteStatefulExtension):
         self._backing = self._working
         self._working = BlobState()
 
-        # TODO:
-        # - refresh Note model using response via self._note._refresh_model()
-        #   - updates note's last modified time
-        # - sanity check to ensure digest is what we expect
+        # refresh note model to update blob_id and modified time
+        model_new = self._note._model._driver.fetch()
+        assert isinstance(model_new, EtapiNoteModel)
+
+        # sanity check to ensure blob_id is expected
+        assert model_new.blob_id == digest
+
+        return model_new
 
     def _normalize_blob(self, blob: str | bytes | IO) -> str | bytes:
         if isinstance(blob, IOBase):
@@ -278,28 +258,6 @@ class Content(NoteStatefulExtension):
 
         return blob
 
-    def _get_digest(self, blob: str | bytes) -> str:
-        """
-        Calculate digest of content.
-
-        This should be kept in sync with src/services/utils.js:hashedBlobId()
-        """
-
-        # encode if string
-        blob_bytes = blob.encode() if isinstance(blob, str) else blob
-
-        # compute digest
-        sha = hashlib.sha512(blob_bytes).digest()
-
-        # encode in base64 and decode as string
-        b64 = base64.b64encode(sha).decode()
-
-        # make replacements to form "kinda" base62
-        b62 = b64.replace("+", "X").replace("/", "Y")
-
-        # return first 20 characters
-        return b62[:20]
-
     @property
     def _url(self) -> str:
         """
@@ -307,3 +265,26 @@ class Content(NoteStatefulExtension):
         """
         base_path = self._note._session._base_path
         return f"{base_path}/notes/{self._note.note_id}/content"
+
+
+def get_digest(blob: str | bytes):
+    """
+    Calculate digest of blob.
+
+    This should be kept in sync with src/services/utils.js:hashedBlobId()
+    """
+
+    # encode if string
+    blob_bytes = blob.encode() if isinstance(blob, str) else blob
+
+    # compute digest
+    sha = hashlib.sha512(blob_bytes).digest()
+
+    # encode in base64 and decode as string
+    b64 = base64.b64encode(sha).decode()
+
+    # make replacements to form "kinda" base62
+    b62 = b64.replace("+", "X").replace("/", "Y")
+
+    # return first 20 characters
+    return b62[:20]

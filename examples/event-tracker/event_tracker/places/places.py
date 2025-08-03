@@ -32,7 +32,7 @@ class CoordinateMixin(BaseDeclarativeMixin):
 @label_def("altName", multi=True)
 @label("place")
 class Place(BaseWorkspaceTemplateNote):
-    leaf = True  # allow user to manage children
+    pass
 
 
 @label("residence")

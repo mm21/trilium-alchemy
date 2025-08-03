@@ -1,9 +1,0 @@
-# Exports a note identified by label to zip.
-
-mappings:
-  - dest:
-      # TODO: use this .yaml as template and generate temp .yaml
-      # with path to temp folder
-      zip: "assets/testExtension1.zip"
-    src:
-      label: "testRoot"

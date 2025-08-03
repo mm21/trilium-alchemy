@@ -1,0 +1,8 @@
+# Exports a note identified by label to zip.
+
+mappings:
+  pull:
+  - src:
+      label: "myProjectRoot"
+    dest:
+      zip: "~/my-projects/my-project.zip"

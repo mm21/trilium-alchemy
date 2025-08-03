@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -10,18 +9,18 @@ from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
 
 from ...core import BaseDeclarativeNote, Note, Session
-from ..utils import commit_changes
-from ._utils import MainTyper, get_root_context, lookup_param
+from ..utils import commit_changes, recurse_notes
+from ._utils import (
+    MainTyper,
+    console,
+    get_notes,
+    get_root_context,
+    logger,
+    lookup_param,
+)
 
 if TYPE_CHECKING:
     from .main import RootContext
-
-
-@dataclass(kw_only=True)
-class TreeContext:
-    root_context: RootContext
-    session: Session
-    target_note: Note
 
 
 app = MainTyper(
@@ -35,31 +34,30 @@ def main(
     ctx: Context,
     note_id: str = Option(
         "root",
-        "--note-id",
         help="Note id on which to perform operation",
     ),
     search: str
     | None = Option(
         None,
-        "--search",
         help="Search string to identify note on which to perform operation, e.g. '#myProjectRoot'",
     ),
 ):
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
-    # lookup subtree root
-    if search:
-        results = session.search(search)
-        if len(results) != 1:
-            raise BadParameter(
-                f"search '{search}' does not uniquely identify a note: got {len(results)} results",
-                ctx=ctx,
-                param=lookup_param(ctx, "search"),
-            )
-        target_note = results[0]
-    else:
-        target_note = Note(note_id=note_id, session=session)
+    # get subtree root
+    notes = get_notes(
+        ctx,
+        session,
+        note_id=note_id,
+        search=search,
+        note_id_param=lookup_param(ctx, "note_id"),
+        search_param=lookup_param(ctx, "search"),
+        exactly_one=True,
+    )
+
+    assert len(notes) == 1
+    target_note = notes[0]
 
     tree_context = TreeContext(
         root_context=root_context, session=session, target_note=target_note
@@ -112,7 +110,7 @@ def export(
         dest, export_format=export_format, overwrite=overwrite
     )
 
-    logging.info(
+    logger.info(
         f"Exported note '{tree_context.target_note.title}' (note_id='{tree_context.target_note.note_id}') -> '{dest}'"
     )
 
@@ -135,7 +133,7 @@ def import_(
     tree_context.target_note.import_zip(src)
 
 
-@app.command("push")
+@app.command()
 def push(
     ctx: Context,
     note_fqcn: str
@@ -158,7 +156,6 @@ def push(
     """
     Push declarative note subtree to target note
     """
-    from .main import console
 
     tree_context = _get_tree_context(ctx)
     root_note_fqcn = tree_context.root_context.instance.root_note_fqcn
@@ -188,11 +185,11 @@ def push(
         module = importlib.import_module(module_path)
         note_cls = getattr(module, obj_name)
     except (ImportError, AttributeError) as e:
-        raise BadParameter(f"failed to import '{fqcn}': {e}")
+        raise ClickException(f"failed to import '{fqcn}': {e}")
 
     if not issubclass(note_cls, BaseDeclarativeNote):
-        raise BadParameter(
-            f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls} ({type(note_cls)})"
+        raise ClickException(
+            f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls}"
         )
 
     # transmute note to have imported subclass, invoking its init
@@ -202,28 +199,39 @@ def push(
     commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
 
 
-"""
-TODO: command: fs-dump [dest: Path]
-- option: --propagate-deletes
-    - or --no-propagate-deletes, propagate by default
-- add Note.walk(): yield subtree recursively
-- add Note.fs_dump(dest: Path): dump meta.yaml, content.[txt/bin] to dest folder
-    - meta.yaml: title/type/mime, attributes, child branches, blob_id
-        - if existing: compare metadata, only update if different
-    - content.[txt/bin]: note content, extension based on Note.is_string
-- add Session.fs_dump_subtree(dest: Path, note: Note)
-    - recursively dumps flattened note subtree to dest folder
-    - use Note.walk(), Note.fs_dump() to recurse and dump notes
-    - note folder under dest: named as [note_id]
-- possible option: --build-hierarchy [dest: Path]
-    - recreates note hierarchy in destination using symlinks
-        - name folders using branch prefix + note titles, suffix w/note_id 
-            if duplicate prefix+title
+@app.command()
+def cleanup_positions(
+    ctx: Context,
+    dry_run: bool = Option(
+        False,
+        "--dry-run",
+        help="Only log pending changes",
+    ),
+    yes: bool = Option(
+        False,
+        "-y",
+        "--yes",
+        help="Don't ask for confirmation before committing changes",
+    ),
+):
+    """
+    Set attribute and branch positions to intervals of 10, starting with 10
+    """
 
-possible command: fs-load [src: Path]
-- could enable bypassing database migration in case of any issue
-    - but would not restore settings, only user-visible notes
-"""
+    tree_context = _get_tree_context(ctx)
+    notes = recurse_notes([tree_context.target_note])
+
+    for note in notes:
+        note._cleanup_positions()
+
+    commit_changes(tree_context.session, console, dry_run=dry_run, yes=yes)
+
+
+@dataclass(kw_only=True)
+class TreeContext:
+    root_context: RootContext
+    session: Session
+    target_note: Note
 
 
 def _get_tree_context(ctx: Context) -> TreeContext:

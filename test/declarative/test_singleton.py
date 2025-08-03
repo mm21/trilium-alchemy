@@ -28,7 +28,7 @@ class TemplateChild1(BaseDeclarativeNote):
     singleton = True
     title_ = "Child 1"
     note_type_ = "book"
-    mime_ = "text/plain"
+    mime_ = ""
 
 
 class IdempotentTest1(BaseDeclarativeNote):
@@ -67,7 +67,7 @@ def check_child1(branch: Branch, state: State):
     assert note.note_id == id_hash(f"{__name__}.TemplateChild1")
     assert note.title == "Child 1"
     assert note.note_type == "book"
-    assert note.mime == "text/plain"
+    assert note.mime == ""
 
     assert len(note.attributes.owned) == 1
     child1 = note.attributes.owned[0]
@@ -78,13 +78,11 @@ def check_child1(branch: Branch, state: State):
     assert len(note.branches.parents) == 2
 
 
-# TODO: ensure declaratively adding children fails when leaf = True
-
-
 @relation("child1", TemplateChild1)
 class TemplateChild2(BaseDeclarativeNote):
     singleton = True
     leaf = True
+    note_type_ = "render"
 
 
 def check_child2(branch: Branch, state: State):
@@ -103,14 +101,15 @@ def check_child2(branch: Branch, state: State):
     assert note.note_id_seed_final == f"{__name__}.TemplateChild2"
     assert note.note_id == id_hash(f"{__name__}.TemplateChild2")
     assert note.title == "TemplateChild2"
-    assert note.note_type == "text"
-    assert note.mime == "text/html"
+    assert note.note_type == "render"
+    assert note.mime == ""
 
-    assert len(note.attributes.owned) == 1
+    assert len(note.attributes.owned) == 2
     assert note.attributes.owned[0].name == "child1"
     assert note.attributes.owned[0].target.note_id == id_hash(
         f"{__name__}.TemplateChild1"
     )
+    assert note.attributes.owned[1].name == "triliumAlchemyDeclarativeLeaf"
 
     assert len(note.branches.children) == 0
     assert len(note.branches.parents) == 2
@@ -236,11 +235,20 @@ def check_inherited_attributes(note: Note):
         assert len(note.attributes.inherited) == 2
         label1, label2 = note.attributes.inherited
 
-        assert label1.name == "hideChildrenOverview"
-        assert label1.value == ""
+        assert label1.name in {"hideChildrenOverview", "mapType"}
 
-        assert label2.name == "mapType"
-        assert label2.value == "link"
+        if label1.name == "hideChildrenOverview":
+            hco = label1
+            mt = label2
+        else:
+            hco = label2
+            mt = label1
+
+        assert hco.name == "hideChildrenOverview"
+        assert hco.value == ""
+
+        assert mt.name == "mapType"
+        assert mt.value == "link"
 
     # recurse into children
     for branch in note.branches.children:
@@ -277,8 +285,6 @@ def check_root(root: SingletonRoot, state: State):
     assert len(root.branches.children) == 2
     check_template(root.branches.children[0], state)
     check_subclass(root.branches.children[1], state)
-
-    assert root._session._root_position_base == 999999999
 
     # check positions of children
     for idx in range(len(root.branches.children)):

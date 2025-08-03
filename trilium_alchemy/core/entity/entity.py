@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
@@ -13,11 +12,8 @@ from ..exceptions import *
 from ..session import Session, SessionContainer, normalize_session
 from .model import (
     BaseEntityModel,
-    ExtensionDescriptor,
     FieldDescriptor,
     ModelContainer,
-    ReadOnlyDescriptor,
-    ReadOnlyFieldDescriptor,
     WriteOnceDescriptor,
     WriteThroughDescriptor,
 )
@@ -28,11 +24,8 @@ __all__ = [
     "State",
     "EntityIdDescriptor",
     "FieldDescriptor",
-    "ReadOnlyFieldDescriptor",
-    "ReadOnlyDescriptor",
     "WriteThroughDescriptor",
     "WriteOnceDescriptor",
-    "ExtensionDescriptor",
 ]
 
 __rollup__ = [
@@ -61,6 +54,8 @@ class BaseEntity[ModelT: BaseEntityModel](
 
     # type used to create _model
     _model_cls: type[ModelT]
+
+    _force_position_cleanup: bool = False
 
     def __new__(
         cls,
@@ -186,7 +181,26 @@ class BaseEntity[ModelT: BaseEntityModel](
         values.
         """
         indent = f"\n{' '*4}"
-        return f"{self.str_short}{indent}{self._state}{indent}{self._model}"
+        return indent.join(
+            [self.str_short]
+            + self._str_summary_extra_pre
+            + [str(self._state), str(self._model)]
+            + self._str_summary_extra_post
+        )
+
+    @property
+    def _str_summary_extra_pre(self) -> list[str]:
+        """
+        Get extra lines to be inserted at beginning of summary.
+        """
+        return []
+
+    @property
+    def _str_summary_extra_post(self) -> list[str]:
+        """
+        Get extra lines to be inserted at end of summary.
+        """
+        return []
 
     @property
     @abstractmethod
@@ -304,7 +318,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         Commit changes to Trilium database for this object.
         """
 
-        logging.debug(f"Flushing: {self.str_summary}")
+        self.session._logger.debug(f"Flushing: {self.str_summary}")
 
         model_new: BaseModel | None = None
         gen: Generator | None = None
@@ -317,7 +331,7 @@ class BaseEntity[ModelT: BaseEntityModel](
         elif self._is_orphan:
             # bail out if a dependency was abandoned
             # TODO: specify which dependency was abandoned
-            logging.warning(
+            self.session._logger.warning(
                 f"Orphaned entity not being flushed since a dependency was abandoned: {self.str_summary}"
             )
         else:
@@ -329,18 +343,19 @@ class BaseEntity[ModelT: BaseEntityModel](
                 ):
                     model_new, gen = self._model.flush(sorter)
             except (NotFoundException, ApiException) as e:
-                logging.warning(
+                self.session._logger.warning(
                     f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
                 )
             else:
                 if self._state is not State.DELETE:
-                    self._model.flush_extensions()
+                    # get latest model from extensions if applicable
+                    model_new = self._model.flush_extensions() or model_new
 
         # mark as clean
         self._set_clean()
 
-        # perform setup if model is newer
-        if model_new is not None and self._model.check_newer(model_new):
+        # perform setup if we got a new model
+        if model_new is not None:
             self._model.setup(model_new)
 
         # continue flush sequence, if needed by subclass

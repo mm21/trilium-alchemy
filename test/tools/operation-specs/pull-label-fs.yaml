@@ -1,0 +1,8 @@
+# Pulls a note identified by label to filesystem dump tree.
+
+mappings:
+  pull:
+  - src:
+      label: "myProjectRoot"
+    dest:
+      fs: "~/my-notes/my-project"

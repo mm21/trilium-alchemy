@@ -7,16 +7,15 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Callable, Literal, cast
+from logging import Logger
+from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
 
 import requests
 from trilium_client import ApiClient, Configuration, DefaultApi
 from trilium_client.exceptions import ApiException
 from trilium_client.models.app_info import AppInfo
-from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.models.login201_response import Login201Response
 from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
@@ -32,6 +31,14 @@ if TYPE_CHECKING:
     from .note.note import Note
 
 __all__ = ["Session"]
+__canonical_syms__ = __all__
+
+
+REQUEST_TIMEOUT = 10.0
+"""
+Timeout for initial request to get app info.
+"""
+
 
 default_session: Session | None = None
 
@@ -82,7 +89,12 @@ class Session:
 
     _trilium_version: str
     """
-    Trilium version.
+    Trilium version as received from server.
+    """
+
+    _trilium_version_tuple: tuple[int, int, int]
+    """
+    Trilium version tuple.
     """
 
     _cache: Cache
@@ -93,12 +105,6 @@ class Session:
     _etapi_headers: dict[str, str]
     """
     Common ETAPI HTTP headers for manual requests.
-    """
-
-    _root_position_base_val: int | None = None
-    """
-    Base position of root tree (just the position of root__hidden branch).
-    Access using Session._root_position_base.
     """
 
     _logout_pending: bool = False
@@ -113,12 +119,19 @@ class Session:
     Root note.
     """
 
+    _logger: Logger
+    """
+    Logger to use.
+    """
+
     def __init__(
         self,
         host: str,
         token: str | None = None,
+        *,
         password: str | None = None,
         default: bool = True,
+        logger: Logger | None = None,
     ):
         """
         Either `token` or `password` is required; if both are provided, `token`
@@ -128,8 +141,11 @@ class Session:
         :param token: ETAPI token
         :param password: Trilium password, if no token provided
         :param default: Register this as the default session; in this case, `session` may be omitted from entity constructors
+        :param logger: Logger to use, or `None` to use default logger
         """
         from .note.note import Note
+
+        self._logger = logger or logging.getLogger()
 
         # ensure no existing default session, if requested to use as default
         if default:
@@ -170,29 +186,49 @@ class Session:
         # TODO: hangs if DNS resolution fails; implement timeout manually
         try:
             app_info: AppInfo = self.api.get_app_info(
-                _request_timeout=(3.0, 3.0)
+                _request_timeout=REQUEST_TIMEOUT
             )
-            logging.debug(f"Got Trilium version: {app_info.app_version}")
-            self._trilium_version = app_info.app_version
-        except ApiException:
-            logging.error(
-                f"Failed to connect to Trilium server {host} using token={self._token}"
+        except Exception as e:
+            err = (
+                f"status={e.status}, reason={e.reason}"
+                if isinstance(e, ApiException)
+                else str(e)
+            )
+            self._logger.error(
+                f"Failed to connect to Trilium host='{host}' using token='{self._token}': {err}"
             )
             raise
+        else:
+            self._logger.debug(
+                f"Connected to Trilium host '{host}', version {app_info.app_version}"
+            )
+
+            # remove non-numeric characters in case of "-beta" suffix, etc
+            def parse_digit(val: str) -> int:
+                return int("".join([c for c in val if c.isdigit()]))
+
+            version_split = app_info.app_version.split(".")
+
+            self._trilium_version = app_info.app_version
+            self._trilium_version_tuple = (
+                parse_digit(version_split[0]),
+                parse_digit(version_split[1]),
+                parse_digit(version_split[2]),
+            )
 
         # set root note
         self._root = Note(note_id="root", session=self)
 
     def __enter__(self):
-        logging.debug(f"Entering context: {self}")
+        self._logger.debug(f"Entering context: {self}")
         return self
 
     def __exit__(self, exc_type, exc_val, traceback):
         if exc_type:
-            logging.error(f"Exiting context with error: {self}")
+            self._logger.error(f"Exiting context with error: {self}")
             return
 
-        logging.debug(f"Exiting context: {self}")
+        self._logger.debug(f"Exiting context: {self}")
 
         # flush pending changes
         self.flush()
@@ -206,6 +242,9 @@ class Session:
 
     @property
     def trilium_version(self) -> str:
+        """
+        Trilium version received from server upon session creation.
+        """
         return self._trilium_version
 
     def flush(
@@ -289,7 +328,7 @@ class Session:
 
         # print debug info, if any
         if response.debug_info:
-            logging.debug(f"Got search debug: {response.debug_info}")
+            self._logger.debug(f"Got search debug: {response.debug_info}")
 
         return [
             Note._from_model(model, session=self) for model in response.results
@@ -431,7 +470,7 @@ class Session:
 
         if self._logout_pending:
             if self.dirty_count:
-                logging.warning(
+                self._logger.warning(
                     f"Logging out with {self.dirty_count} dirty entities"
                 )
 
@@ -509,8 +548,7 @@ class Session:
 
         return index
 
-    @property
-    def dirty_summary(self) -> str:
+    def get_dirty_summary(self) -> str:
         """
         Get a summary of entities with pending changes, grouped by note and
         sorted by title.
@@ -542,7 +580,7 @@ class Session:
             elif isinstance(entity, BaseAttribute):
                 note = entity.note
                 if not note:
-                    logging.warning(
+                    self._logger.warning(
                         f"Attribute has no note: {entity.str_summary}"
                     )
                     continue
@@ -554,7 +592,7 @@ class Session:
 
                 parent = entity.parent
                 if not parent:
-                    logging.warning(
+                    self._logger.warning(
                         f"Branch has no parent note: {entity.str_summary}"
                     )
                     continue
@@ -595,31 +633,6 @@ class Session:
         `/etapi`.
         """
         return f"{self.host}/etapi"
-
-    @property
-    def _root_position_base(self) -> int:
-        """
-        Return the position of root__hidden branch, used as the base for
-        child branches of the root note. If child branch positions aren't
-        above root__hidden branch, the hidden subtree can be selected in the UI
-        when a note range is selected.
-
-        It should be 999999999, but best to get it dynamically and cache it.
-
-        TODO: just use functools.lru_cache
-        """
-
-        # lookup base position if not set
-        if self._root_position_base_val is None:
-            # could instantiate Branch to get its position, but use etapi
-            # directly to avoid tampering with cache
-            model: EtapiBranchModel = self.api.get_branch_by_id("root__hidden")
-            assert model is not None
-
-            self._root_position_base_val = model.note_position
-            assert isinstance(self._root_position_base_val, int)
-
-        return self._root_position_base_val
 
     @property
     def _is_default(self) -> bool:

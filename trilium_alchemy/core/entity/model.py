@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from pydantic import BaseModel
 
-from ..exceptions import *
 from ..session import Session, SessionType
 from .types import State
 
 if TYPE_CHECKING:
     from .entity import BaseEntity
+
+# TODO: parameterize BaseDriver and BaseEntityModel with BaseModel subclass
+# for this entity
 
 
 class BaseDriver(ABC):
@@ -73,9 +75,6 @@ class BaseEntityModel(ABC):
 
     # class to interface with filesystem
     file_driver_cls: type[BaseDriver]
-
-    # mapping of alias to field name
-    fields_alias: dict[str, str] | None = None
 
     # fields allowed for user update
     fields_update: list[str]
@@ -162,7 +161,7 @@ class BaseEntityModel(ABC):
 
     @property
     def exists(self) -> bool:
-        return self._exists
+        return bool(self._exists)
 
     @property
     def _nexists(self) -> bool:
@@ -249,10 +248,6 @@ class BaseEntityModel(ABC):
 
         return fields
 
-    @property
-    def setup_done(self) -> bool:
-        return self._setup_done
-
     def teardown(self):
         self._backing = None
         self._working = None
@@ -327,7 +322,7 @@ class BaseEntityModel(ABC):
         else:
             # populate new working fields
             self._working = {
-                f: self._field_default(f) for f in self.fields_update
+                f: self._get_default_field(f) for f in self.fields_update
             }
 
             # move to create state
@@ -346,7 +341,8 @@ class BaseEntityModel(ABC):
             for ext in self._extensions:
                 ext._setup(model_backing)
 
-    def get_field(self, field: str, bypass_model_setup: bool = False):
+    # TODO: param check_type: check and return given type
+    def get_field(self, field: str) -> str | int | bool | None:
         """
         Get field from model, with working state taking precedence over
         database state.
@@ -355,22 +351,16 @@ class BaseEntityModel(ABC):
         assert field in self._etapi_fields
 
         # perform model setup if not done
-        if not bypass_model_setup:
-            self.setup_check()
+        self.setup_check()
 
         # attempt to get from working model
         if self._working is not None and field in self._working:
             # get field from working model
             return self._working[field]
 
-        if bypass_model_setup:
-            if self._backing is None:
-                return None
-        else:
-            if not self.entity._is_create:
-                # backing model should be populated at this point
-                # if model setup was not bypassed
-                assert self._backing is not None
+        if not self.entity._is_create:
+            # backing model should be populated at this point
+            assert self._backing is not None
 
         # get field from backing model
         if self._backing is not None:
@@ -378,6 +368,7 @@ class BaseEntityModel(ABC):
 
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
+        return None
 
     def set_field(self, field: str, value: Any, bypass_validate: bool = False):
         """
@@ -385,8 +376,7 @@ class BaseEntityModel(ABC):
         """
 
         # ensure field is writeable
-        if field not in self.fields_update:
-            raise ReadOnlyError(field, self.entity)
+        assert field in self.fields_update
 
         # perform model setup if not done
         self.setup_check()
@@ -423,20 +413,22 @@ class BaseEntityModel(ABC):
         """
         self._extensions.append(extension)
 
-    def flush_extensions(self):
+    def flush_extensions(self) -> BaseModel | None:
+        """
+        Flush extensions and return the latest model, if applicable.
+        """
+        model_new: BaseModel | None = None
+
         for ext in self._extensions:
             if ext._is_changed:
-                ext._flush()
+                model_new = ext._flush() or model_new
 
-    def _field_default(self, field: str) -> str:
+        return model_new
+
+    def _get_default_field(self, field: str) -> str:
         """
         Get default field for initializing working model.
         """
-
-        # translate field alias if needed
-        if self.fields_alias and field in self.fields_alias:
-            field = self.fields_alias[field]
-
         assert field in self.fields_default, f"{field} not in defaults"
         return self.fields_default[field]
 
@@ -462,8 +454,8 @@ class ModelContainer:
 
 class Extension(ABC, ModelContainer):
     """
-    Enables an entity to be extended: ensures model is setup when accessed
-    and routes setattr() via ExtensionDescriptor.
+    Enables an entity to be extended with additional state besides the
+    entity's model.
     """
 
     _entity: BaseEntity
@@ -475,8 +467,7 @@ class Extension(ABC, ModelContainer):
     @abstractmethod
     def _setattr(self, val: Any):
         """
-        Invoked when an attribute mapped by ExtensionDescriptor is set by the
-        user.
+        Invoked to set data.
         """
         ...
 
@@ -518,9 +509,9 @@ class StatefulExtension(Extension):
         """
         return False
 
-    def _flush(self):
+    def _flush(self) -> BaseModel | None:
         """
-        Commits changes to database.
+        Commit changes to database, returning the latest model if applicable.
         """
         ...
 
@@ -570,62 +561,6 @@ class FieldDescriptor:
 
     def __set__(self, ent: BaseEntity, val: Any):
         ent._model.set_field(self._field, val)
-
-
-# FieldDescriptor internally raises ReadOnlyError; use this to easily document
-# that it's read-only
-class ReadOnlyFieldDescriptor(FieldDescriptor):
-    """
-    Accessor for a read-only model field, e.g. a {obj}`Note`'s
-    `date_created` field.
-
-    :raises ReadOnlyError: Upon write attempt
-    """
-
-
-class ReadOnlyDescriptor:
-    """
-    Accessor for read-only class attribute.
-
-    :raises ReadOnlyError: Upon write attempt
-    """
-
-    _attr: str
-
-    # name of callback used to check if None is allowed
-    _allow_none_cb: str
-
-    _allow_none: bool
-
-    def __init__(
-        self,
-        attr: str,
-        allow_none_cb: str | None = None,
-        allow_none: bool = False,
-    ):
-        self._attr = attr
-        self._allow_none_cb = allow_none_cb
-        self._allow_none = allow_none
-
-    @require_setup
-    def __get__(self, ent: BaseEntity, objtype=None):
-        # access value
-        val = getattr(ent, self._attr)
-
-        if val is None and not self._allow_none:
-            # check if allowed to be None
-            if self._allow_none_cb is None:
-                allow_none = False
-            else:
-                allow_none_cb = getattr(ent, self._allow_none_cb)
-                allow_none = allow_none_cb(ent)
-
-            assert allow_none is True, f"Field {self._attr} is None"
-
-        return val
-
-    def __set__(self, ent: BaseEntity, val):
-        raise ReadOnlyError(self._attr, ent)
 
 
 class WriteThroughDescriptor:
@@ -693,34 +628,9 @@ class WriteOnceDescriptor:
         if value_current is None:
             setattr(ent, self._attr, value)
         else:
-            # make sure value isn't being changed
-            if value_current != value:
-                raise ReadOnlyError(self._attr, ent)
+            # make sure value isn't being changed, would be internal error
+            assert value_current == value
 
         # invoke validator
         if self._validator:
             getattr(ent, self._validator)()
-
-
-class ExtensionDescriptor:
-    """
-    Accessor for model extension.
-
-    A model extension performs additional processing on the model and provides
-    an interface to update other entities associated with this entity.
-    For example, {obj}`Note` uses an extension to process the list of
-    attributes from the note model and create {obj}`BaseAttribute` instances.
-    """
-
-    _attr: str
-
-    def __init__(self, attr: str):
-        self._attr = attr
-
-    @require_setup
-    def __get__(self, container: ModelContainer, objtype=None):
-        return getattr(container, self._attr)
-
-    @require_setup
-    def __set__(self, container: ModelContainer, val):
-        getattr(container, self._attr, val)._setattr(val)

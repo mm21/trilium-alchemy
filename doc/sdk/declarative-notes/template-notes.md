@@ -1,4 +1,4 @@
-# Trilium extensions
+# Example: Template notes
 
 A number of helper classes are provided for facilitating development of extensions. See {obj}`trilium_alchemy.lib.extension_types` for a full list.
 

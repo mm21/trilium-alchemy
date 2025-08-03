@@ -241,14 +241,6 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
 
         return branch_obj
 
-    def _get_position(self, index: int) -> int:
-        if self._note.note_id == "root":
-            base = self._note.session._root_position_base
-        else:
-            base = 0
-
-        return super()._get_position(index, base=base)
-
 
 class Branches(NoteExtension, BranchLookupMixin):
     """

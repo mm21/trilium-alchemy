@@ -3,13 +3,15 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+import string
 from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Literal, Self, cast
+from typing import IO, Generator, Literal, Self, cast
 
 import requests
+from trilium_client.exceptions import NotFoundException
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
 
@@ -19,6 +21,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
+from ..utils import base_n_hash
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
@@ -34,21 +37,33 @@ __all__ = [
 STRING_NOTE_TYPES = [
     "text",
     "code",
-    "relationMap",
     "search",
+    "relationMap",
+    "noteMap",
     "render",
     "book",
     "mermaid",
     "canvas",
+    "webView",
+    "mindMap",
+    "geoMap",
 ]
 """
 Keep in sync with isStringNote() (src/services/utils.js).
 """
 
-NOTE_TYPES = STRING_NOTE_TYPES + [
+BIN_NOTE_TYPES = [
     "file",
     "image",
 ]
+"""
+Binary note types.
+"""
+
+NOTE_TYPES = STRING_NOTE_TYPES + BIN_NOTE_TYPES
+"""
+All note types.
+"""
 
 STRING_MIME_TYPES = {
     "application/javascript",
@@ -61,16 +76,40 @@ STRING_MIME_TYPES = {
 Keep in sync with STRING_MIME_TYPES (src/services/utils.js).
 """
 
+NOTE_TYPES_MIME_NA = [
+    "search",
+    "noteMap",
+    "render",
+    "book",
+    "webView",
+]
+"""
+Note types to which mime is not applicable (empty string).
+"""
+
+NOTE_TYPES_MIME_FIXED = {
+    "relationMap": "application/json",
+    "mermaid": "text/plain",
+    "canvas": "application/json",
+    "mindMap": "application/json",
+    "geoMap": "application/json",
+}
+"""
+Note types which have a fixed mime type.
+"""
+
 
 def is_string(note_type: str, mime: str) -> bool:
     """
     Encapsulates logic for checking if a note is considered string type
     according to Trilium.
 
-    This should be kept in sync with src/services/utils.js:isStringNote()
+    This should be generally kept in sync with
+    `src/services/utils.js:isStringNote()`, although checking if not a binary
+    type so as to be more future-proof for when other string types are added.
     """
     return (
-        note_type in STRING_NOTE_TYPES
+        note_type not in BIN_NOTE_TYPES
         or mime.startswith("text/")
         or mime in STRING_MIME_TYPES
     )
@@ -78,6 +117,21 @@ def is_string(note_type: str, mime: str) -> bool:
 
 def id_hash(seed: str) -> str:
     """
+    Return entity id given seed. Ensures entity ids have a consistent amount of
+    entropy by being of the same length and character distribution, derived
+    from a 128-bit hash of the seed.
+
+    The hash is mapped to "base62" (a-z, A-Z, 0-9) with no loss in entropy.
+    """
+    chars = string.ascii_letters + string.digits
+    return base_n_hash(seed.encode(encoding="utf-8"), chars)
+
+
+def id_hash_legacy(seed: str) -> str:
+    """
+    Legacy implementation of `id_hash()`. Possibly useful for migrating to
+    the new hash mechanism. To be removed before version 1.0.
+
     Return id given seed. Needed to ensure IDs have a consistent amount of
     entropy by all being of the same length and character distribution.
 
@@ -143,14 +197,17 @@ class Note(BaseEntity[NoteModel]):
             model_backing=kwargs.get("_model_backing"),
         )
 
+    # TODO: add:
+    # type NoteType = Literal["text", "code", ...]
     def __init__(
         self,
         title: str | None = None,
         note_type: str | None = None,
         mime: str | None = None,
+        *,
+        attributes: Iterable[BaseAttribute] | None = None,
         parents: Iterable[Note | Branch] | Note | Branch | None = None,
         children: Iterable[Note | Branch] | None = None,
-        attributes: Iterable[BaseAttribute] | None = None,
         content: str | bytes | IO | None = None,
         note_id: str | None = None,
         template: Note | type[Note] | None = None,
@@ -159,8 +216,8 @@ class Note(BaseEntity[NoteModel]):
     ):
         """
         :param title: Note title
-        :param note_type: Note type, default `text`; one of: `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}, `"search"`{l=python}, `"book"`{l=python}, `"relationMap"`{l=python}, `"render"`{l=python}
-        :param mime: MIME type, default `text/html`; needs to be specified only for note types `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
+        :param note_type: Note type, default `text`; one of: `"text"`{l=python}, `"code"`{l=python}, `"relationMap"`{l=python}, `"search"`{l=python}, `"render"`{l=python}, `"book"`{l=python}, `"mermaid"`, `"canvas"`, `"file"`{l=python}, `"image"`{l=python}
+        :param mime: MIME type, default `text/html`; needs to be specified only for note types `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
         :param parents: Parent note/branch, or iterable of notes/branches (internally modeled as a `set`{l=python})
         :param children: Iterable of child notes/branches (internally modeled as a `list`{l=python})
         :param attributes: Iterable of attributes (internally modeled as a `list`{l=python})
@@ -221,15 +278,44 @@ class Note(BaseEntity[NoteModel]):
                     result += lst
             return result
 
-        # get container from any subclass
+        # get container from subclass if applicable
         init_container = self._init_hook(
             note_id, note_id_seed_final, force_leaf
         )
 
+        def normalize_mime(
+            title: str | None, note_type: str | None, mime: str | None
+        ) -> str | None:
+            """
+            Return correct mime given note_type, validating if it was passed
+            by user.
+            """
+
+            if note_type is None:
+                return None
+            elif note_type in NOTE_TYPES_MIME_NA:
+                mime_norm = ""
+            elif note_type in NOTE_TYPES_MIME_FIXED:
+                mime_norm = NOTE_TYPES_MIME_FIXED[note_type]
+            elif mime is not None:
+                mime_norm = mime
+            else:
+                mime_norm = "text/html" if note_type == "text" else None
+
+            # if passed by user, validate
+            if mime is not None:
+                assert (
+                    mime == mime_norm
+                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_norm}'"
+
+            return mime_norm
+
         # aggregate fields to set
         title_set = title or init_container.title
         note_type_set = note_type or init_container.note_type
-        mime_set = mime or init_container.mime
+        mime_set = normalize_mime(
+            title_set, note_type_set, mime or init_container.mime
+        )
         content_set = content or init_container.content
         attributes_set = combine_lists(attributes, init_container.attributes)
         parents_set: Iterable[Note | Branch] | None = (
@@ -404,7 +490,8 @@ class Note(BaseEntity[NoteModel]):
 
     @note_type.setter
     def note_type(self, val: str):
-        assert val in NOTE_TYPES, f"Invalid note_type: {val}"
+        if not val in NOTE_TYPES:
+            self.session._logger.warning(f"Unknown note_type: {val}")
         self._model.set_field("type", val)
 
     @property
@@ -483,13 +570,10 @@ class Note(BaseEntity[NoteModel]):
     @property
     def branches(self) -> Branches:
         """
-        Getter/setter for branches, both parent and child.
+        Getter for branches, both parents (`.parents`) and children
+        (`.children`).
         """
         return self._branches
-
-    @branches.setter
-    def branches(self, val: list[Branch]):
-        self._branches._setattr(val)
 
     @require_setup_prop
     @property
@@ -511,7 +595,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for child notes.
 
-        :setter: Sets list of parent notes, replacing the existing list
+        :setter: Sets list of child notes, replacing the existing list
         """
         return self._children
 
@@ -696,14 +780,14 @@ class Note(BaseEntity[NoteModel]):
 
     def export_zip(
         self,
-        dest_path: Path,
+        dest_file: Path,
         export_format: Literal["html", "markdown"] = "html",
         overwrite: bool = False,
     ):
         """
         Export this note subtree to zip file.
 
-        :param dest_path: Destination .zip file
+        :param dest_file: Destination .zip file
         :param export_format: Format of exported HTML notes
         :param overwrite: Whether to overwrite destination path if it exists
         """
@@ -712,12 +796,14 @@ class Note(BaseEntity[NoteModel]):
         ), f"Source note {self.str_short} must have a note_id for export"
         assert export_format in {"html", "markdown"}
 
-        if dest_path.exists() and not overwrite:
-            raise ValueError(f"Path {dest_path} exists and overwrite=False")
-
-        dest_path = (
-            dest_path if isinstance(dest_path, Path) else Path(dest_path)
+        dest_file_norm = (
+            dest_file if isinstance(dest_file, Path) else Path(dest_file)
         )
+
+        if dest_file_norm.exists() and not overwrite:
+            raise ValueError(
+                f"Path {dest_file_norm} exists and overwrite=False"
+            )
 
         url = f"{self.session._base_path}/notes/{self.note_id}/export"
         params = {"format": export_format}
@@ -730,25 +816,27 @@ class Note(BaseEntity[NoteModel]):
         zip_file: bytes = response.content
         assert isinstance(zip_file, bytes)
 
-        with dest_path.open("wb") as fh:
+        with dest_file_norm.open("wb") as fh:
             for chunk in response.iter_content(chunk_size=8192):
                 fh.write(chunk)
 
     def import_zip(
         self,
-        src_path: Path,
+        src_file: Path,
     ) -> Note:
         """
         Import note subtree from zip file, adding the imported root as a
         child of this note and returning it.
 
-        :param src_path: Source .zip file
+        :param src_file: Source .zip file
         """
 
         # flush any changes since we need to refresh later
         self.flush()
 
-        src_path = src_path if isinstance(src_path, Path) else Path(src_path)
+        src_file_norm = (
+            src_file if isinstance(src_file, Path) else Path(src_file)
+        )
 
         assert (
             self.note_id is not None
@@ -757,7 +845,7 @@ class Note(BaseEntity[NoteModel]):
         zip_file: bytes
 
         # read input zip
-        with src_path.open("rb") as fh:
+        with src_file_norm.open("rb") as fh:
             zip_file = fh.read()
 
         headers = self._session._etapi_headers.copy()
@@ -783,14 +871,21 @@ class Note(BaseEntity[NoteModel]):
 
         return imported_note
 
+    def walk(self) -> Generator[Note, None, None]:
+        """
+        Yield this note and all children recursively. Each note will only
+        occur once (clones are skipped).
+        """
+        yield from self._walk(set())
+
     def flush(self):
         """
         Flush note along with its owned attributes.
         """
 
         # collect set of entities
-        flush_set = {attr for attr in self.attributes.owned}
-        flush_set.add(self)  # type: ignore
+        flush_set: set[BaseEntity] = {attr for attr in self.attributes.owned}
+        flush_set.add(self)
 
         self._session.flush(flush_set)
 
@@ -836,21 +931,52 @@ class Note(BaseEntity[NoteModel]):
         return list(self.branches) + list(self.attributes.owned)
 
     @property
+    def _str_summary_extra_pre(self) -> list[str]:
+        """
+        Get note paths for summary print.
+        """
+        paths_ret: list[str] = []
+
+        for path in self.paths:
+            if len(path) > 1:
+                paths_ret.append(
+                    " > ".join(
+                        [f"'{note._title_escape}'" for note in path[:-1]]
+                    )
+                )
+
+        return sorted(paths_ret)
+
+    @property
+    def _str_summary_extra_post(self) -> list[str]:
+        """
+        Get content state for summary print.
+        """
+        blob_ids: list[str] = []
+
+        if self._content._is_changed and not self._is_create:
+            blob_ids.append(f"'{self._content._backing.digest}'")
+
+        blob_ids.append(f"'{self._content.blob_id}'")
+
+        return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
+
+    @property
     def _str_short(self):
-        title = self.title.replace("'", "\\'")
-        return f"Note('{title}', note_id='{self.note_id}')"
+        note_id = f"'{self.note_id}'" if self.note_id else None
+        return f"Note('{self._title_escape}', note_id={note_id})"
 
     @property
     def _str_safe(self):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
+    @property
+    def _title_escape(self) -> str:
+        return self.title.replace("'", "\\'")
+
     @classmethod
     def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
         return (note_id, None)
-
-    @classmethod
-    def _is_singleton(cls) -> bool:
-        return False
 
     @classmethod
     def _from_id(cls, note_id: str, session: Session | None = None) -> Note:
@@ -943,6 +1069,30 @@ class Note(BaseEntity[NoteModel]):
         # assign content if empty
         if len(self.content) == 0:
             self.content = src.content
+
+    @classmethod
+    def _exists(cls, session: Session, note_id: str) -> bool:
+        """
+        Check whether note given by note_id exists.
+        """
+        try:
+            _ = session.api.get_note_by_id(note_id)
+        except NotFoundException:
+            return False
+        else:
+            return True
+
+    def _walk(self, seen_notes: set[Note]) -> Generator[Note, None, None]:
+        yield self
+
+        for child in self.children:
+            if not child in seen_notes:
+                seen_notes.add(child)
+                yield from child._walk(seen_notes)
+
+    def _cleanup_positions(self):
+        self._attributes.owned._set_positions(cleanup=True)
+        self._branches.children._set_positions(cleanup=True)
 
 
 @dataclass
@@ -1051,15 +1201,20 @@ class CopyContext:
 def _normalize_template(
     template: Note | type[Note], session: Session | None
 ) -> Relation:
+    from ..declarative.base import BaseDeclarativeNote
+
     target: Note
     template_cls: type[Note] = get_cls(template)
 
     if isinstance(template, ABCMeta):
         # have class
 
+        assert issubclass(
+            template_cls, BaseDeclarativeNote
+        ), f"Template target must be a subclass of BaseDeclarativeNote, got {template_cls}"
         assert (
             template_cls._is_singleton()
-        ), "Template target must be singleton class"
+        ), f"Template target must be singleton class, got {template_cls}"
 
         # instantiate target
         target = template_cls(session=session)

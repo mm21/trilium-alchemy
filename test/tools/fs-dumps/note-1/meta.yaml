@@ -1,0 +1,10 @@
+id: note_1
+type: text
+mime: text/html
+title: Note 1
+blob_id: 7XJSwh6apxkriWy2bX9P
+attributes:
+- label_1(inheritable)=test_value
+- ~relation_1=note_2
+children:
+- note_2|Test prefix

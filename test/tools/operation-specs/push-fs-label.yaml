@@ -1,0 +1,8 @@
+# Pushes a filesystem dump tree to a parent note identified by label.
+
+mappings:
+  push:
+  - src:
+      fs: "~/my-notes/my-project"
+    dest:
+      label: "myProjectsRoot"

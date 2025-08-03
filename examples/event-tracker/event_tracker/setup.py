@@ -8,8 +8,10 @@ it with example notes imperatively.
 """
 
 import logging
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 from rich.console import Console
 
@@ -40,8 +42,17 @@ resolve to the same `Note` object when instantiated.
 """
 
 
-def setup_declarative():
+def setup_declarative(root_path: Path):
     logging.info("Syncing declarative tree")
+
+    # update path to allow import of event_tracker package
+    env = os.environ.copy()
+
+    pythonpath = [str(root_path)]
+    if current_pythonpath := env.get("PYTHONPATH"):
+        pythonpath.append(current_pythonpath)
+
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath)
 
     # invoke CLI to push declarative root note
     try:
@@ -53,7 +64,8 @@ def setup_declarative():
                 "#eventTrackerRoot",
                 "push",
                 "event_tracker.root.Root",
-            ]
+            ],
+            env=env,
         )
     except subprocess.CalledProcessError:
         sys.exit("CLI invocation failed; see error log for details")

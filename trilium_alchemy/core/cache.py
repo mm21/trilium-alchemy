@@ -5,13 +5,15 @@ Implements a cache of Trilium entities.
 from __future__ import annotations
 
 import graphlib
-import logging
 from typing import TYPE_CHECKING, Iterable
 
 from .exceptions import ValidationError, _ValidationError
+from .utils import INHERIT_RELATIONS
 
 if TYPE_CHECKING:
+    from .attribute.relation import Relation
     from .entity import BaseEntity
+    from .note import Note
     from .session import Session
 
 
@@ -71,10 +73,10 @@ class Cache:
         self._validate(dirty_set - dirty_set_old)
 
         if not len(dirty_set):
-            logging.debug("No dirty entities to flush")
+            self._session._logger.debug("No dirty entities to flush")
             return
 
-        logging.debug(
+        self._session._logger.debug(
             f"Flushing {len(dirty_set)} entities: {self._get_summary(dirty_set)}"
         )
 
@@ -103,7 +105,10 @@ class Cache:
         sorter.prepare()
 
         # get notes with changed child branch positions
-        refresh_set = self._check_refresh(dirty_set)
+        refresh_ordering_notes = self._check_refresh_ordering(dirty_set)
+
+        # get notes with changed templates/parent branches
+        refresh_notes = self._check_refresh_notes(dirty_set)
 
         # flush entities in order provided by sorter
         while sorter.is_active():
@@ -123,8 +128,14 @@ class Cache:
                 sorter.done(entity)
 
         # refresh ordering for changed branch positions
-        for note in refresh_set:
-            self._session.refresh_note_ordering(note)
+        for note in refresh_ordering_notes:
+            if note._model.exists:
+                self._session.refresh_note_ordering(note)
+
+        # refresh notes
+        for note in refresh_notes:
+            if note._model.exists:
+                note.refresh()
 
     def add(self, entity: BaseEntity):
         """
@@ -136,7 +147,7 @@ class Cache:
             assert entity is self.entity_map[entity._entity_id]
         else:
             self.entity_map[entity._entity_id] = entity
-            logging.debug(
+            self._session._logger.debug(
                 f"Added to cache: entity_id={entity._entity_id}, type={type(entity)}"
             )
 
@@ -165,11 +176,11 @@ class Cache:
         Recursively add entity's dependencies to set if they're dirty.
         """
         for dep in entity._dependencies:
-            if dep._is_dirty:
+            if dep not in dirty_set and dep._is_dirty:
                 dirty_set.add(dep)
                 self._flush_gather(dep, dirty_set)
 
-    def _check_refresh(self, dirty_set: set[BaseEntity]):
+    def _check_refresh_ordering(self, dirty_set: set[BaseEntity]) -> set[Note]:
         """
         Return set of notes with changed child branch positions. These need
         to be refreshed in the UI after they're flushed.
@@ -177,13 +188,46 @@ class Cache:
 
         from .branch import Branch
 
-        refresh_set = set()
+        notes: set[Note] = set()
+
         for entity in dirty_set:
             if isinstance(entity, Branch):
                 if entity._model.is_field_changed("note_position"):
-                    refresh_set.add(entity.parent)
+                    assert entity.parent
 
-        return refresh_set
+                    if not entity.parent._is_delete:
+                        notes.add(entity.parent)
+
+        return notes
+
+    def _check_refresh_notes(self, dirty_set: set[BaseEntity]) -> set[Note]:
+        """
+        Return set of notes with changed relations which affect inherited
+        attributes or children. These need to be refreshed to pick up
+        changes to inherited attributes and automatically-added children
+        (from new templates).
+        """
+        from .note import Note
+
+        notes: set[Note] = set()
+
+        for entity in dirty_set:
+            if isinstance(entity, Note) and not entity._is_delete:
+                # check for created/deleted inherit relations
+                relations: list[Relation] = []
+
+                for relation in INHERIT_RELATIONS:
+                    relations += entity.relations.get_all(relation)
+
+                if any(
+                    r._is_create
+                    or r._is_delete
+                    or r._model.is_field_changed("value")
+                    for r in relations
+                ):
+                    notes.add(entity)
+
+        return notes
 
     def _get_summary(self, dirty_set: set[BaseEntity] | None = None) -> str:
         """

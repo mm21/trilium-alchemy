@@ -25,11 +25,8 @@ __all__ = rollup(
     exceptions,
 )
 
-__canonical_syms__ = [
-    "Session",
-]
-
 __canonical_children__ = [
+    "session",
     "note",
     "attribute",
     "branch",
