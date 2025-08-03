@@ -56,9 +56,10 @@ def main(
         help="Trilium password",
         envvar="TRILIUM_PASSWORD",
     ),
-    instance: str
+    instance_name: str
     | None = Option(
         None,
+        "--instance",
         help="Instance name as configured in .yaml",
         envvar="TRILIUM_INSTANCE",
     ),
@@ -70,9 +71,9 @@ def main(
         dir_okay=False,
     ),
 ):
-    if instance:
+    if instance_name:
         root_context = RootContext.from_config(
-            ctx=ctx, instance_name=instance, config_file=config_file
+            ctx=ctx, instance_name=instance_name, config_file=config_file
         )
     else:
         if not (token or password):
@@ -154,7 +155,7 @@ class RootContext:
             raise BadParameter(
                 f"instance '{instance_name}' not found in '{config_file}'",
                 ctx=ctx,
-                param=lookup_param(ctx, "instance"),
+                param=lookup_param(ctx, "instance_name"),
             )
 
         return RootContext(ctx=ctx, instance=instance, from_file=True)
