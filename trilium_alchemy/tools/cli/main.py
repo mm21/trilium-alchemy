@@ -77,7 +77,7 @@ def main(
     ),
 ):
     # Load environment variables from .env file if it exists
-    dotenv.load_dotenv(Path('.env').resolve(), override=True)
+    dotenv.load_dotenv(Path('.env').resolve(), usecwd=True)
     
     if instance_name:
         root_context = RootContext.from_config(
@@ -104,7 +104,7 @@ def main(
                 message="either --token/TRILIUM_TOKEN or --password/TRILIUM_PASSWORD must be provided",
                 ctx=ctx,
                 param_hint=["token", "password"],
-                param_type="option" if not token and not password else None,
+                param_type="option",
             )
 
         instance = InstanceConfig(host=host, token=token, password=password)
