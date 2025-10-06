@@ -15,12 +15,11 @@ Planned commands:
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import dotenv
 from click.exceptions import BadParameter, MissingParameter
+from dotenv import find_dotenv, load_dotenv
 from pydantic import ValidationError
 from typer import Context, Exit, Option
 
@@ -29,17 +28,13 @@ from ..config import Config, InstanceConfig
 from . import db, fs, note, tree
 from ._utils import MainTyper, get_root_context, logger, lookup_param
 
-dotenv.load_dotenv()
+load_dotenv(find_dotenv(usecwd=True))
 
 app = MainTyper(
     "trilium-alchemy",
     help="TriliumAlchemy CLI Toolkit",
 )
 
-
-def _get_host() -> str | None:
-    """Get host from environment variable if not provided."""
-    return os.environ.get("TRILIUM_HOST")
 
 @app.callback()
 def main(
@@ -68,42 +63,31 @@ def main(
         help="Instance name as configured in .yaml",
         envvar="TRILIUM_INSTANCE",
     ),
-    config_file: Path
-    | None = Option(
+    config_file: Path = Option(
         "trilium-alchemy.yaml",
         help=".yaml file containing instance info, only applicable with --instance",
         envvar="TRILIUM_ALCHEMY_CONFIG_FILE",
         dir_okay=False,
     ),
 ):
-    # Load environment variables from .env file if it exists
-    dotenv.load_dotenv(Path('.env').resolve(), usecwd=True)
-    
     if instance_name:
         root_context = RootContext.from_config(
             ctx=ctx, instance_name=instance_name, config_file=config_file
         )
     else:
-        # Get host from environment if not provided
         if not host:
-            host = _get_host()
-            if not host:
-                raise MissingParameter(
-                    message="either --host or --instance must be provided, or set TRILIUM_HOST environment variable",
-                    ctx=ctx,
-                    param_hint=["host", "instance"],
-                    param_type="option",
-                )
+            raise MissingParameter(
+                message="either --host/--instance must be passed, or set TRILIUM_HOST/TRILIUM_INSTANCE environment variable",
+                ctx=ctx,
+                param_hint=["host", "instance"],  # type: ignore
+                param_type="option",
+            )
 
-        # Get token/password from environment if not provided
-        token = token or os.environ.get("TRILIUM_TOKEN")
-        password = password or os.environ.get("TRILIUM_PASSWORD")
-        
         if not (token or password):
             raise MissingParameter(
-                message="either --token/TRILIUM_TOKEN or --password/TRILIUM_PASSWORD must be provided",
+                message="either --token/--password must be passed, or set TRILIUM_TOKEN/TRILIUM_PASSWORD environment variable",
                 ctx=ctx,
-                param_hint=["token", "password"],
+                param_hint=["token", "password"],  # type: ignore
                 param_type="option",
             )
 
