@@ -30,8 +30,6 @@ class BranchDriver(BaseDriver):
     def branch(self) -> Branch:
         return self.entity
 
-
-class EtapiDriver(BranchDriver):
     def fetch(self) -> EtapiBranchModel | None:
         model: EtapiBranchModel | None
 
@@ -85,16 +83,10 @@ class EtapiDriver(BranchDriver):
             self.session._logger.error(f"Failed to delete branch: {e}")
 
 
-class FileDriver(BranchDriver):
-    pass
-
-
 class BranchModel(BaseEntityModel):
     etapi_model = EtapiBranchModel
 
-    etapi_driver_cls = EtapiDriver
-
-    file_driver_cls = FileDriver
+    driver_cls = BranchDriver
 
     field_entity_id = "branch_id"
 

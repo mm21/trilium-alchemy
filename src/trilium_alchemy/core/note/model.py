@@ -19,8 +19,6 @@ class NoteDriver(BaseDriver):
     def note(self) -> Note:
         return self.entity
 
-
-class EtapiDriver(NoteDriver):
     def fetch(self) -> EtapiNoteModel | None:
         model: EtapiNoteModel | None
 
@@ -115,16 +113,10 @@ class EtapiDriver(NoteDriver):
                 sorter.done(branch)
 
 
-class FileDriver(NoteDriver):
-    pass
-
-
 class NoteModel(BaseEntityModel):
     etapi_model = EtapiNoteModel
 
-    etapi_driver_cls = EtapiDriver
-
-    file_driver_cls = FileDriver
+    driver_cls = NoteDriver
 
     field_entity_id = "note_id"
 

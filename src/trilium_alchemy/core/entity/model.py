@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from pydantic import BaseModel
 
-from ..session import Session, SessionType
+from ..session import Session
 from .types import State
 
 if TYPE_CHECKING:
@@ -70,10 +70,7 @@ class BaseEntityModel(ABC):
     etapi_model: type[BaseModel]
 
     # class to interface with ETAPI
-    etapi_driver_cls: type[BaseDriver]
-
-    # class to interface with filesystem
-    file_driver_cls: type[BaseDriver]
+    driver_cls: type[BaseDriver]
 
     # fields allowed for user update
     fields_update: list[str]
@@ -107,15 +104,7 @@ class BaseEntityModel(ABC):
         self.entity = entity
         self._extensions = list()
 
-        # select driver based on session type and instantiate
-        driver_map = {
-            SessionType.ETAPI: self.etapi_driver_cls,
-            SessionType.FILE: self.file_driver_cls,
-            # SessionType.VIRTUAL: None (set self._driver as None)
-        }
-        assert entity.session._type in driver_map
-
-        self._driver = driver_map[entity.session._type](entity)
+        self._driver = self.driver_cls(entity)
 
     def __str__(self):
         fields = list()

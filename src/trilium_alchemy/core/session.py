@@ -8,7 +8,6 @@ import datetime
 import json
 import logging
 from dataclasses import dataclass, field
-from enum import Enum, auto
 from logging import Logger
 from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
 
@@ -43,22 +42,6 @@ Timeout for initial request to get app info.
 default_session: Session | None = None
 
 
-class SessionType(Enum):
-    """
-    Type of session.
-    """
-
-    ETAPI = auto()
-    """
-    Interface to Trilium server.
-    """
-
-    FILE = auto()
-    """
-    Interface to filesystem.
-    """
-
-
 class Session:
     """
     Interface to Trilium and context in which to store changes to entities.
@@ -67,11 +50,6 @@ class Session:
     invoke {obj}`Session.flush` to commit them.
 
     For details and example usage, see {ref}`sessions` in the user guide.
-    """
-
-    _type = SessionType.ETAPI
-    """
-    Type of session.
     """
 
     _host: str

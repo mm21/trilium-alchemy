@@ -32,8 +32,6 @@ class AttributeDriver(BaseDriver):
     def attribute(self) -> BaseAttribute:
         return self.entity
 
-
-class EtapiDriver(AttributeDriver):
     def fetch(self) -> EtapiAttributeModel | None:
         model: EtapiAttributeModel | None
 
@@ -89,14 +87,9 @@ class EtapiDriver(AttributeDriver):
         self.session.api.delete_attribute_by_id(self.attribute.attribute_id)
 
 
-class FileDriver(AttributeDriver):
-    pass
-
-
 class AttributeModel(BaseEntityModel):
     etapi_model = EtapiAttributeModel
-    etapi_driver_cls = EtapiDriver
-    file_driver_cls = FileDriver
+    driver_cls = AttributeDriver
     field_entity_id = "attribute_id"
 
     fields_update = [
