@@ -4,5 +4,6 @@ __out__
 .pytest_cache
 .env
 .trilium_data
+.venv
 build
 dist

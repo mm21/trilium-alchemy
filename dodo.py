@@ -48,7 +48,7 @@ def cleanup_dir(output_dir: Path):
         shutil.rmtree(output_dir)
 
 
-def task_pytest() -> Task:
+def task_test() -> Task:
     """
     Run pytest and generate coverage reports.
     """
