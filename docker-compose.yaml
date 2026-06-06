@@ -1,5 +1,4 @@
 # Simple Trilium instance to use for testing.
-version: '3'
 services:
   trilium:
     image: triliumnext/notes:v0.91.6

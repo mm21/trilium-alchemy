@@ -719,13 +719,13 @@ def _restart_trilium(callable: Callable[[], None]):
     """
 
     # shutdown trilium
-    subprocess.check_call(["docker-compose", "down"])
+    subprocess.check_call(["docker", "compose", "down"])
 
     # invoke callable
     callable()
 
     # start trilium
-    subprocess.check_call(["docker-compose", "up", "-d"])
+    subprocess.check_call(["docker", "compose", "up", "-d"])
 
     # wait for trilium to startup
     time.sleep(5)
