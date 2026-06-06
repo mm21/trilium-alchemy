@@ -11,6 +11,8 @@ from doit.task import Task
 from doit.tools import create_folder
 from dotenv import load_dotenv
 
+Path("__cache__").mkdir(parents=True, exist_ok=True)
+
 PACKAGE = "trilium_alchemy"
 
 # badges output
@@ -180,10 +182,6 @@ def task_format() -> Task:
 
     autoflake_args = [
         "autoflake",
-        "--remove-all-unused-imports",
-        "--remove-unused-variables",
-        "-i",
-        "-r",
         ".",
     ]
 
