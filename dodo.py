@@ -196,8 +196,8 @@ def task_format() -> Task:
         actions=[
             (_run, (["autoflake"] + py_args,)),
             (_run, (["isort"] + py_args,)),
-            (_run, (["docformatter"] + py_args, {0, 3})),
             (_run, (["black"] + py_args,)),
+            (_run, (["docformatter"] + py_args, {0, 3})),
             (_run, (["toml-sort", "-i"] + toml_args,)),
         ],
         targets=[],
