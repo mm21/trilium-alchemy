@@ -27,7 +27,7 @@ from .attributes.labels import Labels
 from .attributes.relations import Relations
 from .branches import Branches, ChildNotes, ParentNotes
 from .content import Content
-from .model import NoteModel
+from .note_model import NoteModel
 
 __all__ = [
     "Note",
