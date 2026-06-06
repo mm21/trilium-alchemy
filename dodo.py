@@ -4,9 +4,9 @@ Doit file to wrap development workflow commands.
 
 import os
 import shutil
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 from doit import task_params
 from doit.task import Task
@@ -44,6 +44,14 @@ MYPY_XML_PATH = MYPY_PATH / "xml"
 PYRIGHT_PATH = ANALYSIS_PATH / "pyright"
 PYRIGHT_JSON_PATH = PYRIGHT_PATH / "report.json"
 
+# folders in which to format python files
+FORMAT_FOLDERS = [
+    "doc",
+    "examples",
+    "src",
+    "test",
+]
+
 
 def cleanup_dir(output_dir: Path):
     if output_dir.exists():
@@ -54,7 +62,6 @@ def task_test() -> Task:
     """
     Run pytest and generate coverage reports.
     """
-
     args = [
         "pytest",
         f"--cov={PACKAGE}",
@@ -83,7 +90,6 @@ def task_badges() -> Task:
     """
     Generate badges from coverage results.
     """
-
     tests_args = [
         "genbadge",
         "tests",
@@ -131,7 +137,6 @@ def task_doc(copy: bool) -> Task:
     """
     Generate documentation.
     """
-
     args = [
         "sphinx-build",
         "-T",  # show full traceback upon error
@@ -181,41 +186,19 @@ def task_format() -> Task:
     """
     Run formatters.
     """
-
-    autoflake_args = [
-        "autoflake",
-        ".",
-    ]
-
-    isort_args = [
-        "isort",
-        ".",
-    ]
-
-    docformatter_args = [
-        "docformatter",
-        ".",
-    ]
-
-    black_args = [
-        "black",
-        ".",
-    ]
-
-    toml_sort_args = [
-        "toml-sort",
-        "-i",
-        "pyproject.toml",
-    ]
+    # aggregate files to format
+    root = Path.cwd()
+    py_args = list(map(str, root.glob("*.py"))) + FORMAT_FOLDERS
+    toml_args = list(map(str, root.glob("*.toml")))
 
     return Task(
         "format",
         actions=[
-            (_run, (autoflake_args,)),
-            (_run, (isort_args,)),
-            (_run, (docformatter_args, {0, 3})),
-            (_run, (black_args,)),
-            (_run, (toml_sort_args,)),
+            (_run, (["autoflake"] + py_args,)),
+            (_run, (["isort"] + py_args,)),
+            (_run, (["docformatter"] + py_args, {0, 3})),
+            (_run, (["black"] + py_args,)),
+            (_run, (["toml-sort", "-i"] + toml_args,)),
         ],
         targets=[],
         file_dep=[],
@@ -226,7 +209,6 @@ def task_analysis() -> Task:
     """
     Run static analysis tools.
     """
-
     # TODO: command line option to filter specific path
 
     mypy_args = [
