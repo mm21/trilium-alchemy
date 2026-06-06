@@ -40,6 +40,7 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 dev = [
   "autoflake>=2.3.1,<3",
   "black>=25.1.0,<26",
+  "docformatter>=1.7.8,<2",
   "doit>=0.36.0,<0.37.0",
   "furo>=2023.5.20,<2024",
   "genbadge[all]>=1.1.0,<2",
@@ -59,7 +60,6 @@ dev = [
   "sphinxcontrib-plantuml>=0.25,<0.26",
   "sphinxcontrib-typer>=0.5.1,<0.6.0",
   "toml-sort>=0.23.1,<0.24.0",
-  "tox>=4.24.2,<5",
   "types-requests>=2.31.0.8,<3"
 ]
 
@@ -86,14 +86,21 @@ exclude_lines = [
 [tool.coverage.run]
 data_file = "__cache__/.coverage"
 
+[tool.docformatter]
+black = true
+in-place = true
+make-summary-multi-line = true
+non-strict = true
+pre-summary-newline = true
+recursive = true
+
 [tool.doit]
 dep_file = "__cache__/.doit.db"
 verbosity = 2
 
 [tool.isort]
-line_length = 80
 profile = "black"
-py_version = 312
+quiet = true
 
 [tool.mypy]
 ignore_missing_imports = true

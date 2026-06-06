@@ -5,6 +5,8 @@ Doit file to wrap development workflow commands.
 import os
 import shutil
 from pathlib import Path
+import subprocess
+import sys
 
 from doit import task_params
 from doit.task import Task
@@ -190,6 +192,11 @@ def task_format() -> Task:
         ".",
     ]
 
+    docformatter_args = [
+        "docformatter",
+        ".",
+    ]
+
     black_args = [
         "black",
         ".",
@@ -204,10 +211,11 @@ def task_format() -> Task:
     return Task(
         "format",
         actions=[
-            " ".join(autoflake_args),
-            " ".join(isort_args),
-            " ".join(black_args),
-            " ".join(toml_sort_args),
+            (_run, (autoflake_args,)),
+            (_run, (isort_args,)),
+            (_run, (docformatter_args, {0, 3})),
+            (_run, (black_args,)),
+            (_run, (toml_sort_args,)),
         ],
         targets=[],
         file_dep=[],
@@ -245,3 +253,11 @@ def task_analysis() -> Task:
         targets=[],
         file_dep=[],
     )
+
+
+def _run(cmd: list[str], expect_rc: int | set[int] = 0):
+    expect_rcs = expect_rc if isinstance(expect_rc, set) else set((expect_rc,))
+    print(f"=== Running: {cmd[0]}")
+    rc = subprocess.call(cmd)
+    if not rc in expect_rcs:
+        sys.exit(f"{cmd[0]} failed: rc={rc}, cmd={cmd}")
