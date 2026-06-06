@@ -67,20 +67,6 @@ class BaseEntityModel(ABC):
     encapsulating both locally modified data and data as received from Trilium.
     """
 
-    # pydantic model used in etapi
-    etapi_model: type[BaseModel]
-
-    # class to interface with ETAPI
-    driver_cls: type[BaseDriver]
-
-    entity_id_field: str
-
-    # fields allowed for user update
-    update_fields: list[str]
-
-    # default values of fields
-    default_fields: dict[str, Any]
-
     # entity owning this object
     entity: BaseEntity
 
@@ -151,11 +137,57 @@ class BaseEntityModel(ABC):
 
     @property
     def exists(self) -> bool:
+        """
+        Whether the model for certain exists.
+        """
         return bool(self._exists)
 
     @property
-    def _nexists(self) -> bool:
+    def nexists(self) -> bool:
+        """
+        Whether the model for certain does not exist (setup is additionally done).
+        """
         return self._exists is False and self._setup_done
+
+    @property
+    @abstractmethod
+    def etapi_model(self) -> type[BaseModel]:
+        """
+        Pydantic model used in etapi.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def driver_cls(self) -> type[BaseDriver]:
+        """
+        Class to interface with ETAPI.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def entity_id_field(self) -> str:
+        """
+        Field used to store entity id.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def update_fields(self) -> list[str]:
+        """
+        Fields allowed for user update.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def default_fields(self) -> dict[str, Any]:
+        """
+        Default values of fields.
+        """
+        ...
 
     def flush(
         self, sorter: TopologicalSorter

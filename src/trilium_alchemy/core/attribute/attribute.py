@@ -96,19 +96,25 @@ class AttributeDriver(BaseDriver[EtapiAttributeModel]):
 
 
 class AttributeModel(BaseEntityModel):
-    etapi_model = EtapiAttributeModel
-    driver_cls = AttributeDriver
-    entity_id_field = "attribute_id"
-    update_fields = [
-        "value",
-        "is_inheritable",
-        "position",
-    ]
-    default_fields = {
-        "value": "",
-        "is_inheritable": False,
-        "position": 10,
-    }
+    @property
+    def etapi_model(self) -> type[EtapiAttributeModel]:
+        return EtapiAttributeModel
+
+    @property
+    def driver_cls(self) -> type[AttributeDriver]:
+        return AttributeDriver
+
+    @property
+    def entity_id_field(self) -> str:
+        return "attribute_id"
+
+    @property
+    def update_fields(self) -> list[str]:
+        return ["value", "is_inheritable", "position"]
+
+    @property
+    def default_fields(self) -> dict:
+        return {"value": "", "is_inheritable": False, "position": 10}
 
 
 class BaseAttribute(OrderedEntity[AttributeModel], ABC):

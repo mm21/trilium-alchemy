@@ -236,7 +236,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
 
     @property
     def _is_abandoned(self) -> bool:
-        return self._state in {State.CLEAN, State.DELETE} and self._model._nexists
+        return self._state in {State.CLEAN, State.DELETE} and self._model.nexists
 
     @property
     def _is_orphan(self) -> bool:

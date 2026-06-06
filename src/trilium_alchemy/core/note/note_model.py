@@ -117,22 +117,24 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
 
 
 class NoteModel(BaseEntityModel):
-    etapi_model = EtapiNoteModel
+    @property
+    def etapi_model(self) -> type[EtapiNoteModel]:
+        return EtapiNoteModel
 
-    driver_cls = NoteDriver
+    @property
+    def driver_cls(self) -> type[NoteDriver]:
+        return NoteDriver
 
-    entity_id_field = "note_id"
+    @property
+    def entity_id_field(self) -> str:
+        return "note_id"
 
-    update_fields = [
-        "title",
-        "type",
-        "mime",
-    ]
+    @property
+    def update_fields(self) -> list[str]:
+        return ["title", "type", "mime"]
 
-    # this is where the actual defaults come from; defaults in
-    # Note.__init__ are only for documentation
-    default_fields = {
-        "title": "new note",
-        "type": "text",
-        "mime": "text/html",
-    }
+    @property
+    def default_fields(self) -> dict:
+        # this is where the actual defaults come from; defaults in
+        # Note.__init__ are only for documentation
+        return {"title": "new note", "type": "text", "mime": "text/html"}

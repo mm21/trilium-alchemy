@@ -85,23 +85,25 @@ class BranchDriver(BaseDriver[EtapiBranchModel]):
 
 
 class BranchModel(BaseEntityModel):
-    etapi_model = EtapiBranchModel
+    @property
+    def etapi_model(self) -> type[EtapiBranchModel]:
+        return EtapiBranchModel
 
-    driver_cls = BranchDriver
+    @property
+    def driver_cls(self) -> type[BranchDriver]:
+        return BranchDriver
 
-    entity_id_field = "branch_id"
+    @property
+    def entity_id_field(self) -> str:
+        return "branch_id"
 
-    update_fields = [
-        "prefix",
-        "is_expanded",
-        "note_position",
-    ]
+    @property
+    def update_fields(self) -> list[str]:
+        return ["prefix", "is_expanded", "note_position"]
 
-    default_fields = {
-        "prefix": "",
-        "is_expanded": False,
-        "note_position": 10,
-    }
+    @property
+    def default_fields(self) -> dict:
+        return {"prefix": "", "is_expanded": False, "note_position": 10}
 
 
 class Branch(OrderedEntity[BranchModel]):
