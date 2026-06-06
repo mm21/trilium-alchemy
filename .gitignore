@@ -1,7 +1,6 @@
 **/__pycache__
+__cache__
 __out__
-.doit*
-.pytest_cache
 .env
 .trilium_data
 .venv
