@@ -4,11 +4,19 @@ Contributions are welcome, but please reach out first so work can be coordinated
 
 ## Setup
 
-Ensure that [Poetry](https://python-poetry.org/) is installed before proceeding.
+Ensure that [uv](https://docs.astral.sh/uv/) is installed before proceeding. On macOS and Linux:
 
 ```bash
-pip install poetry
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+See the [installation docs](https://docs.astral.sh/uv/getting-started/installation/) for other methods.
 
 ### Installation
 
@@ -19,17 +27,19 @@ git clone https://github.com/mm21/trilium-alchemy.git
 cd trilium-alchemy
 ```
 
-Install the dependencies:
+Install the dependencies (the `dev` dependency group is included by default):
 
 ```bash
-poetry install --with=dev
+uv sync
 ```
 
-And then activate a shell:
+This creates a virtual environment in `.venv`. Either activate it:
 
 ```bash
-poetry shell
+source .venv/bin/activate
 ```
+
+or prefix commands with `uv run` (e.g. `uv run pytest`, `uv run doit`) to run them in the environment without activating it.
 
 ### Environment
 

@@ -165,7 +165,7 @@ class MyFrontendScript(BaseDeclarativeNote):
 The filename is relative to the package or subpackage the class is defined in. Currently accessing parent paths (`".."`) is not supported.
 
 ```{note}
-If you use [Poetry](https://python-poetry.org/) and want to publish a Python note hierarchy with content from a file, no additional steps are needed to package these files if they reside in your project. If you use setuptools, you'll need to use `package_data` or `data_files` to include them (however using setuptools for this is currently untested).
+If you use [uv](https://docs.astral.sh/uv/) and want to publish a Python note hierarchy with content from a file, no additional steps are needed to package these files if they reside within your package. If you use setuptools, you'll need to use `package_data` or `data_files` to include them (however using setuptools for this is currently untested).
 ```
 
 ## Singleton notes
