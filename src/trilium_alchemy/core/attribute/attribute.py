@@ -137,15 +137,15 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
 
     _attribute_type: str
     _model_cls = AttributeModel
-    _position: int = FieldDescriptor("position")
+    _position = FieldDescriptor[int]("position")
 
     # name of attribute, ensuring only one name is assigned
-    _name: str = WriteOnceDescriptor("_name_obj")
+    _name = WriteOnceDescriptor[str]("_name_obj")
     _name_obj: str | None = None
 
     # note which owns this attribute, ensuring only one note is assigned
     # - or None if not yet assigned to a note
-    _note: Note | None = WriteOnceDescriptor("_note_obj")
+    _note = WriteOnceDescriptor["Note | None"]("_note_obj")
     _note_obj: Note | None = None
 
     def __new__(cls, *_, **kwargs) -> Self:

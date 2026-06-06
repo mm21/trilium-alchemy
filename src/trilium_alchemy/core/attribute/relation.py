@@ -28,7 +28,7 @@ class Relation(BaseAttribute):
 
     _attribute_type: str = "relation"
 
-    _target = WriteThroughDescriptor("_target_obj", "note_id", "value")
+    _target = WriteThroughDescriptor["Note"]("_target_obj", "note_id", "value")
     _target_obj: Note | None = None
 
     def __init__(

@@ -122,13 +122,13 @@ class Branch(OrderedEntity[BranchModel]):
 
     _model_cls = BranchModel
 
-    _parent: Note | None = WriteOnceDescriptor("_parent_obj", validator="_validate")
+    _parent = WriteOnceDescriptor["Note | None"]("_parent_obj", validator="_validate")
     _parent_obj: Note | None = None
 
-    _child: Note = WriteOnceDescriptor("_child_obj", validator="_validate")
+    _child = WriteOnceDescriptor["Note | None"]("_child_obj", validator="_validate")
     _child_obj: Note | None = None
 
-    _position: int = FieldDescriptor("note_position")
+    _position = FieldDescriptor[int]("note_position")
 
     def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(

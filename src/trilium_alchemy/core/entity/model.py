@@ -4,7 +4,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Callable, Generator
+from typing import TYPE_CHECKING, Any, Generator, Self, cast, overload
 
 from pydantic import BaseModel
 
@@ -356,7 +356,7 @@ class BaseEntityModel(ABC):
             for ext in self._extensions:
                 ext._setup(model_backing)
 
-    # TODO: param check_type: check and return given type
+    # MTODO: param check_type: check and return given type
     def get_field(self, field: str) -> str | int | bool | None:
         """
         Get field from model, with working state taking precedence over database state.
@@ -528,15 +528,6 @@ class StatefulExtension(Extension):
         ...
 
 
-def require_setup(func):
-    @wraps(func)
-    def wrapper(self, ent: BaseEntity, objtype=None):
-        ent._model.setup_check()
-        return func(self, ent, objtype)
-
-    return wrapper
-
-
 def require_setup_prop(func):
     if isinstance(func, property):
         # if decorating a property, wrap its getter and return a new property
@@ -552,7 +543,7 @@ def require_setup_prop(func):
     return wrapper
 
 
-class FieldDescriptor:
+class FieldDescriptor[T]:
     """
     Accessor for a model field, e.g. a {obj}`Note`'s `title` field.
 
@@ -566,46 +557,58 @@ class FieldDescriptor:
     def __init__(self, field: str):
         self._field = field
 
-    def __get__(self, ent: BaseEntity, objtype=None):
-        return ent._model.get_field(self._field)
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self: ...
+    @overload
+    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
+        _ = objtype
+        if obj is None:
+            return self
+        return cast(T, obj._model.get_field(self._field))
 
-    def __set__(self, ent: BaseEntity, val: Any):
-        ent._model.set_field(self._field, val)
+    def __set__(self, obj: BaseEntity, val: T):
+        obj._model.set_field(self._field, val)
 
 
-class WriteThroughDescriptor:
+class WriteThroughDescriptor[T]:
     """
     Accessor for class attribute which immediately populates the underlying model field
     when updated.
     """
 
-    # attribute which holds value
+    # attribute which holds value for reading
     _attr: str
 
-    # attribute of attribute containing value set in model
-    _attr_attr: str
+    # attribute of object which holds value for writing
+    _obj_attr: str
 
     # name of model field to be set
     _field: str
 
-    def __init__(self, attr: str, attr_attr: str, field: str):
+    def __init__(self, attr: str, obj_attr: str, field: str):
         self._attr = attr
-        self._attr_attr = attr_attr
+        self._obj_attr = obj_attr
         self._field = field
 
-    @require_setup
-    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
-        return getattr(ent, self._attr)
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self: ...
+    @overload
+    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
+        _ = objtype
+        if obj is None:
+            return self
+        obj._model.setup_check()
+        return getattr(obj, self._attr)
 
-    def __set__(self, ent: BaseEntity, value: Any):
+    def __set__(self, obj: BaseEntity, value: T):
         assert value is not None
-        # set attr of entity
-        setattr(ent, self._attr, value)
-        # write through to model
-        ent._model.set_field(self._field, getattr(value, self._attr_attr))
+        setattr(obj, self._attr, value)
+        obj._model.set_field(self._field, getattr(value, self._obj_attr))
 
 
-class WriteOnceDescriptor:
+class WriteOnceDescriptor[T]:
     """
     Accessor for field which is only allowed a single value.
 
@@ -617,28 +620,33 @@ class WriteOnceDescriptor:
     # attribute which holds value
     _attr: str
 
-    # callback to invoke after setting value
-    _validator: Callable
+    # name of method to invoke after setting value
+    _validator: str | None
 
-    def __init__(self, attr: str, validator: Callable = None):
+    def __init__(self, attr, *, validator: str | None = None):
         self._attr = attr
         self._validator = validator
 
-    @require_setup
-    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
-        return getattr(ent, self._attr)
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self: ...
+    @overload
+    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
+        _ = objtype
+        if obj is None:
+            return self
+        obj._model.setup_check()
+        return getattr(obj, self._attr)
 
-    def __set__(self, ent: BaseEntity, value: Any):
+    def __set__(self, obj: BaseEntity, value: T):
         assert value is not None
 
-        value_current = getattr(ent, self._attr)
+        value_current = getattr(obj, self._attr)
 
         if value_current is None:
-            setattr(ent, self._attr, value)
+            setattr(obj, self._attr, value)
         else:
-            # make sure value isn't being changed, would be internal error
             assert value_current == value
 
-        # invoke validator
-        if self._validator:
-            getattr(ent, self._validator)()
+        if validator := self._validator:
+            getattr(obj, validator)()

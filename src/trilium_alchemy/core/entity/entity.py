@@ -487,22 +487,18 @@ class EntityIdDescriptor:
     """
 
     @overload
-    def __get__(self, ent: None, objtype: None) -> EntityIdDescriptor: ...
-
+    def __get__(self, obj: None, objtype: type) -> Self: ...
     @overload
-    def __get__(self, ent: BaseEntity, objtype: type[BaseEntity]) -> str: ...
-
-    def __get__(
-        self,
-        ent: BaseEntity | None,
-        objtype: type[BaseEntity] | None = None,
-    ) -> EntityIdDescriptor | str:
-        if ent is None:
+    def __get__(self, obj: BaseEntity, objtype: type) -> str: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | str:
+        _ = objtype
+        if obj is None:
             return self
-        return cast(str, ent._entity_id)
+        return cast(str, obj._entity_id)
 
-    def __set__(self, ent: BaseEntity, val: Any):
-        raise ReadOnlyError("_entity_id", ent)
+    def __set__(self, obj: BaseEntity, val: Any):
+        _ = val
+        raise ReadOnlyError("_entity_id", obj)
 
 
 def normalize_entities[CollectionT: Iterable](
