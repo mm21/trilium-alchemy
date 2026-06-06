@@ -14,9 +14,12 @@ if TYPE_CHECKING:
     from .note import Note
 
 
-class NoteDriver(BaseDriver):
+class NoteDriver(BaseDriver[EtapiNoteModel]):
     @property
     def note(self) -> Note:
+        from .note import Note
+
+        assert isinstance(self.entity, Note)
         return self.entity
 
     def fetch(self) -> EtapiNoteModel | None:
@@ -40,7 +43,7 @@ class NoteDriver(BaseDriver):
         assert parent_branch.parent._model.exists
 
         # get note fields
-        model_dict = self.note._model._working.copy()
+        model_dict = self.note._model.working_data.copy()
 
         model_dict["parent_note_id"] = parent_branch.parent.note_id
 
@@ -53,7 +56,7 @@ class NoteDriver(BaseDriver):
             model_dict["note_id"] = self.note.note_id
 
         # assign writeable fields from branch
-        for field in parent_branch._model.fields_update:
+        for field in parent_branch._model.update_fields:
             model_dict[field] = parent_branch._model.get_field(field)
 
         model = CreateNoteDef(**model_dict)
@@ -118,9 +121,9 @@ class NoteModel(BaseEntityModel):
 
     driver_cls = NoteDriver
 
-    field_entity_id = "note_id"
+    entity_id_field = "note_id"
 
-    fields_update = [
+    update_fields = [
         "title",
         "type",
         "mime",
@@ -128,7 +131,7 @@ class NoteModel(BaseEntityModel):
 
     # this is where the actual defaults come from; defaults in
     # Note.__init__ are only for documentation
-    fields_default = {
+    default_fields = {
         "title": "new note",
         "type": "text",
         "mime": "text/html",

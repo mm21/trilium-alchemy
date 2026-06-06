@@ -52,7 +52,6 @@ SUFFIX_SIZE = NORM_NOTE_ID_SIZE - TREE_DEPTH * PREFIX_SIZE
 Number of characters in note folder.
 """
 
-
 @dataclass(kw_only=True)
 class DumpStats:
     """

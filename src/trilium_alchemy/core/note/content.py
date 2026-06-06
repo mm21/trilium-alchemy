@@ -218,7 +218,7 @@ class Content(NoteStatefulExtension):
         self._working = BlobState()
 
         # refresh note model to update blob_id and modified time
-        model_new = self._note._model._driver.fetch()
+        model_new = self._note._model.driver.fetch()
         assert isinstance(model_new, EtapiNoteModel)
 
         # sanity check to ensure blob_id is expected

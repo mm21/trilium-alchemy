@@ -27,30 +27,34 @@ __all__ = [
 ]
 
 
-class AttributeDriver(BaseDriver):
+class AttributeDriver(BaseDriver[EtapiAttributeModel]):
     @property
     def attribute(self) -> BaseAttribute:
+        assert isinstance(self.entity, BaseAttribute)
         return self.entity
 
     def fetch(self) -> EtapiAttributeModel | None:
-        model: EtapiAttributeModel | None
+        assert self.attribute.attribute_id
+        model: EtapiAttributeModel | None = None
 
         try:
             model = self.session.api.get_attribute_by_id(self.attribute.attribute_id)
         except NotFoundException:
-            model = None
+            pass
 
         return model
 
-    def flush_create(self, sorter: TopologicalSorter):
-        assert self.attribute._note is not None
-        assert self.attribute._note.note_id is not None
+    def flush_create(self, sorter: TopologicalSorter) -> EtapiAttributeModel:
+        _ = sorter
+        assert self.attribute._note
+        assert self.attribute._note.note_id
+        assert self.attribute._model.working_data
 
         model = EtapiAttributeModel(
-            note_id=self.attribute._note.note_id,
+            noteId=self.attribute._note.note_id,
             type=self.attribute._attribute_type,
             name=self.attribute.name,
-            **self.attribute._model._working,
+            **self.attribute._model.working_data,
         )
 
         if self.attribute.attribute_id is not None:
@@ -61,8 +65,10 @@ class AttributeDriver(BaseDriver):
 
         return model_new
 
-    def flush_update(self, sorter: TopologicalSorter):
-        # check if relation and target changed
+    def flush_update(self, sorter: TopologicalSorter) -> EtapiAttributeModel:
+        assert self.attribute.attribute_id
+
+        # check if is relation and target changed
         relation_update = (
             self.attribute._attribute_type == "relation"
             and self.attribute._model.is_field_changed("value")
@@ -84,21 +90,21 @@ class AttributeDriver(BaseDriver):
             return model_new
 
     def flush_delete(self, sorter: TopologicalSorter):
+        _ = sorter
+        assert self.attribute.attribute_id
         self.session.api.delete_attribute_by_id(self.attribute.attribute_id)
 
 
 class AttributeModel(BaseEntityModel):
     etapi_model = EtapiAttributeModel
     driver_cls = AttributeDriver
-    field_entity_id = "attribute_id"
-
-    fields_update = [
+    entity_id_field = "attribute_id"
+    update_fields = [
         "value",
         "is_inheritable",
         "position",
     ]
-
-    fields_default = {
+    default_fields = {
         "value": "",
         "is_inheritable": False,
         "position": 10,

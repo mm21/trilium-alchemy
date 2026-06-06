@@ -25,9 +25,10 @@ __all__ = [
 ]
 
 
-class BranchDriver(BaseDriver):
+class BranchDriver(BaseDriver[EtapiBranchModel]):
     @property
     def branch(self) -> Branch:
+        assert isinstance(self.entity, Branch)
         return self.entity
 
     def fetch(self) -> EtapiBranchModel | None:
@@ -52,7 +53,7 @@ class BranchDriver(BaseDriver):
         model = EtapiBranchModel(
             note_id=self.branch.child.note_id,
             parent_note_id=self.branch.parent.note_id,
-            **self.branch._model._working,
+            **self.branch._model.working_data,
         )
 
         model_new = self.session.api.post_branch(model)
@@ -88,15 +89,15 @@ class BranchModel(BaseEntityModel):
 
     driver_cls = BranchDriver
 
-    field_entity_id = "branch_id"
+    entity_id_field = "branch_id"
 
-    fields_update = [
+    update_fields = [
         "prefix",
         "is_expanded",
         "note_position",
     ]
 
-    fields_default = {
+    default_fields = {
         "prefix": "",
         "is_expanded": False,
         "note_position": 10,

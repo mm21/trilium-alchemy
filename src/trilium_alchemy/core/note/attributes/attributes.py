@@ -135,12 +135,12 @@ class InheritedAttributes(
             attr_map: dict[str, list[BaseAttribute]] = dict()
             for attr in inherited_list:
                 if attr.note.note_id not in attr_map:
-                    attr_map[attr.note.note_id] = list()
+                    attr_map[attr.note.note_id] = []
 
                 attr_map[attr.note.note_id].append(attr)
 
             # generate sorted list
-            list_sorted = list()
+            list_sorted = []
             for note_id in attr_map:
                 attr_map[note_id].sort(key=lambda x: x._position)
                 list_sorted += attr_map[note_id]

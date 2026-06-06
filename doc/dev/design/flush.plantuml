@@ -7,7 +7,7 @@ participant "session: Session" as session
 participant "session._cache: Cache" as cache
 participant "entity: BaseEntity" as entity
 participant "entity._model: BaseEntityModel" as model
-participant "entity._model._driver: BaseDriver" as driver
+participant "entity._model.driver: BaseDriver" as driver
 database "ETAPI" as etapi
 
 user->session ++: session.flush(entities: Iterable[Entity] = None)

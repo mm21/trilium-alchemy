@@ -14,11 +14,8 @@ from .types import State
 if TYPE_CHECKING:
     from .entity import BaseEntity
 
-# TODO: parameterize BaseDriver and BaseEntityModel with BaseModel subclass
-# for this entity
 
-
-class BaseDriver(ABC):
+class BaseDriver[ModelT: BaseModel](ABC):
     """
     Implements interface to backing store for note, either to Trilium itself (through
     ETAPI) or another mechanism like a filesystem.
@@ -32,21 +29,21 @@ class BaseDriver(ABC):
         self.session = entity.session
 
     @abstractmethod
-    def fetch(self) -> BaseModel | None:
+    def fetch(self) -> ModelT | None:
         """
         Retrieve model from backing store, or None if it doesn't exist.
         """
         ...
 
     @abstractmethod
-    def flush_create(self, sorter: TopologicalSorter):
+    def flush_create(self, sorter: TopologicalSorter) -> ModelT:
         """
         Create entity.
         """
         ...
 
     @abstractmethod
-    def flush_update(self, sorter: TopologicalSorter):
+    def flush_update(self, sorter: TopologicalSorter) -> ModelT:
         """
         Update entity.
         """
@@ -58,6 +55,10 @@ class BaseDriver(ABC):
         Delete entity.
         """
         ...
+
+
+# TODO: parameterize BaseEntityModel with BaseModel subclass
+# for this entity
 
 
 class BaseEntityModel(ABC):
@@ -72,21 +73,26 @@ class BaseEntityModel(ABC):
     # class to interface with ETAPI
     driver_cls: type[BaseDriver]
 
+    entity_id_field: str
+
     # fields allowed for user update
-    fields_update: list[str]
+    update_fields: list[str]
 
     # default values of fields
-    fields_default: dict[str, str]
+    default_fields: dict[str, Any]
 
     # entity owning this object
     entity: BaseEntity
 
+    # driver to interface with backing store
+    driver: BaseDriver
+
     # cached data fetched from backing store, or None if not fetched
-    _backing: dict[str, str | int | bool] | None = None
+    backing_data: dict[str, Any] | None = None
 
     # locally modified or created data not yet committed to backing store,
     # or None if not fetched
-    _working: dict[str, str | int | bool] | None = None
+    working_data: dict[str, Any] | None = None
 
     # whether model setup was completed, populating model from server
     _setup_done: bool = False
@@ -97,17 +103,13 @@ class BaseEntityModel(ABC):
     # list of stateful extensions registered by subclass
     _extensions: list[StatefulExtension]
 
-    # driver to interface with backing store
-    _driver: BaseDriver
-
     def __init__(self, entity: BaseEntity):
         self.entity = entity
-        self._extensions = list()
-
-        self._driver = self.driver_cls(entity)
+        self.driver = self.driver_cls(entity)
+        self._extensions = []
 
     def __str__(self):
-        fields = list()
+        fields = []
 
         def get_field_str(value: str | int | bool) -> str:
             return (
@@ -116,21 +118,21 @@ class BaseEntityModel(ABC):
                 else str(value)
             )
 
-        for field in self.fields_update:
-            if self._backing is None:
+        for field in self.update_fields:
+            if self.backing_data is None:
                 if self.entity._is_create:
                     backing = ""
                 else:
                     backing = "?"
             else:
-                backing = f"{get_field_str(self._backing[field])}"
+                backing = f"{get_field_str(self.backing_data[field])}"
 
-            if self._working is None or not self.is_changed:
+            if self.working_data is None or not self.is_changed:
                 working = ""
             else:
                 if (
-                    self._backing is not None
-                    and self._backing[field] == self._working[field]
+                    self.backing_data is not None
+                    and self.backing_data[field] == self.working_data[field]
                 ):
                     working = ""
                 else:
@@ -139,7 +141,7 @@ class BaseEntityModel(ABC):
                     else:
                         arrow = "->"
 
-                    working = f"{arrow}{get_field_str(self._working[field])}"
+                    working = f"{arrow}{get_field_str(self.working_data[field])}"
 
             fields.append(f"{field}={backing}{working}")
 
@@ -167,9 +169,9 @@ class BaseEntityModel(ABC):
 
         # get flush method based on state
         func = {
-            State.CREATE: self._driver.flush_create,
-            State.UPDATE: self._driver.flush_update,
-            State.DELETE: self._driver.flush_delete,
+            State.CREATE: self.driver.flush_create,
+            State.UPDATE: self.driver.flush_update,
+            State.DELETE: self.driver.flush_delete,
         }[self.entity._state]
 
         # invoke flush method
@@ -192,18 +194,18 @@ class BaseEntityModel(ABC):
         if self.entity._state is State.CREATE:
             # set entity id if needed
             if self.entity._entity_id is None:
-                entity_id = getattr(model_new, self.field_entity_id)
+                entity_id = getattr(model_new, self.entity_id_field)
                 self.entity._set_entity_id(entity_id)
 
         return (model_new, gen)
 
     @property
     def fields_changed(self) -> bool:
-        if self._working is None or self._backing is None:
+        if self.working_data is None or self.backing_data is None:
             return False
         else:
-            backing = {k: self._backing[k] for k in self.fields_update}
-            return backing != self._working
+            backing = {k: self.backing_data[k] for k in self.update_fields}
+            return backing != self.working_data
 
     @property
     def extension_changed(self) -> bool:
@@ -214,10 +216,10 @@ class BaseEntityModel(ABC):
         return self.entity._is_create or self.fields_changed or self.extension_changed
 
     def is_field_changed(self, field) -> bool:
-        if self._working is None or self._backing is None:
+        if self.working_data is None or self.backing_data is None:
             return False
 
-        return self._backing[field] != self._working[field]
+        return self.backing_data[field] != self.working_data[field]
 
     def get_fields_changed(self) -> dict[str, Any]:
         """
@@ -225,15 +227,15 @@ class BaseEntityModel(ABC):
         """
         fields = dict()
 
-        for field in self.fields_update:
-            if self._backing[field] != self._working[field]:
-                fields[field] = self._working[field]
+        for field in self.update_fields:
+            if self.backing_data[field] != self.working_data[field]:
+                fields[field] = self.working_data[field]
 
         return fields
 
     def teardown(self):
-        self._backing = None
-        self._working = None
+        self.backing_data = None
+        self.working_data = None
         self._setup_done = False
 
         for ext in self._extensions:
@@ -264,8 +266,8 @@ class BaseEntityModel(ABC):
 
     def check_newer(self, model: BaseModel) -> bool:
         return (
-            self._backing is None
-            or model.utc_date_modified > self._backing["utc_date_modified"]
+            self.backing_data is None
+            or model.utc_date_modified > self.backing_data["utc_date_modified"]
         )
 
     def setup(self, model_backing: BaseModel | None = None, create: bool | None = None):
@@ -283,26 +285,28 @@ class BaseEntityModel(ABC):
         else:
             # attempt to fetch from database if not provided
             if model_backing is None:
-                model_backing = self._driver.fetch()
+                model_backing = self.driver.fetch()
 
             if model_backing is None:
-                self._backing = None
+                self.backing_data = None
 
                 # create is False means expected to exist
                 assert create is None
             else:
-                self._backing = dict(model_backing)
+                self.backing_data = dict(model_backing)
 
             # set exists flag
-            self._exists = self._backing is not None
+            self._exists = self.backing_data is not None
 
         # populate working fields
         if self._exists:
             # reset fields if any; will create on demand if needed
-            self._working = None
+            self.working_data = None
         else:
             # populate new working fields
-            self._working = {f: self._get_default_field(f) for f in self.fields_update}
+            self.working_data = {
+                f: self._get_default_field(f) for f in self.update_fields
+            }
 
             # move to create state
             self.entity._set_dirty(State.CREATE)
@@ -331,17 +335,17 @@ class BaseEntityModel(ABC):
         self.setup_check()
 
         # attempt to get from working model
-        if self._working is not None and field in self._working:
+        if self.working_data is not None and field in self.working_data:
             # get field from working model
-            return self._working[field]
+            return self.working_data[field]
 
         if not self.entity._is_create:
             # backing model should be populated at this point
-            assert self._backing is not None
+            assert self.backing_data is not None
 
         # get field from backing model
-        if self._backing is not None:
-            return self._backing[field]
+        if self.backing_data is not None:
+            return self.backing_data[field]
 
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
@@ -352,23 +356,23 @@ class BaseEntityModel(ABC):
         Set field in working model.
         """
         # ensure field is writeable
-        assert field in self.fields_update
+        assert field in self.update_fields
 
         # perform model setup if not done
         self.setup_check()
 
         # check if working model is initialized
-        if self._working is None:
+        if self.working_data is None:
             # backing model should exist: working model populated for create
-            assert self._backing is not None
+            assert self.backing_data is not None
 
             # populate working model with copy of backing model, filtered by
             # fields used for update
-            self._working = {k: self._backing[k] for k in self.fields_update}
+            self.working_data = {k: self.backing_data[k] for k in self.update_fields}
 
         if not bypass_validate:
             # validate fields for setting
-            assert field in self.fields_update
+            assert field in self.update_fields
 
         # handle deleted state
         if self.entity._state is State.DELETE:
@@ -377,7 +381,7 @@ class BaseEntityModel(ABC):
             )
 
         # set field in working model
-        self._working[field] = value
+        self.working_data[field] = value
 
         # set as dirty/clean if needed
         self.entity._check_state()
@@ -406,8 +410,8 @@ class BaseEntityModel(ABC):
         """
         Get default field for initializing working model.
         """
-        assert field in self.fields_default, f"{field} not in defaults"
-        return self.fields_default[field]
+        assert field in self.default_fields, f"{field} not in defaults"
+        return self.default_fields[field]
 
     @property
     def _etapi_fields(self) -> set[str]:
