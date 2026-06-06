@@ -160,8 +160,8 @@ class Attributes(
     Interface to a note's owned and inherited attributes.
 
     This object is stateless; {obj}`Note.attributes.owned` and
-    {obj}`Note.attributes.inherited` are the sources of truth
-    for owned and inherited attributes respectively.
+    {obj}`Note.attributes.inherited` are the sources of truth for owned and inherited
+    attributes respectively.
 
     For type-safe accesses, use {obj}`Note.labels` or {obj}`Note.relations`.
 
@@ -182,8 +182,8 @@ class Attributes(
     def owned(self) -> OwnedAttributes:
         """
         Getter/setter for owned attributes.
-        Same interface as {obj}`Note.attributes` but filtered by
-        owned attributes.
+
+        Same interface as {obj}`Note.attributes` but filtered by owned attributes.
         """
         return self._owned
 
@@ -196,8 +196,8 @@ class Attributes(
     def inherited(self) -> InheritedAttributes:
         """
         Getter for inherited attributes.
-        Same interface as {obj}`Note.attributes` but filtered by
-        inherited attributes.
+
+        Same interface as {obj}`Note.attributes` but filtered by inherited attributes.
         """
         return self._inherited
 

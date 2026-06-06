@@ -1,4 +1,7 @@
-"""Renderer for MyST."""
+"""
+Renderer for MyST.
+"""
+
 from __future__ import annotations
 
 import re
@@ -13,7 +16,9 @@ _RE_DELIMS = re.compile(r"(\s*[\[\]\(\),]\s*)")
 
 
 class MystRenderer(RendererBase):
-    """Render the documentation as MyST."""
+    """
+    Render the documentation as MyST.
+    """
 
     EXTENSION = ".md"
 
@@ -97,7 +102,9 @@ class MystRenderer(RendererBase):
 
     @staticmethod
     def enclosing_backticks(text: str) -> str:
-        """Ensure the enclosing backticks are more than any inner ones."""
+        """
+        Ensure the enclosing backticks are more than any inner ones.
+        """
         backticks = "```"
         while backticks in text:
             backticks += "`"
@@ -106,8 +113,9 @@ class MystRenderer(RendererBase):
     def render_module(
         self, item: ItemData, module: Module, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for a module."""
-
+        """
+        Create the content for a module.
+        """
         if self.standalone and self.is_hidden(item):
             yield from ["---", "orphan: true", "---", ""]
 
@@ -181,9 +189,7 @@ class MystRenderer(RendererBase):
                             yield from self.generate_summary(
                                 index_filtered,
                                 name_map={
-                                    sym.canonical.virt_path: sym.virt_path.split(
-                                        "."
-                                    )[
+                                    sym.canonical.virt_path: sym.virt_path.split(".")[
                                         -1
                                     ]
                                     for sym in index_filtered
@@ -205,18 +211,20 @@ class MystRenderer(RendererBase):
     def render_package(
         self, item: ItemData, module: Module, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for a package."""
+        """
+        Create the content for a package.
+        """
         yield from self.render_module(item, module)
 
     def render_function(
         self, item: ItemData, symbol: Symbol, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for a function."""
+        """
+        Create the content for a function.
+        """
         short_name = item["full_name"].split(".")[-1]
         show_annotations = self.show_annotations(item)
-        sig = (
-            f"{short_name}({self.format_args(item['args'], show_annotations)})"
-        )
+        sig = f"{short_name}({self.format_args(item['args'], show_annotations)})"
         if show_annotations and item.get("return_annotation"):
             sig += f" -> {self.format_annotation(item['return_annotation'])}"
 
@@ -239,7 +247,9 @@ class MystRenderer(RendererBase):
     def render_exception(
         self, item: ItemData, symbol: Symbol, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for an exception."""
+        """
+        Create the content for an exception.
+        """
         yield from self.render_class(item, symbol)
 
     def _check_subclass(self, item: ItemData, cls_name: str):
@@ -257,17 +267,15 @@ class MystRenderer(RendererBase):
                 if item:
                     subclasses.append(item)
             return any(
-                self._check_subclass(subclass, cls_name)
-                for subclass in subclasses
+                self._check_subclass(subclass, cls_name) for subclass in subclasses
             )
 
         return is_subclass
 
-    def render_class(
-        self, item: ItemData, symbol: Symbol, **kwargs
-    ) -> t.Iterable[str]:
-        """Create the content for a class."""
-
+    def render_class(self, item: ItemData, symbol: Symbol, **kwargs) -> t.Iterable[str]:
+        """
+        Create the content for a class.
+        """
         # check if sig should be skipped
         # TODO: make generic, config-based (register callback?)
         mixin_subclass = (
@@ -365,7 +373,9 @@ class MystRenderer(RendererBase):
     def render_property(
         self, item: ItemData, symbol: Symbol, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for a property."""
+        """
+        Create the content for a property.
+        """
         short_name = item["full_name"].split(".")[-1]
         yield f"````{{py:property}} {short_name}"
         yield f":canonical: {item['full_name']}"
@@ -386,7 +396,9 @@ class MystRenderer(RendererBase):
     def render_method(
         self, item: ItemData, symbol: Symbol | None, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for a method."""
+        """
+        Create the content for a method.
+        """
         short_name = item["full_name"].split(".")[-1]
         show_annotations = self.show_annotations(item)
         sig = f"{short_name}({self.format_args(item['args'], show_annotations, ignore_self='self')})"
@@ -417,13 +429,15 @@ class MystRenderer(RendererBase):
     def render_attribute(
         self, item: ItemData, symbol: Symbol, **kwargs
     ) -> t.Iterable[str]:
-        """Create the content for an attribute."""
+        """
+        Create the content for an attribute.
+        """
         yield from self.render_data(item, symbol, **kwargs)
 
-    def render_data(
-        self, item: ItemData, symbol: Symbol, **kwargs
-    ) -> t.Iterable[str]:
-        """Create the content for a data item."""
+    def render_data(self, item: ItemData, symbol: Symbol, **kwargs) -> t.Iterable[str]:
+        """
+        Create the content for a data item.
+        """
         short_name = item["full_name"].split(".")[-1]
 
         yield f"````{{py:{item['type']}}} {short_name}"
@@ -470,18 +484,14 @@ class MystRenderer(RendererBase):
 
         return lines
 
-    def render_docstring(
-        self, item: ItemData, summary=False, allow_titles=False
-    ):
+    def render_docstring(self, item: ItemData, summary=False, allow_titles=False):
         lines = []
 
         col_prefix = "  - " if summary else ""
         indent = "    " if summary else ""
 
         if self.show_docstring(item):
-            lines += [
-                f"{col_prefix}```{{autodoc2-docstring}} {item['full_name']}"
-            ]
+            lines += [f"{col_prefix}```{{autodoc2-docstring}} {item['full_name']}"]
 
             if parser_name := self.get_doc_parser(item["full_name"]):
                 lines += [f"{indent}:parser: {parser_name}"]
@@ -501,8 +511,9 @@ class MystRenderer(RendererBase):
         return lines
 
     def render_init(self, item: ItemData):
-        """Render initializer for classes"""
-
+        """
+        Render initializer for classes.
+        """
         lines = []
 
         init_item = self.get_item(f"{item['full_name']}.__init__")
@@ -550,9 +561,7 @@ class MystRenderer(RendererBase):
 
         return lines
 
-    def render_info(
-        self, item: ItemData = None, symbol: Symbol = None, **kwargs
-    ):
+    def render_info(self, item: ItemData = None, symbol: Symbol = None, **kwargs):
         lines = []
         lines += self.render_aliases(symbol)
         lines += self.render_inherited(item, **kwargs)
@@ -567,9 +576,7 @@ class MystRenderer(RendererBase):
                 "```",
             ]
 
-            lines += self.render_list(
-                [f"`{sym.virt_path}`" for sym in symbol.aliases]
-            )
+            lines += self.render_list([f"`{sym.virt_path}`" for sym in symbol.aliases])
 
         return lines
 
@@ -586,7 +593,8 @@ class MystRenderer(RendererBase):
         return lines
 
     def _reformat_cls_base_myst(self, value: str) -> str:
-        """Reformat the base of a class for RST.
+        """
+        Reformat the base of a class for RST.
 
         Base annotations can come in the form::
 
@@ -595,7 +603,6 @@ class MystRenderer(RendererBase):
         which we want to reformat as::
 
             {py:obj}`A`\\[{py:obj}`B`, {py:obj}`C`, {py:obj}`D`\\]
-
         """
         result = ""
         for sub_target in _RE_DELIMS.split(value.strip()):

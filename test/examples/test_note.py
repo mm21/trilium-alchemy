@@ -19,9 +19,7 @@ class MyNote(BaseDeclarativeNote):
 @mark.default_session
 def test_imperative(session: Session):
     # create new note under root
-    note = Note(
-        title="My note", content="<p>Hello, world!</p>", parents=session.root
-    )
+    note = Note(title="My note", content="<p>Hello, world!</p>", parents=session.root)
 
     # add label #sorted
     note += Label("sorted")

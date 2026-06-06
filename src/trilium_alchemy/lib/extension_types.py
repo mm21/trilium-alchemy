@@ -1,6 +1,7 @@
 """
 Defines more specific classes to assist in the development of extensions.
 """
+
 from __future__ import annotations
 
 from ..core import BaseAttribute, Branch, Note, label

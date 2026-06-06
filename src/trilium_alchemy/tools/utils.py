@@ -1,6 +1,7 @@
 """
 Utilities for generic tool-related functionality.
 """
+
 from __future__ import annotations
 
 import typer
@@ -24,11 +25,9 @@ def commit_changes(
     """
     Print a summary of changes and handle flags.
 
-    ```{todo}
-    Add `BaseEntity._rich_str`: returns `rich.text.Text` object with individual
-    components styled, e.g. note titles. Avoids need to escape single-quotes
-    in titles and model values.
-    ```
+    ```{todo} Add `BaseEntity._rich_str`: returns `rich.text.Text` object with
+    individual components styled, e.g. note titles. Avoids need to escape single-quotes
+    in titles and model values. ```
     """
     if not session._cache.dirty_set:
         session._logger.info("No changes to commit")

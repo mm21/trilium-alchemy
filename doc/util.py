@@ -1,12 +1,11 @@
 """
 Builds database to track physical and virtual canonical symbols.
 
-Virtually canonical symbols: symbols exposed as the "canonical" public 
-interface, but are not necessarily defined there in order to decouple 
-implementation
+Virtually canonical symbols: symbols exposed as the "canonical" public interface, but
+are not necessarily defined there in order to decouple implementation
 
-Virtually aliased symbols: virtually canonical symbols imported from another 
-module, e.g. in the containing package's __all__
+Virtually aliased symbols: virtually canonical symbols imported from another module,
+e.g. in the containing package's __all__
 
 Physically canonical symbols: defined in the module itself
 
@@ -39,8 +38,9 @@ from autodoc2.utils import ItemData
 
 class Symbol:
     """
-    Represents a unique symbol, as captured by autodoc2. It may be defined
-    in another module and imported, in which case it's considered
+    Represents a unique symbol, as captured by autodoc2.
+
+    It may be defined in another module and imported, in which case it's considered
     "physically aliased".
     """
 
@@ -101,7 +101,9 @@ class Symbol:
         return f"\nSymbol {self.virt_path}{py_obj}{is_canonical}{canonical}{aliases}"
 
     def _init(self):
-        """additional init if required by subclass"""
+        """
+        Additional init if required by subclass.
+        """
 
     @property
     def name(self) -> str:
@@ -139,11 +141,11 @@ class Symbol:
 
     def _get_attr_impl(self, cls, attr):
         """
-        Get the provided attribute value from class along with the class
-        from which it's inherited.
+        Get the provided attribute value from class along with the class from which it's
+        inherited.
 
-        Can't naively use getattr(cls, attr) since it may activate
-        a descriptor. Manually traverse MRO and check vars() for each class.
+        Can't naively use getattr(cls, attr) since it may activate a descriptor.
+        Manually traverse MRO and check vars() for each class.
         """
 
         # raise AttributeError if it couldn't be found since None is a valid
@@ -212,9 +214,7 @@ class Symbol:
         elif isinstance(value, str):
             # string, need to add quotes
             return f'`"{value}"`{{l=python}}'
-        elif (
-            value is None or isinstance(value, int) or isinstance(value, float)
-        ):
+        elif value is None or isinstance(value, int) or isinstance(value, float):
             # common python types
             # TODO: add more?
             return f"`{value}`{{l=python}}"
@@ -254,13 +254,19 @@ class Symbol:
 
 class Module(Symbol):
     all_: list[str]
-    """__all__ retrieved from importing module"""
+    """
+    __all__ retrieved from importing module.
+    """
 
     symbols: list[Symbol]
-    """symbols from __canonical_syms__"""
+    """
+    Symbols from __canonical_syms__
+    """
 
     children: list[Module]
-    """child modules from __canonical_children__"""
+    """
+    Child modules from __canonical_children__
+    """
 
     def __repr__(self):
         symbols = ", ".join([sym.virt_path for sym in self.symbols])
@@ -316,12 +322,16 @@ class Module(Symbol):
 
     @property
     def canonical_symbols(self):
-        """list of virtually canonical symbols in this module"""
+        """
+        List of virtually canonical symbols in this module.
+        """
         return [sym for sym in self.symbols if sym.is_canonical]
 
     @property
     def alias_symbols(self):
-        """list of virtually alias symbols in this module"""
+        """
+        List of virtually alias symbols in this module.
+        """
         return [sym for sym in self.symbols if sym.is_alias]
 
 
@@ -352,9 +362,7 @@ class SymbolMap:
 
     @property
     def canonical_map(self) -> dict[str, Symbol]:
-        return {
-            path: sym for path, sym in self.sym_map.items() if sym.is_canonical
-        }
+        return {path: sym for path, sym in self.sym_map.items() if sym.is_canonical}
 
     @property
     def phys_map(self) -> dict[str, Symbol]:
@@ -403,9 +411,9 @@ class SymbolMap:
     def lookup(self, name: str) -> Symbol | None:
         """
         Try to find symbol with provided name in database.
+
         It may be the name of a symbol with no modpath.
         """
-
         if "." in name:
             if name.startswith(self.root_path):
                 full_name = name
@@ -457,10 +465,8 @@ class Env:
 
     def db_fixup(self, db: Database):
         """
-        Use db_fixup hook to populate 'all' for modules and create alias
-        mappings.
+        Use db_fixup hook to populate 'all' for modules and create alias mappings.
         """
-
         self.db = db
 
         self.symbol_map.build(db)
@@ -472,8 +478,8 @@ class Env:
 
     def set_ref(self):
         """
-        Set reference to Symbol object in autodoc2's item so we can access
-        it later as needed.
+        Set reference to Symbol object in autodoc2's item so we can access it later as
+        needed.
         """
         for full_name, item in self.db._items.items():
             if symbol := self.symbol_map.sym_map.get(full_name, None):
@@ -481,8 +487,9 @@ class Env:
 
     def set_all(self):
         """
-        Set "all" from symbol_map. Required since dynamic __all__ can't be
-        captured by static analysis.
+        Set "all" from symbol_map.
+
+        Required since dynamic __all__ can't be captured by static analysis.
         """
         for full_name, item in self.db._items.items():
             symbol = item.get("symbol_obj", None)
@@ -577,14 +584,12 @@ class Env:
 
     def _resolve_item(self, name: str) -> tuple[ItemData | None, Symbol | None]:
         """
-        Try to get item given its name, which may not include
-        a modpath.
+        Try to get item given its name, which may not include a modpath.
 
         If there's a corresponding Symbol, it's returned as well. The
         Symbol may be the containing class - members of classes don't
         have an entry in the SymbolMap.
         """
-
         # try to resolve as symbol
         symbol = self.symbol_map.lookup(name)
 
@@ -609,7 +614,6 @@ class Env:
         """
         Resolve reference to top-level symbol (e.g. trilium_alchemy.*).
         """
-
         target = pending_xref.get("reftarget", None)
 
         if target is None:
@@ -632,9 +636,7 @@ class Env:
         pending_xref["reftarget"] = full_name
 
     def resolve_refs(self, app, doctree):
-        for pending_xref in doctree.traverse(
-            condition=sphinx.addnodes.pending_xref
-        ):
+        for pending_xref in doctree.traverse(condition=sphinx.addnodes.pending_xref):
             self._resolve_ref(pending_xref)
 
     def _get_parent(self, node, cls):
@@ -655,9 +657,10 @@ class Env:
 
     def _insert_xref(self, inline: docutils.nodes.inline):
         """
-        Insert pending_xref in place. Used for param defaults.
-        """
+        Insert pending_xref in place.
 
+        Used for param defaults.
+        """
         assert (
             len(inline.children) == 1
         ), f"Multiple children of default: {inline.astext()}"
@@ -681,17 +684,13 @@ class Env:
             inline += xref
 
     def _lookup_func(self, doctree, full_name):
-        for signature in doctree.traverse(
-            condition=sphinx.addnodes.desc_signature
-        ):
+        for signature in doctree.traverse(condition=sphinx.addnodes.desc_signature):
             if signature["ids"][0] == full_name:
                 parameterlist = signature.next_node(
                     condition=sphinx.addnodes.desc_parameterlist
                 )
 
-                returns = signature.next_node(
-                    condition=sphinx.addnodes.desc_returns
-                )
+                returns = signature.next_node(condition=sphinx.addnodes.desc_returns)
 
                 assert parameterlist is not None
 
@@ -726,10 +725,11 @@ class Env:
                 parameterlist: sphinx.addnodes.desc_parameterlist,
             ):
                 """
-                Functions with only one arg get added as a paragraph rather
-                than bullet list. It has the same structure as the paragraph
-                in the list_item of a bullet list, so use the same approach
-                for both.
+                Functions with only one arg get added as a paragraph rather than bullet
+                list.
+
+                It has the same structure as the paragraph in the list_item of a bullet
+                list, so use the same approach for both.
                 """
 
                 def process_term(
@@ -798,7 +798,6 @@ class Env:
                 """
                 Functions with multiple args get added as bullet lists.
                 """
-
                 # traverse children of bullet list and convert to
                 # definition list
                 for list_item in list(bullet_list.children):
@@ -827,9 +826,7 @@ class Env:
                 # already what we want
                 return
             else:
-                print(
-                    f"Warning: unknown list_node: {type(list_node)}, {list_node}"
-                )
+                print(f"Warning: unknown list_node: {type(list_node)}, {list_node}")
                 return
 
             # replace original list with definition list
@@ -854,9 +851,9 @@ class Env:
         ):
             """
             field_list can have both parameters and returns.
+
             Find out which this has and invoke the right functions.
             """
-
             for field in field_list.traverse(condition=docutils.nodes.field):
                 field_name, field_body = field.children
 
@@ -898,9 +895,7 @@ class Env:
                     process_field_list(field_list, parameterlist, None)
 
         # traverse parameters
-        for parameter in doctree.traverse(
-            condition=sphinx.addnodes.desc_parameter
-        ):
+        for parameter in doctree.traverse(condition=sphinx.addnodes.desc_parameter):
             # shorten xrefs
             for pending_xref in parameter.traverse(
                 condition=sphinx.addnodes.pending_xref
@@ -922,9 +917,7 @@ class Env:
                 self._shorten_pending_xref(pending_xref)
 
         # traverse signatures
-        for signatures in doctree.traverse(
-            condition=sphinx.addnodes.desc_signature
-        ):
+        for signatures in doctree.traverse(condition=sphinx.addnodes.desc_signature):
             # shorten xrefs
             for pending_xref in signatures.traverse(
                 condition=sphinx.addnodes.pending_xref
@@ -946,17 +939,15 @@ class Env:
 
     def expand_titles(self, app, doctree):
         """
-        The sidebar navigation loses its monospace font when a custom
-        title is provided to shorten the module names. Alternatively a short
-        name can be set for the title of the page itself, but it's better to
-        see the full modpath as the title when viewing the page.
+        The sidebar navigation loses its monospace font when a custom title is provided
+        to shorten the module names. Alternatively a short name can be set for the title
+        of the page itself, but it's better to see the full modpath as the title when
+        viewing the page.
 
-        The solution to enable short module names in the sidebar while having
-        the full modpath for the title is to use the short name for the title,
-        but expand it here to the full name. The shortened title in the sidebar
-        will remain intact.
+        The solution to enable short module names in the sidebar while having the full
+        modpath for the title is to use the short name for the title, but expand it here
+        to the full name. The shortened title in the sidebar will remain intact.
         """
-
         for section in doctree.traverse(condition=docutils.nodes.section):
             if len(section.children) < 2:
                 continue

@@ -1,6 +1,7 @@
 """
 Filesystem operations on a prefix tree of notes.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -34,8 +35,9 @@ log2(62**12) = 72 bits of entropy.
 
 TREE_DEPTH = 2
 """
-Depth of prefix tree. For example:
+Depth of prefix tree.
 
+For example:
 /dump_root/a1/b2/c3d4...
 /dump_root/a1/b3/c4d5...
 """
@@ -86,7 +88,6 @@ def dump_tree(
     """
     Dump notes to destination folder in prefix tree format.
     """
-
     assert dest_dir.is_dir()
 
     logger = logger or logging.getLogger()
@@ -126,9 +127,7 @@ def dump_tree(
 
     # delete existing paths which weren't dumped (presumed deleted in Trilium)
     if prune:
-        _prune_dirs(
-            dest_dir, dumped_note_dirs, stats, logger=logger, dry_run=dry_run
-        )
+        _prune_dirs(dest_dir, dumped_note_dirs, stats, logger=logger, dry_run=dry_run)
 
     return stats
 
@@ -141,18 +140,15 @@ def load_tree(
     parent_note: Note | None = None,
 ) -> list[Note]:
     """
-    Load notes from source folder and optionally place top-level notes as
-    children of parent note.
+    Load notes from source folder and optionally place top-level notes as children of
+    parent note.
     """
-
     logger = logger or logging.getLogger()
     notes: list[Note] = []
     note_dirs = _find_note_dirs(src_dir, logger=logger)
 
     if not len(note_dirs):
-        raise ValidationError(
-            [f"Folder does not contain any notes: '{src_dir}'"]
-        )
+        raise ValidationError([f"Folder does not contain any notes: '{src_dir}'"])
 
     # load notes
     for note_dir in note_dirs:
@@ -202,10 +198,10 @@ def scan_content(
     dump_dir: Path, *, logger: Logger | None = None, dry_run: bool = False
 ):
     """
-    Scan content files and update metadata if out of date. Use if content
-    files were updated after dumping.
-    """
+    Scan content files and update metadata if out of date.
 
+    Use if content files were updated after dumping.
+    """
     logger = logger or logging.getLogger()
     note_dirs = _find_note_dirs(dump_dir, logger=logger)
 
@@ -239,18 +235,17 @@ def _find_note_dirs(
     dump_dir: Path, empty_dirs: list[Path] | None = None, *, logger: Logger
 ) -> list[Path]:
     """
-    Walk prefix tree folder and return valid note folders, logging warnings
-    for any unexpected files/folders. Optionally populates list of empty
-    folders.
-    """
+    Walk prefix tree folder and return valid note folders, logging warnings for any
+    unexpected files/folders.
 
+    Optionally populates list of empty folders.
+    """
     note_dirs: list[Path] = []
 
     def check_note_dir(dir_path: Path):
         """
         Check if this is a valid note folder and add to note dirs.
         """
-
         # ensure name is of expected length
         if len(dir_path.name) != SUFFIX_SIZE:
             logger.warning(f"Unexpected folder: '{dir_path}'")
@@ -259,16 +254,12 @@ def _find_note_dirs(
         filenames = {p.name for p in dir_path.iterdir()}
 
         if META_FILENAME not in filenames:
-            logger.warning(
-                f"Note folder '{dir_path}' does not contain metadata file"
-            )
+            logger.warning(f"Note folder '{dir_path}' does not contain metadata file")
             return
 
         filenames.remove(META_FILENAME)
 
-        if len(filenames) != 1 or not (
-            filenames < {"content.txt", "content.bin"}
-        ):
+        if len(filenames) != 1 or not (filenames < {"content.txt", "content.bin"}):
             logger.warning(
                 f"Note folder '{dir_path}' contains ambiguous or missing content file: {filenames}"
             )
@@ -280,7 +271,6 @@ def _find_note_dirs(
         """
         Check if this folder is a valid prefix folder.
         """
-
         # ensure name is of expected length
         if len(dir_path.name) != PREFIX_SIZE:
             logger.warning(f"Unexpected folder: '{dir_path}'")
@@ -321,18 +311,16 @@ def _map_note_dir(note: Note) -> Path:
     """
     Map note to relative path in which it should be placed based on its note_id.
 
-    This is done based on a hash of the note's `note_id`, rather than `note_id`
-    itself, primarily to accommodate case-insensitive filesystems.
+    This is done based on a hash of the note's `note_id`, rather than `note_id` itself,
+    primarily to accommodate case-insensitive filesystems.
     """
-
     # generate hash of note id to get normalized note id
     assert note.note_id
     norm_note_id = _normalize_note_id(note.note_id)
 
     # generate prefixes
     prefixes = [
-        norm_note_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE]
-        for i in range(TREE_DEPTH)
+        norm_note_id[i * PREFIX_SIZE : (i + 1) * PREFIX_SIZE] for i in range(TREE_DEPTH)
     ]
 
     # trim to get suffix
@@ -352,7 +340,6 @@ def _prune_dirs(
     """
     Remove existing paths not belonging to dumped notes.
     """
-
     empty_dirs: list[Path] = []
     note_dirs = _find_note_dirs(dump_dir, empty_dirs, logger=logger)
 
@@ -373,7 +360,6 @@ def _prune_dir(dump_dir: Path, path: Path):
     """
     Remove this folder and empty parent folders.
     """
-
     if not path.exists() or dump_dir == path:
         return
 
@@ -388,21 +374,20 @@ def _prune_dir(dump_dir: Path, path: Path):
 
 def _normalize_note_id(note_id: str) -> str:
     """
-    Get fixed-length hex id, well suited for a filesystem prefix tree and
-    compatible with case insensitive filesystems.
+    Get fixed-length hex id, well suited for a filesystem prefix tree and compatible
+    with case insensitive filesystems.
 
-    Uses SHAKE-128 since we only need 128 bits of entropy; more
-    cryptographically optimal than discarding bits from SHA-256 hash.
+    Uses SHAKE-128 since we only need 128 bits of entropy; more cryptographically
+    optimal than discarding bits from SHA-256 hash.
     """
     return hashlib.shake_128(note_id.encode(encoding="utf-8")).hexdigest(16)
 
 
 def _find_root_notes(notes: list[Note]) -> list[Note]:
     """
-    Traverse notes loaded from filesystem and find ones which are "relative"
-    roots, i.e. don't have any parents which are present on the filesystem.
+    Traverse notes loaded from filesystem and find ones which are "relative" roots, i.e.
+    don't have any parents which are present on the filesystem.
     """
-
     root_notes: list[Note] = []
     notes_set = set(notes)
 

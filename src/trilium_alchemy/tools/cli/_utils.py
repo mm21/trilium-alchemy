@@ -121,9 +121,7 @@ def format_datetime(dt: datetime.datetime) -> str:
 
 
 def format_file_datetime(dt: datetime.datetime) -> str:
-    return dt.strftime(r"%Y-%m-%d_%H-%M-") + format_seconds(
-        dt, decimal_point="-"
-    )
+    return dt.strftime(r"%Y-%m-%d_%H-%M-") + format_seconds(dt, decimal_point="-")
 
 
 def format_seconds(
@@ -135,6 +133,4 @@ def format_seconds(
         else (dt.seconds, dt.microseconds)
     )
 
-    return str(round(seconds + microseconds / 1e6, 3)).replace(
-        ".", decimal_point
-    )
+    return str(round(seconds + microseconds / 1e6, 3)).replace(".", decimal_point)

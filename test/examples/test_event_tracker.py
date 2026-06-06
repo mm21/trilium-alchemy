@@ -1,6 +1,7 @@
 """
 Verify the example under examples/event-tracker.
 """
+
 import os
 from pathlib import Path
 

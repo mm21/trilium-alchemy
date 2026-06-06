@@ -75,9 +75,7 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         setattr(attr, self._value_name, val)
         attr.inheritable = inheritable
 
-    def _set_values(
-        self, name: str, vals: list[Any], inheritable: bool = False
-    ):
+    def _set_values(self, name: str, vals: list[Any], inheritable: bool = False):
         attrs = self._get_all_writeable(name)
 
         if len(vals) > len(attrs):
@@ -120,18 +118,16 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
     @abstractmethod
     def _create_attr(self, name: str) -> AttributeT:
         """
-        Overridden by subclass to create an attribute of the respective type,
-        already bound to this note.
+        Overridden by subclass to create an attribute of the respective type, already
+        bound to this note.
         """
         ...
 
 
-class BaseFilteredAttributes[AttributeT: BaseAttribute](
-    AttributeListMixin[AttributeT]
-):
+class BaseFilteredAttributes[AttributeT: BaseAttribute](AttributeListMixin[AttributeT]):
     """
-    Base class to represent attributes filtered by type, with capability to
-    further filter by name.
+    Base class to represent attributes filtered by type, with capability to further
+    filter by name.
     """
 
     _filter_cls: type[AttributeT]
@@ -174,12 +170,10 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](
         return len(self._attr_list)
 
     @overload
-    def __getitem__(self, i: int) -> AttributeT:
-        ...
+    def __getitem__(self, i: int) -> AttributeT: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[AttributeT]:
-        ...
+    def __getitem__(self, i: slice) -> list[AttributeT]: ...
 
     def __getitem__(self, i: int | slice) -> AttributeT | list[AttributeT]:
         return self._attr_list[i]

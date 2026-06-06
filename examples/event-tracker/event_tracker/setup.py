@@ -37,8 +37,10 @@ LEAF_NOTES: list[type[BaseDeclarativeNote]] = [
     Battles,
 ]
 """
-Leaf note classes. These hold user-maintained notes and are singletons -- they
-resolve to the same `Note` object when instantiated.
+Leaf note classes.
+
+These hold user-maintained notes and are singletons -- they resolve to the same `Note`
+object when instantiated.
 """
 
 
@@ -127,9 +129,7 @@ def setup_notes(session: Session, console: Console):
 
     amon_hen = Note(title="Amon Hen", parents=gondor, template=PointOfInterest)
 
-    misty_mountains = Note(
-        title="Misty Mountains", parents=lands, template=Land
-    )
+    misty_mountains = Note(title="Misty Mountains", parents=lands, template=Land)
 
     moria = Note(title="Moria", parents=misty_mountains, template=City)
 
@@ -137,17 +137,13 @@ def setup_notes(session: Session, console: Console):
     # as passing template arg
     bagginses = Group.new_instance(title="Bagginses", parents=groups)
     fellowship = Group.new_instance(title="The Fellowship", parents=groups)
-    allies = Group.new_instance(
-        title="Allies of The Fellowship", parents=groups
-    )
+    allies = Group.new_instance(title="Allies of The Fellowship", parents=groups)
 
     bilbo = Person.new_instance(title="Bilbo Baggins", parents=bagginses)
     bilbo["birthday"] = "2890-09-22"
     bilbo += Relation("livedAt", bag_end)
 
-    frodo = Person.new_instance(
-        title="Frodo Baggins", parents={bagginses, fellowship}
-    )
+    frodo = Person.new_instance(title="Frodo Baggins", parents={bagginses, fellowship})
     frodo["birthday"] = "2968-09-22"
     frodo += Relation("livedAt", bag_end)
 
@@ -233,9 +229,7 @@ def setup_notes(session: Session, console: Console):
     breaking_fellowship.relations.set_target("place", amon_hen)
     breaking_fellowship["date"] = "3019-02-26"
 
-    battle_helms_deep = BattleInstance(
-        title="Battle of Helm's Deep", parents=battles
-    )
+    battle_helms_deep = BattleInstance(title="Battle of Helm's Deep", parents=battles)
     battle_helms_deep.add_people(
         aragorn,
         legolas,

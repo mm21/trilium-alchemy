@@ -72,7 +72,6 @@ class Content(NoteStatefulExtension):
         """
         Get blob id from the working model if it exists, else backing model.
         """
-
         digest = self._working.digest or self._backing.digest
         assert digest is not None
         return digest
@@ -84,10 +83,8 @@ class Content(NoteStatefulExtension):
     @property
     def _is_changed(self):
         """
-        Return whether note content is changed, as determined by content hash
-        (blobId).
+        Return whether note content is changed, as determined by content hash (blobId).
         """
-
         if self._working.blob is None:
             # content not set by user
             return False
@@ -104,10 +101,9 @@ class Content(NoteStatefulExtension):
 
     def _setup(self, model: EtapiNoteModel | None):
         """
-        Setup state from Note model; defer loading content itself until
-        accessed by user.
+        Setup state from Note model; defer loading content itself until accessed by
+        user.
         """
-
         if model is None:
             # newly created, initialize to empty content
             if self._is_string:
@@ -133,10 +129,9 @@ class Content(NoteStatefulExtension):
         """
         Return current content.
 
-        The type is `str` or `bytes`, depending on whether Trilium stores the
-        content as string or binary.
+        The type is `str` or `bytes`, depending on whether Trilium stores the content as
+        string or binary.
         """
-
         if self._working.blob is not None:
             # get from content set by user
             blob = self._working.blob
@@ -171,12 +166,9 @@ class Content(NoteStatefulExtension):
         """
         Get note content from server.
         """
-
         blob: str | bytes = None
 
-        response = requests.get(
-            self._url, headers=self._note._session._etapi_headers
-        )
+        response = requests.get(self._url, headers=self._note._session._etapi_headers)
         assert response.status_code == 200
 
         if self._is_string:
@@ -192,7 +184,6 @@ class Content(NoteStatefulExtension):
         """
         Push note content to server and return the updated note model.
         """
-
         blob: str | bytes = self._working.blob
         assert blob is not None
 
@@ -273,7 +264,6 @@ def get_digest(blob: str | bytes):
 
     This should be kept in sync with src/services/utils.js:hashedBlobId()
     """
-
     # encode if string
     blob_bytes = blob.encode() if isinstance(blob, str) else blob
 

@@ -1,8 +1,9 @@
 """
-CLI command to generate test notes. Uses an algorithm to generate a configurable 
-amount of test notes with a configurable hierarchy depth.
+CLI command to generate test notes.
 
-If there are N notes per level and depth D > 0, the total number of notes 
+Uses an algorithm to generate a configurable amount of test notes with a configurable hierarchy depth.
+
+If there are N notes per level and depth D > 0, the total number of notes
 generated is:
 
 N^1 + N^2 + ... + N^D

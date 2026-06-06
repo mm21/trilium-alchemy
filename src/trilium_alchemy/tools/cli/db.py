@@ -26,8 +26,7 @@ if TYPE_CHECKING:
 
 MAX_BACKUP_TIME_DELTA = 10
 """
-Maximum number of seconds within which the backup should have been created
-by Trilium.
+Maximum number of seconds within which the backup should have been created by Trilium.
 """
 
 app = MainTyper(
@@ -39,8 +38,7 @@ app = MainTyper(
 @app.callback()
 def main(
     ctx: Context,
-    data_dir: Path
-    | None = Option(
+    data_dir: Path | None = Option(
         None,
         help="Directory containing Trilium database, if not specified in config file",
         envvar="TRILIUM_DATA_DIR",
@@ -50,11 +48,7 @@ def main(
 ):
     root_context = get_root_context(ctx)
 
-    if (
-        data_dir
-        and "TRILIUM_DATA_DIR" not in os.environ
-        and root_context.from_file
-    ):
+    if data_dir and "TRILIUM_DATA_DIR" not in os.environ and root_context.from_file:
         raise BadParameter(
             message="cannot be passed with config file",
             ctx=ctx,
@@ -88,8 +82,7 @@ def backup(
         "--verify",
         help=f"Whether to verify by ensuring backup's mtime is < {MAX_BACKUP_TIME_DELTA} seconds ago (requires db --data-dir)",
     ),
-    dest: Path
-    | None = Option(
+    dest: Path | None = Option(
         None,
         help="Optional destination database file or folder to copy backup; if folder, filename will use current datetime (requires db --data-dir)",
     ),
@@ -100,9 +93,8 @@ def backup(
     ),
 ):
     """
-    Backup database, optionally copying to destination path
+    Backup database, optionally copying to destination path.
     """
-
     now = format_file_datetime(datetime.datetime.now())
 
     # select name
@@ -174,7 +166,9 @@ def backup(
                 f"Backup '{backup_path}' was written {delta.seconds} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
             )
 
-        verify_str = f" at {format_datetime(mod_datetime)} ({format_seconds(delta)} seconds ago)"
+        verify_str = (
+            f" at {format_datetime(mod_datetime)} ({format_seconds(delta)} seconds ago)"
+        )
         backup_str = str(backup_path)
     else:
         verify_str = ""
@@ -193,9 +187,7 @@ def backup(
 @app.command()
 def restore(
     ctx: Context,
-    src: Path = Argument(
-        help="Source database file", dir_okay=False, exists=True
-    ),
+    src: Path = Argument(help="Source database file", dir_okay=False, exists=True),
     dry_run: bool = Option(
         False,
         "--dry-run",
@@ -209,9 +201,8 @@ def restore(
     ),
 ):
     """
-    Restore database from file
+    Restore database from file.
     """
-
     db_context = _get_db_context(ctx)
     data_dir = db_context.data_dir
 

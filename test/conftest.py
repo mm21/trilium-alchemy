@@ -94,12 +94,11 @@ def newline(request):
 @fixture(autouse=True)
 def cleanup_tree(request: FixtureRequest):
     """
-    Cleanup existing tree and ensure this testcase cleaned up its notes
-    afterward.
+    Cleanup existing tree and ensure this testcase cleaned up its notes afterward.
     """
-    if request.config.getoption(
-        "--skip-teardown"
-    ) or request.node.get_closest_marker("skip_cleanup"):
+    if request.config.getoption("--skip-teardown") or request.node.get_closest_marker(
+        "skip_cleanup"
+    ):
         yield
         return
 
@@ -121,17 +120,15 @@ def cleanup_tree(request: FixtureRequest):
     root = get_root_note(session.api)
     assert root.attributes is not None
 
-    assert (
-        len(get_branches(session.api, root)) == 0
-    ), "Test did not cleanup root notes"
+    assert len(get_branches(session.api, root)) == 0, "Test did not cleanup root notes"
     assert len(root.attributes) == 0, "Test did not cleanup root attributes"
 
 
 @fixture(autouse=True, scope="session")
 def session_setup(request: FixtureRequest):
     """
-    Ensure there are no non-system notes under root; these may be clobbered by
-    a testcase.
+    Ensure there are no non-system notes under root; these may be clobbered by a
+    testcase.
     """
     if not request.config.getoption("--clobber"):
         session = create_session()
@@ -157,13 +154,12 @@ def session(request) -> Generator[Session, None, None]:
     """
     Create a new Session.
 
-    Most testing is done using non-default Session, which is the case more
-    likely to go wrong e.g. if passing a Session is missed in implementation.
+    Most testing is done using non-default Session, which is the case more likely to go
+    wrong e.g. if passing a Session is missed in implementation.
 
-    Also allows each test to create its own session by default, but a default
-    session can be specified by using `@mark.default_session`.
+    Also allows each test to create its own session by default, but a default session
+    can be specified by using `@mark.default_session`.
     """
-
     if request.node.get_closest_marker("default_session"):
         default = True
     else:
@@ -181,12 +177,10 @@ def create_session(default=False):
 
 
 @fixture
-def note(
-    request: FixtureRequest, session: Session
-) -> Generator[Note, None, None]:
+def note(request: FixtureRequest, session: Session) -> Generator[Note, None, None]:
     """
-    Create a new note "manually" using ETAPI directly; don't rely on framework
-    under test to do so.
+    Create a new note "manually" using ETAPI directly; don't rely on framework under
+    test to do so.
 
     Supports attribute creation using decorator like:
 
@@ -204,9 +198,7 @@ def note(
 
 
 @fixture
-def note1(
-    request: FixtureRequest, session: Session
-) -> Generator[Note, None, None]:
+def note1(request: FixtureRequest, session: Session) -> Generator[Note, None, None]:
     note = create_note_fixture(request, session, "note1")
     yield note
     teardown_note(request, session, note.note_id)
@@ -351,24 +343,18 @@ def skip_teardown(request: FixtureRequest) -> bool:
     return bool(request.config.getoption("--skip-teardown"))
 
 
-"""
-Helper functions to implement fixtures.
-"""
+# Helper functions to implement fixtures.
 
 
-def create_note_fixture(
-    request: FixtureRequest, session: Session, fixture_name: str
-):
+def create_note_fixture(request: FixtureRequest, session: Session, fixture_name: str):
     """
     Collect attribute markers as (args, kwargs).
 
-    There's a single attributes marker rather than separate label/relation
-    markers since in that case we wouldn't know what order the user wants them
-    in. They need to use the same marker to preserve the order.
+    There's a single attributes marker rather than separate label/relation markers since
+    in that case we wouldn't know what order the user wants them in. They need to use
+    the same marker to preserve the order.
     """
-    attributes = [
-        (m.args, m.kwargs) for m in request.node.iter_markers("attribute")
-    ]
+    attributes = [(m.args, m.kwargs) for m in request.node.iter_markers("attribute")]
 
     # get attributes in order provided by user
     attributes.reverse()
@@ -385,26 +371,17 @@ def create_note_fixture(
 
     # override title/type/mime if specified
 
-    if (
-        marker_title
-        and marker_title.kwargs.get("fixture", "note") == fixture_name
-    ):
+    if marker_title and marker_title.kwargs.get("fixture", "note") == fixture_name:
         note_title = marker_title.args[0]
     else:
         # generate title based on timestamp
         now = str(datetime.datetime.now())
         note_title = f"Test note {now}"
 
-    if (
-        marker_type
-        and marker_type.kwargs.get("fixture", "note") == fixture_name
-    ):
+    if marker_type and marker_type.kwargs.get("fixture", "note") == fixture_name:
         note_type = marker_type.args[0]
 
-    if (
-        marker_mime
-        and marker_mime.kwargs.get("fixture", "note") == fixture_name
-    ):
+    if marker_mime and marker_mime.kwargs.get("fixture", "note") == fixture_name:
         note_mime = marker_mime.args[0]
 
     note_id = create_note(
@@ -480,9 +457,7 @@ def create_note(api: DefaultApi, **kwargs) -> str:
     return note_id
 
 
-def teardown_note(
-    request: FixtureRequest, session: Session, note_id: str
-) -> None:
+def teardown_note(request: FixtureRequest, session: Session, note_id: str) -> None:
     if not request.node.get_closest_marker(
         "skip_teardown"
     ) and not request.config.getoption("--skip-teardown"):
@@ -568,18 +543,15 @@ def note_exists(api: DefaultApi, note_id: str):
 
 def note_cleanup(note: Note):
     """
-    Flush and then delete note so we don't get warnings when flushing it
-    after deleting due to abandoned dependencies.
+    Flush and then delete note so we don't get warnings when flushing it after deleting
+    due to abandoned dependencies.
     """
-
     note.session.flush()
     note.delete()
     note.flush()
 
 
-def change_attribute(
-    api: DefaultApi, attribute: EtapiAttributeModel, position: int
-):
+def change_attribute(api: DefaultApi, attribute: EtapiAttributeModel, position: int):
     assert attribute.type in {"label", "relation"}
 
     model = EtapiAttributeModel(
@@ -688,9 +660,7 @@ def get_branch(api: DefaultApi, branch_id: str) -> EtapiBranchModel | None:
     return model
 
 
-def get_branches(
-    api: DefaultApi, note: EtapiNoteModel
-) -> list[EtapiBranchModel]:
+def get_branches(api: DefaultApi, note: EtapiNoteModel) -> list[EtapiBranchModel]:
     """
     Get branch models which are not hidden.
     """

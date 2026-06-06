@@ -38,9 +38,7 @@ class EtapiDriver(AttributeDriver):
         model: EtapiAttributeModel | None
 
         try:
-            model = self.session.api.get_attribute_by_id(
-                self.attribute.attribute_id
-            )
+            model = self.session.api.get_attribute_by_id(self.attribute.attribute_id)
         except NotFoundException:
             model = None
 
@@ -74,16 +72,12 @@ class EtapiDriver(AttributeDriver):
 
         # is_inheritable and target note (relation type only) are considered
         # immutable by Trilium; delete and create a new attribute if changed
-        if relation_update or self.attribute._model.is_field_changed(
-            "is_inheritable"
-        ):
+        if relation_update or self.attribute._model.is_field_changed("is_inheritable"):
             self.flush_delete(sorter)
             return self.flush_create(sorter)
         else:
             # can just use patch
-            model = EtapiAttributeModel(
-                **self.attribute._model.get_fields_changed()
-            )
+            model = EtapiAttributeModel(**self.attribute._model.get_fields_changed())
             model_new = self.session.api.patch_attribute_by_id(
                 self.attribute.attribute_id, model
             )
@@ -202,8 +196,8 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     @property
     def inheritable(self) -> bool:
         """
-        Getter/setter for whether this attribute is inherited to
-        children and by `template`/`inherit` relations.
+        Getter/setter for whether this attribute is inherited to children and by
+        `template`/`inherit` relations.
         """
         return self._model.get_field("is_inheritable")
 
@@ -221,8 +215,8 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     @property
     def note(self) -> Note | None:
         """
-        Getter for note which owns this attribute, or `None` if it hasn't
-        been bound to a note yet.
+        Getter for note which owns this attribute, or `None` if it hasn't been bound to
+        a note yet.
         """
         return self._note
 
@@ -231,10 +225,8 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         """
         Getter for position of this attribute.
 
-        ```{note}
-        This is maintained automatically based on the order of this attribute
-        in its note's {obj}`Note.attributes` list.
-        ```
+        ```{note} This is maintained automatically based on the order of this attribute
+        in its note's {obj}`Note.attributes` list. ```
         """
         return self._position
 
@@ -245,15 +237,12 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         """
         Get instance of appropriate concrete class given an `attributeId`.
         """
-
         # need to know type in order to create appropriate subclass,
         # so get model from id first
 
         session = normalize_session(session)
 
-        model: EtapiAttributeModel = session.api.get_attribute_by_id(
-            attribute_id
-        )
+        model: EtapiAttributeModel = session.api.get_attribute_by_id(attribute_id)
         assert model is not None
 
         return cls._from_model(model, session=session)
@@ -316,16 +305,13 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
                 self._note.attributes.owned.remove(self)
 
     def _flush_check(self):
-        _assert_validate(
-            self._note is not None, "Attribute not assigned to note"
-        )
+        _assert_validate(self._note is not None, "Attribute not assigned to note")
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
         """
         Attribute depends on note which owns it.
         """
-
         deps = {self._note}
 
         if self._state is not State.DELETE:

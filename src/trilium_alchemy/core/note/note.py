@@ -101,8 +101,8 @@ Note types which have a fixed mime type.
 
 def is_string(note_type: str, mime: str) -> bool:
     """
-    Encapsulates logic for checking if a note is considered string type
-    according to Trilium.
+    Encapsulates logic for checking if a note is considered string type according to
+    Trilium.
 
     This should be generally kept in sync with
     `src/services/utils.js:isStringNote()`, although checking if not a binary
@@ -117,9 +117,10 @@ def is_string(note_type: str, mime: str) -> bool:
 
 def id_hash(seed: str) -> str:
     """
-    Return entity id given seed. Ensures entity ids have a consistent amount of
-    entropy by being of the same length and character distribution, derived
-    from a 128-bit hash of the seed.
+    Return entity id given seed.
+
+    Ensures entity ids have a consistent amount of entropy by being of the same length
+    and character distribution, derived from a 128-bit hash of the seed.
 
     The hash is mapped to "base62" (a-z, A-Z, 0-9) with no loss in entropy.
     """
@@ -129,8 +130,9 @@ def id_hash(seed: str) -> str:
 
 def id_hash_legacy(seed: str) -> str:
     """
-    Legacy implementation of `id_hash()`. Possibly useful for migrating to
-    the new hash mechanism. To be removed before version 1.0.
+    Legacy implementation of `id_hash()`.
+
+    Possibly useful for migrating to the new hash mechanism. To be removed before version 1.0.
 
     Return id given seed. Needed to ensure IDs have a consistent amount of
     entropy by all being of the same length and character distribution.
@@ -169,10 +171,10 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
 
 class Note(BaseEntity[NoteModel]):
     """
-    Encapsulates a note. Can be subclassed for custom attribute accessors.
+    Encapsulates a note.
 
-    For a detailed walkthrough of how to use this class, see
-    {ref}`Working with notes <working-with-notes-notes>`.
+    Can be subclassed for custom attribute accessors.     For a detailed walkthrough of
+    how to use this class, see     {ref}`Working with notes <working-with-notes-notes>`.
     """
 
     _model_cls = NoteModel
@@ -227,7 +229,6 @@ class Note(BaseEntity[NoteModel]):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-
         note_id, note_id_seed_final = get_cls(self)._get_note_id(note_id)
 
         note_id_seed_final = (
@@ -279,18 +280,14 @@ class Note(BaseEntity[NoteModel]):
             return result
 
         # get container from subclass if applicable
-        init_container = self._init_hook(
-            note_id, note_id_seed_final, force_leaf
-        )
+        init_container = self._init_hook(note_id, note_id_seed_final, force_leaf)
 
         def normalize_mime(
             title: str | None, note_type: str | None, mime: str | None
         ) -> str | None:
             """
-            Return correct mime given note_type, validating if it was passed
-            by user.
+            Return correct mime given note_type, validating if it was passed by user.
             """
-
             if note_type is None:
                 return None
             elif note_type in NOTE_TYPES_MIME_NA:
@@ -313,9 +310,7 @@ class Note(BaseEntity[NoteModel]):
         # aggregate fields to set
         title_set = title or init_container.title
         note_type_set = note_type or init_container.note_type
-        mime_set = normalize_mime(
-            title_set, note_type_set, mime or init_container.mime
-        )
+        mime_set = normalize_mime(title_set, note_type_set, mime or init_container.mime)
         content_set = content or init_container.content
         attributes_set = combine_lists(attributes, init_container.attributes)
         parents_set: Iterable[Note | Branch] | None = (
@@ -361,11 +356,13 @@ class Note(BaseEntity[NoteModel]):
 
     def __iadd__(
         self,
-        entity: Note
-        | tuple[Note, str]
-        | Branch
-        | BaseAttribute
-        | Iterable[Note | tuple[Note, str] | Branch | BaseAttribute],
+        entity: (
+            Note
+            | tuple[Note, str]
+            | Branch
+            | BaseAttribute
+            | Iterable[Note | tuple[Note, str] | Branch | BaseAttribute]
+        ),
     ) -> Note:
         """
         Implement entity bind operator:
@@ -378,7 +375,6 @@ class Note(BaseEntity[NoteModel]):
 
         or iterable of any combination.
         """
-
         entities = normalize_entities(entity)
 
         for ent in entities:
@@ -388,9 +384,7 @@ class Note(BaseEntity[NoteModel]):
                 # add child note
                 self.branches.children.append(ent)
             else:
-                assert isinstance(
-                    ent, Branch
-                ), f"Unknown type for +=: {type(ent)}"
+                assert isinstance(ent, Branch), f"Unknown type for +=: {type(ent)}"
                 branch = ent
 
                 if branch.parent in {None, self}:
@@ -415,7 +409,6 @@ class Note(BaseEntity[NoteModel]):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-
         # iterate and add as parent
         for p in normalize_entities(parent):
             self.branches.parents.add(p)
@@ -553,16 +546,14 @@ class Note(BaseEntity[NoteModel]):
     @property
     def labels(self) -> Labels:
         """
-        Getter for labels, accessed as combined list or filtered by
-        owned vs inherited.
+        Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
         return self._labels
 
     @property
     def relations(self) -> Relations:
         """
-        Getter for labels, accessed as combined list or filtered by
-        owned vs inherited.
+        Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
         return self._relations
 
@@ -570,8 +561,7 @@ class Note(BaseEntity[NoteModel]):
     @property
     def branches(self) -> Branches:
         """
-        Getter for branches, both parents (`.parents`) and children
-        (`.children`).
+        Getter for branches, both parents (`.parents`) and children (`.children`).
         """
         return self._branches
 
@@ -671,8 +661,7 @@ class Note(BaseEntity[NoteModel]):
     @property
     def paths(self) -> list[list[Note]]:
         """
-        Get list of paths to this note, where each path is a list of
-        ancestor notes.
+        Get list of paths to this note, where each path is a list of ancestor notes.
         """
 
         def get_paths(note: Note) -> list[list[Note]]:
@@ -697,34 +686,27 @@ class Note(BaseEntity[NoteModel]):
     @property
     def paths_str(self) -> list[str]:
         """
-        Get list of paths to this note, where each path is a string
-        like `A > B > C`.
+        Get list of paths to this note, where each path is a string like `A > B > C`.
         """
-        return [
-            " > ".join([note.title for note in path]) for path in self.paths
-        ]
+        return [" > ".join([note.title for note in path]) for path in self.paths]
 
     def get(self, name: str, default: str | None = None) -> str | None:
         """
-        Get value of first label with provided name, or `None` if no such
-        label exists.
+        Get value of first label with provided name, or `None` if no such label exists.
         """
         attr = self.labels.get(name)
         return default if attr is None else attr.value
 
     def copy(self, deep: bool = False) -> Note:
         """
-        Return a copy of this note, including its title, type, MIME,
-        attributes, and content.
+        Return a copy of this note, including its title, type, MIME, attributes, and
+        content.
 
-        If `deep` is `False`{l=python}, child notes are cloned to the
-        returned copy. Otherwise, child notes are recursively deep copied.
+        If `deep` is `False`{l=python}, child notes are cloned to the returned copy.
+        Otherwise, child notes are recursively deep copied.
 
-        ```{note}
-        The returned copy still needs to be placed in the tree hierarchy
-        (added as a child of another note) before `Session.flush()`
-        is invoked.
-        ```
+        ```{note} The returned copy still needs to be placed in the tree hierarchy
+        (added as a child of another note) before `Session.flush()` is invoked. ```
         """
         return CopyContext().copy(self, deep=deep)
 
@@ -736,7 +718,6 @@ class Note(BaseEntity[NoteModel]):
         - Set content if empty
         - Recursively deep copy missing child notes, matched by title
         """
-
         copy_context = CopyContext()
 
         def find_child(child: Note, dest: Note) -> Note | None:
@@ -764,14 +745,13 @@ class Note(BaseEntity[NoteModel]):
     def transmute[NoteT: Note](self, note_cls: type[NoteT]) -> NoteT:
         """
         Change this note's base to the provided class and return it.
-        This is useful for converting a {obj}`Note` instance to a subclass
-        thereof with custom convenience APIs.
 
-        ```{note}
-        Has a side effect of committing any changes to this note to Trilium.
+        This is useful for converting a {obj}`Note` instance to a subclass thereof with
+        custom convenience APIs.
+
+        ```{note} Has a side effect of committing any changes to this note to Trilium.
         ```
         """
-
         if self._is_dirty:
             # commit changes to this note so state is retained
             self.flush()
@@ -796,14 +776,10 @@ class Note(BaseEntity[NoteModel]):
         ), f"Source note {self.str_short} must have a note_id for export"
         assert export_format in {"html", "markdown"}
 
-        dest_file_norm = (
-            dest_file if isinstance(dest_file, Path) else Path(dest_file)
-        )
+        dest_file_norm = dest_file if isinstance(dest_file, Path) else Path(dest_file)
 
         if dest_file_norm.exists() and not overwrite:
-            raise ValueError(
-                f"Path {dest_file_norm} exists and overwrite=False"
-            )
+            raise ValueError(f"Path {dest_file_norm} exists and overwrite=False")
 
         url = f"{self.session._base_path}/notes/{self.note_id}/export"
         params = {"format": export_format}
@@ -825,18 +801,15 @@ class Note(BaseEntity[NoteModel]):
         src_file: Path,
     ) -> Note:
         """
-        Import note subtree from zip file, adding the imported root as a
-        child of this note and returning it.
+        Import note subtree from zip file, adding the imported root as a child of this
+        note and returning it.
 
         :param src_file: Source .zip file
         """
-
         # flush any changes since we need to refresh later
         self.flush()
 
-        src_file_norm = (
-            src_file if isinstance(src_file, Path) else Path(src_file)
-        )
+        src_file_norm = src_file if isinstance(src_file, Path) else Path(src_file)
 
         assert (
             self.note_id is not None
@@ -865,16 +838,15 @@ class Note(BaseEntity[NoteModel]):
         self.refresh()
 
         # create imported note using response_model
-        imported_note = Note._from_model(
-            response_model.note, session=self.session
-        )
+        imported_note = Note._from_model(response_model.note, session=self.session)
 
         return imported_note
 
     def walk(self) -> Generator[Note, None, None]:
         """
-        Yield this note and all children recursively. Each note will only
-        occur once (clones are skipped).
+        Yield this note and all children recursively.
+
+        Each note will only occur once (clones are skipped).
         """
         yield from self._walk(set())
 
@@ -882,7 +854,6 @@ class Note(BaseEntity[NoteModel]):
         """
         Flush note along with its owned attributes.
         """
-
         # collect set of entities
         flush_set: set[BaseEntity] = {attr for attr in self.attributes.owned}
         flush_set.add(self)
@@ -893,7 +864,6 @@ class Note(BaseEntity[NoteModel]):
         """
         Perform additional init prior to model setup.
         """
-
         # create extensions
         self._attributes = Attributes(self)
         self._branches = Branches(self)
@@ -940,9 +910,7 @@ class Note(BaseEntity[NoteModel]):
         for path in self.paths:
             if len(path) > 1:
                 paths_ret.append(
-                    " > ".join(
-                        [f"'{note._title_escape}'" for note in path[:-1]]
-                    )
+                    " > ".join([f"'{note._title_escape}'" for note in path[:-1]])
                 )
 
         return sorted(paths_ret)
@@ -983,12 +951,8 @@ class Note(BaseEntity[NoteModel]):
         return Note(note_id=note_id, session=session)
 
     @classmethod
-    def _from_model(
-        cls, model: EtapiNoteModel, session: Session | None = None
-    ) -> Note:
-        return Note(
-            note_id=model.note_id, session=session, _model_backing=model
-        )
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
+        return Note(note_id=model.note_id, session=session, _model_backing=model)
 
     def _delete(self):
         super()._delete()
@@ -999,9 +963,7 @@ class Note(BaseEntity[NoteModel]):
 
     def _flush_check(self):
         if not self._is_delete:
-            _assert_validate(
-                len(self.branches.parents) > 0, "Note has no parents"
-            )
+            _assert_validate(len(self.branches.parents) > 0, "Note has no parents")
 
         for branch in self.branches.parents:
             _assert_validate(
@@ -1020,10 +982,8 @@ class Note(BaseEntity[NoteModel]):
 
     def _sync_subtree(self, src: Note, copy_context: CopyContext):
         """
-        Recursively sync this note with source, deep copying new notes as
-        necessary.
+        Recursively sync this note with source, deep copying new notes as necessary.
         """
-
         self.note_type = src.note_type
         self.mime = src.mime
 
@@ -1107,11 +1067,11 @@ class InitContainer:
 
 class CopyContext:
     """
-    Maintain a mapping of (destination note's id) -> (new Note)
-    to properly recreate any clones.
+    Maintain a mapping of (destination note's id) -> (new Note) to properly recreate any
+    clones.
 
-    Use id() since note_id may not exist yet, and there cannot be
-    multiple Note instances with same note_id.
+    Use id() since note_id may not exist yet, and there cannot be multiple Note
+    instances with same note_id.
     """
 
     note_map: dict[int, Note]
@@ -1175,7 +1135,6 @@ class CopyContext:
         """
         Copy owned attributes from source to destination.
         """
-
         for attr in src.attributes.owned:
             assert isinstance(attr, (Label, Relation))
             attr_copy: BaseAttribute

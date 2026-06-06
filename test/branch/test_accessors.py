@@ -112,9 +112,7 @@ def test_child_add(session: Session, note: Note, note1: Note, note2: Note):
     assert note.branches.children[1]._is_clean
 
 
-def test_child_add_prefix(
-    session: Session, note: Note, note1: Note, note2: Note
-):
+def test_child_add_prefix(session: Session, note: Note, note1: Note, note2: Note):
     note += (note1, "My prefix 1")
     note.children += (note2, "My prefix 2")
 
@@ -144,9 +142,7 @@ def test_child_add_prefix(
 
 # Add child as branch
 def test_child_add_branch(session: Session, note1: Note, note2: Note):
-    branch = Branch(
-        child=note2, prefix="my_prefix", expanded=True, session=session
-    )
+    branch = Branch(child=note2, prefix="my_prefix", expanded=True, session=session)
 
     assert branch.parent is None
     assert branch.child is note2

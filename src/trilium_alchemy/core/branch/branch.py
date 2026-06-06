@@ -36,9 +36,7 @@ class EtapiDriver(BranchDriver):
         model: EtapiBranchModel | None
 
         try:
-            model = self.branch.session.api.get_branch_by_id(
-                self.branch.branch_id
-            )
+            model = self.branch.session.api.get_branch_by_id(self.branch.branch_id)
 
             # Trilium internally sets prefix = null when it's an empty string;
             # null becomes None, so translate None to '' here
@@ -117,24 +115,19 @@ class Branch(OrderedEntity[BranchModel]):
     """
     Encapsulates a branch, a parent-child association between notes.
 
-    Implicitly created by operations documented in {obj}`Note` and
-    {obj}`Branches`. Can also be explicitly created and added to a note
-    using its `+=`{l=python} operator:
+    Implicitly created by operations documented in {obj}`Note` and {obj}`Branches`. Can
+    also be explicitly created and added to a note using its `+=`{l=python} operator:
 
-    ```
-    # add child note with prefix
-    note += Branch(child=Note(title="Child note"), prefix="Child branch prefix")
+    ``` # add child note with prefix note += Branch(child=Note(title="Child note"),
+    prefix="Child branch prefix")
 
-    # add parent note (cloning the note) with prefix
-    note += Branch(parent=session.root, prefix="Parent branch prefix")
-    ```
+    # add parent note (cloning the note) with prefix note += Branch(parent=session.root,
+    prefix="Parent branch prefix") ```
     """
 
     _model_cls = BranchModel
 
-    _parent: Note | None = WriteOnceDescriptor(
-        "_parent_obj", validator="_validate"
-    )
+    _parent: Note | None = WriteOnceDescriptor("_parent_obj", validator="_validate")
     _parent_obj: Note | None = None
 
     _child: Note = WriteOnceDescriptor("_child_obj", validator="_validate")
@@ -166,7 +159,6 @@ class Branch(OrderedEntity[BranchModel]):
         :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI
         :param kwargs: Internal only
         """
-
         branch_id = kwargs.pop("_branch_id", None)
         create = kwargs.pop("_create", None)
         ignore_expanded = kwargs.pop("_ignore_expanded", False)
@@ -183,13 +175,13 @@ class Branch(OrderedEntity[BranchModel]):
             parent=parent,
             child=child,
         )
-
         """
-        create can be True/False/None:
-            True: when branch_id not provided (created by user)
-            False: when loaded by branch_id
-            None: when loaded by declarative note definition
-                (don't care if it exists or not)
+        Create can be True/False/None:
+
+        True: when branch_id not provided (created by user)
+        False: when loaded by branch_id
+        None: when loaded by declarative note definition
+            (don't care if it exists or not)
         """
         if create is not False:
             # set model fields for newly created or declarative definition
@@ -243,8 +235,7 @@ class Branch(OrderedEntity[BranchModel]):
     @property
     def expanded(self) -> bool:
         """
-        Getter/setter for whether child note (as a folder) appears
-        expanded in UI.
+        Getter/setter for whether child note (as a folder) appears expanded in UI.
         """
         return self._model.get_field("is_expanded")
 
@@ -264,11 +255,8 @@ class Branch(OrderedEntity[BranchModel]):
         """
         Getter for position of this branch.
 
-        ```{note}
-        This is maintained automatically based on the order of this branch
-        in its parent note's
-        {obj}`Note.branches.children <Note.branches>` list.
-        ```
+        ```{note} This is maintained automatically based on the order of this branch in
+        its parent note's {obj}`Note.branches.children <Note.branches>` list. ```
         """
         return self._position
 
@@ -287,10 +275,9 @@ class Branch(OrderedEntity[BranchModel]):
         """
         Constructor to create instance of existing Branch given branch_id.
 
-        The default is for Branch() to create a new branch; use this to load an
-        existing one.
+        The default is for Branch() to create a new branch; use this to load an existing
+        one.
         """
-
         # This is different than attributes since when getting a note from the
         # server, an Attribute model is returned for each attribute. Branches,
         # however, are returned by id only.
@@ -304,8 +291,7 @@ class Branch(OrderedEntity[BranchModel]):
     # TODO: only use case for this right now is test code, so not
     # not high priority
     @classmethod
-    def _from_model(self, model: EtapiBranchModel):
-        ...
+    def _from_model(self, model: EtapiBranchModel): ...
 
     @classmethod
     def _gen_branch_id(cls, parent_note_id: str, child_note_id: str) -> str:
@@ -322,9 +308,7 @@ class Branch(OrderedEntity[BranchModel]):
             assert self._parent_obj is None
             assert model.note_id == "root"
         else:
-            self.parent = Note(
-                note_id=model.parent_note_id, session=self._session
-            )
+            self.parent = Note(note_id=model.parent_note_id, session=self._session)
 
         self.child = Note(note_id=model.note_id, session=self._session)
 
@@ -390,7 +374,6 @@ class Branch(OrderedEntity[BranchModel]):
         """
         Ensure there isn't already a Branch between parent and child.
         """
-
         if self._parent_obj and self._child_obj:
             # collect cached and newly created branches
             branches = {

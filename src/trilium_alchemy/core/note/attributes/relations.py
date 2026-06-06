@@ -40,17 +40,14 @@ class BaseWriteableRelationMixin(BaseReadableRelationMixin):
 
     def set_target(self, name: str, val: Note, inheritable: bool = False):
         """
-        Set target of first relation with provided name, creating if it doesn't
-        exist.
+        Set target of first relation with provided name, creating if it doesn't exist.
         """
         self._set_value(name, val, inheritable)
 
-    def set_targets(
-        self, name: str, vals: list[Note], inheritable: bool = False
-    ):
+    def set_targets(self, name: str, vals: list[Note], inheritable: bool = False):
         """
-        Set targets of all relations with provided name, creating or deleting
-        relations as necessary.
+        Set targets of all relations with provided name, creating or deleting relations
+        as necessary.
         """
         self._set_values(name, vals, inheritable)
 

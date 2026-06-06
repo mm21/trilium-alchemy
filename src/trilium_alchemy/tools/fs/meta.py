@@ -1,6 +1,7 @@
 """
 Note metadata.
 """
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -101,8 +102,9 @@ class NoteMeta(BaseYamlModel):
 
 class AttributeMeta(BaseModel):
     """
-    Attribute metadata used to populate yaml. Position is inferred from the
-    order in the containing list.
+    Attribute metadata used to populate yaml.
+
+    Position is inferred from the order in the containing list.
     """
 
     attribute_type: Literal["label", "relation"]
@@ -148,10 +150,11 @@ class AttributeMeta(BaseModel):
 
 class BranchMeta(BaseModel):
     """
-    Branch metadata used to populate yaml. Position is inferred from the
-    order in the containing list, and branch id is inferred from
-    the parent and child note ids. Expanded state is ignored, being primarily
-    a UI concept only.
+    Branch metadata used to populate yaml.
+
+    Position is inferred from the order in the containing list, and branch id is
+    inferred from the parent and child note ids. Expanded state is ignored, being
+    primarily a UI concept only.
     """
 
     child_note_id: str

@@ -40,15 +40,14 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
 
     def set_value(self, name: str, val: str, inheritable: bool = False):
         """
-        Set value of first label with provided name, creating if it doesn't
-        exist.
+        Set value of first label with provided name, creating if it doesn't exist.
         """
         self._set_value(name, val, inheritable)
 
     def set_values(self, name: str, vals: list[str], inheritable: bool = False):
         """
-        Set values of all labels with provided name, creating or deleting
-        labels as necessary.
+        Set values of all labels with provided name, creating or deleting labels as
+        necessary.
         """
         self._set_values(name, vals, inheritable)
 
@@ -64,9 +63,7 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
         return attr
 
 
-class OwnedLabels(
-    BaseOwnedFilteredAttributes[label.Label], BaseWriteableLabelMixin
-):
+class OwnedLabels(BaseOwnedFilteredAttributes[label.Label], BaseWriteableLabelMixin):
     """
     Accessor for owned labels.
     """

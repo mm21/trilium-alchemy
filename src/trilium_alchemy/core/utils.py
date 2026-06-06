@@ -27,8 +27,7 @@ List of relations entailing inheritance.
 
 def base_n_hash(data: bytes, chars: str) -> str:
     """
-    Hash data using SHAKE-128 and encode as a base-N string, where N is
-    len(chars).
+    Hash data using SHAKE-128 and encode as a base-N string, where N is len(chars).
     """
     assert len(chars)
 
@@ -52,8 +51,8 @@ def base_n_hash(data: bytes, chars: str) -> str:
 @cache
 def _get_max_len(bit_count: int, char_count: int) -> int:
     """
-    Get max length of the resulting hash for the given # bits and # characters
-    used to represent it.
+    Get max length of the resulting hash for the given # bits and # characters used to
+    represent it.
     """
     max_digest = (1 << bit_count) - 1
     max_len = 0

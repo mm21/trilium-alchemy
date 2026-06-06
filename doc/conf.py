@@ -19,9 +19,7 @@ project = "TriliumAlchemy"
 copyright = "2023-2024, mm21"
 author = "mm21"
 
-with open(
-    Path(os.path.abspath(__file__)).parent.parent / "pyproject.toml", "rb"
-) as fh:
+with open(Path(os.path.abspath(__file__)).parent.parent / "pyproject.toml", "rb") as fh:
     release = tomllib.load(fh)["project"]["version"]
 
 package = "trilium_alchemy"

@@ -49,21 +49,24 @@ class SessionType(Enum):
     """
 
     ETAPI = auto()
-    """Interface to Trilium server"""
+    """
+    Interface to Trilium server.
+    """
 
     FILE = auto()
-    """Interface to filesystem"""
+    """
+    Interface to filesystem.
+    """
 
 
 class Session:
     """
     Interface to Trilium and context in which to store changes to entities.
 
-    Changes to entities are tracked as they're made by the user. The user
-    must then invoke {obj}`Session.flush` to commit them.
+    Changes to entities are tracked as they're made by the user. The user must then
+    invoke {obj}`Session.flush` to commit them.
 
-    For details and example usage, see {ref}`sessions` in the
-    user guide.
+    For details and example usage, see {ref}`sessions` in the user guide.
     """
 
     _type = SessionType.ETAPI
@@ -78,8 +81,8 @@ class Session:
 
     _token: str
     """
-    Token as passed by user, or returned by Trilium if a `password` was
-    provided by user.
+    Token as passed by user, or returned by Trilium if a `password` was provided by
+    user.
     """
 
     _api: DefaultApi | None
@@ -109,9 +112,10 @@ class Session:
 
     _logout_pending: bool = False
     """
-    Indicates if this session was created using a password rather than API
-    token. In that case, the Session will automatically logout when exiting
-    a context, and logout() will invoke the logout API.
+    Indicates if this session was created using a password rather than API token.
+
+    In that case, the Session will automatically logout when exiting a context, and
+    logout() will invoke the logout API.
     """
 
     _root: Note
@@ -134,13 +138,14 @@ class Session:
         logger: Logger | None = None,
     ):
         """
-        Either `token` or `password` is required; if both are provided, `token`
-        takes precedence.
+        Either `token` or `password` is required; if both are provided, `token` takes
+        precedence.
 
         :param host: Hostname of Trilium server
         :param token: ETAPI token
         :param password: Trilium password, if no token provided
-        :param default: Register this as the default session; in this case, `session` may be omitted from entity constructors
+        :param default: Register this as the default session; in this case, `session`
+            may be omitted from entity constructors
         :param logger: Logger to use, or `None` to use default logger
         """
         from .note.note import Note
@@ -172,9 +177,7 @@ class Session:
         self._etapi_headers = {"Authorization": self._token}
 
         # create ETAPI client config
-        config = Configuration(
-            host=self._base_path, api_key={"EtapiTokenAuth": token}
-        )
+        config = Configuration(host=self._base_path, api_key={"EtapiTokenAuth": token})
 
         # create api
         self._api = DefaultApi(ApiClient(config))
@@ -185,9 +188,7 @@ class Session:
         # test connection to trilium server
         # TODO: hangs if DNS resolution fails; implement timeout manually
         try:
-            app_info: AppInfo = self.api.get_app_info(
-                _request_timeout=REQUEST_TIMEOUT
-            )
+            app_info: AppInfo = self.api.get_app_info(_request_timeout=REQUEST_TIMEOUT)
         except Exception as e:
             err = (
                 f"status={e.status}, reason={e.reason}"
@@ -296,7 +297,6 @@ class Session:
 
         :returns: List of notes
         """
-
         from .note.note import Note
 
         ancestor_note_id: str | None = (
@@ -310,9 +310,7 @@ class Session:
 
         # take int in interface and convert to str
         ancestor_depth_arg: str | None
-        ancestor_depth_arg = (
-            str(ancestor_depth) if ancestor_depth is not None else None
-        )
+        ancestor_depth_arg = str(ancestor_depth) if ancestor_depth is not None else None
 
         response: SearchResponse = self.api.search_notes(
             query,
@@ -330,9 +328,7 @@ class Session:
         if response.debug_info:
             self._logger.debug(f"Got search debug: {response.debug_info}")
 
-        return [
-            Note._from_model(model, session=self) for model in response.results
-        ]
+        return [Note._from_model(model, session=self) for model in response.results]
 
     def backup(self, name: str):
         """
@@ -344,47 +340,54 @@ class Session:
 
     def get_today_note(self) -> Note:
         """
-        Returns today's day note. Gets created if doesn't exist.
+        Returns today's day note.
+
+        Gets created if doesn't exist.
         """
         return self.get_day_note(datetime.date.today())
 
     def get_day_note(self, date: datetime.date) -> Note:
         """
-        Returns a day note for a given date. Gets created if doesn't exist.
+        Returns a day note for a given date.
 
+        Gets created if doesn't exist.
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
         return self._etapi_wrapper(self.api.get_day_note, date)
 
     def get_week_note(self, date: datetime.date) -> Note:
         """
-        Returns a week note for a given date. Gets created if doesn't exist.
+        Returns a week note for a given date.
 
+        Gets created if doesn't exist.
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
         return self._etapi_wrapper(self.api.get_week_note, date)
 
     def get_month_note(self, month: str) -> Note:
         """
-        Returns a month note for a given date. Gets created if doesn't exist.
+        Returns a month note for a given date.
 
+        Gets created if doesn't exist.
         :param month: Month in the form `yyyy-mm`, e.g. `2023-07`
         """
         return self._etapi_wrapper(self.api.get_month_note, month)
 
     def get_year_note(self, year: str) -> Note:
         """
-        Returns a year note for a given date. Gets created if doesn't exist.
+        Returns a year note for a given date.
 
+        Gets created if doesn't exist.
         :param year: Year as string
         """
         return self._etapi_wrapper(self.api.get_year_note, year)
 
     def get_inbox_note(self, date: datetime.date) -> Note:
         """
-        Returns an "inbox" note into which note can be created. Date will
-        be used depending on whether the inbox is a fixed note
-        (identified with `#inbox` label) or a day note in a journal.
+        Returns an "inbox" note into which note can be created.
+
+        Date will be used depending on whether the inbox is a fixed note (identified
+        with `#inbox` label) or a day note in a journal.
 
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
@@ -392,9 +395,10 @@ class Session:
 
     def get_app_info(self) -> AppInfo:
         """
-        Returns app info. See <https://github.com/mm21/trilium-client/blob/main/docs/AppInfo.md> for its definition.
-        """
+        Returns app info.
 
+        See <https://github.com/mm21/trilium-client/blob/main/docs/AppInfo.md> for its definition.
+        """
         app_info: AppInfo = self.api.get_app_info()
         return app_info
 
@@ -402,11 +406,8 @@ class Session:
         """
         Refresh ordering of provided note's children for any connected clients.
 
-        ```{note}
-        This API is automatically invoked after any child branch positions
-        are adjusted. It should rarely be required, but is
-        provided for completeness.
-        ```
+        ```{note} This API is automatically invoked after any child branch positions are
+        adjusted. It should rarely be required, but is provided for completeness. ```
         """
         from .note.note import Note
 
@@ -418,18 +419,14 @@ class Session:
         """
         Login using a password and get an ETAPI token.
 
-        ```{note}
-        You can implicitly login by passing `password` when creating
-        a {obj}`Session`. This API should rarely be required, but
-        is provided for completeness.
-        ```
+        ```{note} You can implicitly login by passing `password` when creating a
+        {obj}`Session`. This API should rarely be required, but is provided for
+        completeness. ```
 
         :param host: Hostname of Trilium server
         :param password: Trilium password
-
         :returns: ETAPI token
         """
-
         # avoid creating an api object, but use generated models
 
         request_model = LoginRequest(password=password)
@@ -444,9 +441,7 @@ class Session:
             response.status_code == 201
         ), f"Login attempt returned status code {response.status_code}"
 
-        response_model = Login201Response.model_validate(
-            json.loads(response.text)
-        )
+        response_model = Login201Response.model_validate(json.loads(response.text))
 
         assert isinstance(response_model.auth_token, str)
         token: str = cast(str, response_model.auth_token)
@@ -455,19 +450,16 @@ class Session:
 
     def logout(self):
         """
-        Deletes the currently active API token, if this `Session` was created
-        with a `password` rather than `token`.
+        Deletes the currently active API token, if this `Session` was created with a
+        `password` rather than `token`.
 
-        ```{warning}
-        Subsequent attempts to invoke ETAPI methods using this `Session`,
-        such as those invoked by {meth}`flush <Session.flush>`, will fail.
-        ```
+        ```{warning} Subsequent attempts to invoke ETAPI methods using this `Session`,
+        such as those invoked by {meth}`flush <Session.flush>`, will fail. ```
 
-        If this {obj}`Session` was instead created with a token, a warning
-        will be generated and no action will be taken. For token-based sessions
-        there's no corresponding login.
+        If this {obj}`Session` was instead created with a token, a warning will be
+        generated and no action will be taken. For token-based sessions there's no
+        corresponding login.
         """
-
         if self._logout_pending:
             if self.dirty_count:
                 self._logger.warning(
@@ -484,8 +476,9 @@ class Session:
 
     def deregister_default(self):
         """
-        If this session was registered as default, deregister it. No-op
-        otherwise.
+        If this session was registered as default, deregister it.
+
+        No-op otherwise.
         """
         if self._is_default:
             global default_session
@@ -524,7 +517,10 @@ class Session:
     @property
     def dirty_map(
         self,
-    ) -> dict[State, set[BaseEntity],]:
+    ) -> dict[
+        State,
+        set[BaseEntity],
+    ]:
         """
         Mapping of state to dirty {obj}`BaseEntity` objects
         in that state.
@@ -550,8 +546,8 @@ class Session:
 
     def get_dirty_summary(self) -> str:
         """
-        Get a summary of entities with pending changes, grouped by note and
-        sorted by title.
+        Get a summary of entities with pending changes, grouped by note and sorted by
+        title.
         """
         from .attribute.attribute import BaseAttribute
         from .branch.branch import Branch
@@ -580,9 +576,7 @@ class Session:
             elif isinstance(entity, BaseAttribute):
                 note = entity.note
                 if not note:
-                    self._logger.warning(
-                        f"Attribute has no note: {entity.str_summary}"
-                    )
+                    self._logger.warning(f"Attribute has no note: {entity.str_summary}")
                     continue
 
                 note_state = get_note_state(entity.note)
@@ -603,9 +597,7 @@ class Session:
         note_summaries: list[str] = []
 
         # generate summaries of notes
-        for note_state in sorted(
-            note_states.values(), key=lambda n: n.note.title
-        ):
+        for note_state in sorted(note_states.values(), key=lambda n: n.note.title):
             note_summaries.append(note_state.summary)
 
         return "\n".join(note_summaries)
@@ -620,8 +612,11 @@ class Session:
     @property
     def api(self) -> DefaultApi:
         """
-        ETAPI client object. Used internally and exposed for manual
-        low-level operations. For its documentation, see: <https://github.com/mm21/trilium-client>
+        ETAPI client object.
+
+        Used internally and exposed for manual low-level operations. For its
+        documentation, see:
+        <https://github.com/mm21/trilium-client>
         """
         assert self._api is not None
         return self._api
@@ -629,7 +624,9 @@ class Session:
     @property
     def _base_path(self) -> str:
         """
-        Return API base path from config. This is the host appended with
+        Return API base path from config.
+
+        This is the host appended with
         `/etapi`.
         """
         return f"{self.host}/etapi"
@@ -687,7 +684,6 @@ def normalize_session(session: Session | None) -> Session:
     """
     Interface to get default Session if none provided.
     """
-
     if session is not None:
         return session
 

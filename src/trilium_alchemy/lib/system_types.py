@@ -1,20 +1,19 @@
 """
-A common note structure is to create "system" notes which hold templates,
-scripts, etc. This module facilitates maintenance of such a system, with a 
-{obj}`BaseSystemNote` class to hold such notes.
+A common note structure is to create "system" notes which hold templates, scripts, etc.
+This module facilitates maintenance of such a system, with a {obj}`BaseSystemNote` class
+to hold such notes.
 
-The root system {obj}`BaseRootSystemNote` additionally holds themes and a
-built-in stylesheet which hides the "Create child note" button in the UI
-for subclass-managed notes 
-({obj}`BaseDeclarativeNote.leaf` is `False`{l=python}).
+The root system {obj}`BaseRootSystemNote` additionally holds themes and a built-in
+stylesheet which hides the "Create child note" button in the UI for subclass-managed
+notes ({obj}`BaseDeclarativeNote.leaf` is `False`{l=python}).
 
-If a note hierarchy is defined under a {obj}`BaseRootNote` subclass,
-a {obj}`BaseRootSystemNote` is automatically added.
+If a note hierarchy is defined under a {obj}`BaseRootNote` subclass, a
+{obj}`BaseRootSystemNote` is automatically added.
 
-For a complete example of a note hierarchy using these classes, see 
-`trilium-alchemy/examples/event-tracker` and its documentation at
-{ref}`event-tracker`.
+For a complete example of a note hierarchy using these classes, see `trilium-
+alchemy/examples/event-tracker` and its documentation at {ref}`event-tracker`.
 """
+
 from __future__ import annotations
 
 from typing import cast
@@ -102,11 +101,11 @@ class Scripts(BaseHiddenCategoryNote):
 @label("archived")
 class BaseSystemNote(BaseDeclarativeNote):
     """
-    Base class for a "system" note, a collection of various types of
-    infrastructure notes.
+    Base class for a "system" note, a collection of various types of infrastructure
+    notes.
 
-    Attributes such as {obj}`BaseSystemNote.templates` from any base classes
-    are appended.
+    Attributes such as {obj}`BaseSystemNote.templates` from any base classes are
+    appended.
     """
 
     templates: list[type[BaseTemplateNote]] | None = None
@@ -129,9 +128,7 @@ class BaseSystemNote(BaseDeclarativeNote):
     List of {obj}`Widget` subclasses.
     """
 
-    scripts: list[
-        type[BaseFrontendScriptNote | BaseBackendScriptNote]
-    ] | None = None
+    scripts: list[type[BaseFrontendScriptNote | BaseBackendScriptNote]] | None = None
     """
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
@@ -166,10 +163,8 @@ class BaseSystemNote(BaseDeclarativeNote):
 
     def _collect_notes(self, attr: str) -> list[Note]:
         """
-        Get the attribute with the given name, appending those of
-        base classes.
+        Get the attribute with the given name, appending those of base classes.
         """
-
         notes: list[Note] = []
 
         for cls in type(self).mro():
@@ -201,9 +196,10 @@ class BaseSystemNote(BaseDeclarativeNote):
 
 class TriliumAlchemyStylesheetNote(BaseAppCssNote):
     """
-    Custom stylesheet to hide "Create child note" button for
-    non-leaf notes. This is to reflect the fact that these
-    notes are managed by code rather than in the UI.
+    Custom stylesheet to hide "Create child note" button for non-leaf notes.
+
+    This is to reflect the fact that these notes are managed by code rather than in the
+    UI.
     """
 
     content_file = "assets/system.css"
@@ -224,7 +220,7 @@ class BaseRootSystemNote(BaseSystemNote):
 
     themes: list[type[BaseThemeNote]] | None = None
     """
-    List of {obj}`Theme` subclasses
+    List of {obj}`Theme` subclasses.
     """
 
     def init(self, _: list[BaseAttribute], children: list[Branch]):

@@ -1,6 +1,7 @@
 """
 Interface to configuration as persisted in .yaml file.
 """
+
 from __future__ import annotations
 
 from logging import Logger

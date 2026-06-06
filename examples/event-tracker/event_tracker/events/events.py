@@ -98,9 +98,7 @@ class EventInstance(BaseDeclarativeNote):
     leaf = True
 
     def add_people(self, *people):
-        self.attributes.owned += [
-            Relation("person", person) for person in people
-        ]
+        self.attributes.owned += [Relation("person", person) for person in people]
 
 
 @relation("template", Birthday)

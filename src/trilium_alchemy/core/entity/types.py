@@ -5,24 +5,34 @@ from rich.markup import escape
 
 class State(Enum):
     """
-    Entity state. Maintained automatically based on the user's
-    updates and object's current state in Trilium.
+    Entity state.
 
-    For example, state will change from {obj}`State.UPDATE` back
-    to {obj}`State.CLEAN` if the user reverts changes.
+    Maintained automatically based on the user's updates and object's current state in
+    Trilium.
+
+    For example, state will change from {obj}`State.UPDATE` back to {obj}`State.CLEAN`
+    if the user reverts changes.
     """
 
     CLEAN = auto()
-    """No pending changes"""
+    """
+    No pending changes.
+    """
 
     CREATE = auto()
-    """Pending create"""
+    """
+    Pending create.
+    """
 
     UPDATE = auto()
-    """Pending update"""
+    """
+    Pending update.
+    """
 
     DELETE = auto()
-    """Pending delete"""
+    """
+    Pending delete.
+    """
 
     def __str__(self) -> str:
         color_map = {

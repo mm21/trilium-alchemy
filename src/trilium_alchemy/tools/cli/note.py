@@ -1,6 +1,7 @@
 """
 Operations on one or more notes, not necessarily within the same subtree.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -31,13 +32,11 @@ app = MainTyper(
 @app.callback()
 def main(
     ctx: Context,
-    note_id: str
-    | None = Option(
+    note_id: str | None = Option(
         None,
         help="Note id on which to perform operation",
     ),
-    search: str
-    | None = Option(
+    search: str | None = Option(
         None,
         help="Search string to identify note(s) on which to perform operation, e.g. '#myProjectRoot'",
     ),
@@ -59,13 +58,11 @@ def main(
 @app.command()
 def sync_template(
     ctx: Context,
-    template_note_id: str
-    | None = Option(
+    template_note_id: str | None = Option(
         None,
         help="Template note id",
     ),
-    template_search: str
-    | None = Option(
+    template_search: str | None = Option(
         None,
         help="Search string to identify template note, e.g. '#template #task'",
     ),
@@ -82,9 +79,9 @@ def sync_template(
     ),
 ):
     """
-    Sync notes with specified template, or first ~template relation if no template provided; select all applicable notes if none passed
+    Sync notes with specified template, or first ~template relation if no template
+    provided; select all applicable notes if none passed.
     """
-
     note_context = _get_note_context(ctx)
 
     notes: list[Note] | None = None
@@ -105,8 +102,7 @@ def sync_template(
         template = templates[0]
 
         if not (
-            "template" in template.labels
-            or "workspaceTemplate" in template.labels
+            "template" in template.labels or "workspaceTemplate" in template.labels
         ):
             logger.error(
                 f"Template note does not have '#template' or '#workspaceTemplate' label: {template._str_short}"
@@ -154,7 +150,6 @@ def _sync_template(
     """
     Invoke template sync operation after validating input.
     """
-
     notes_norm: list[Note]
 
     # if no notes passed, look them up from the template (if any)
@@ -171,9 +166,7 @@ def _sync_template(
         # ensure some notes were found
         if not len(notes_norm):
             template_desc = (
-                f"~template={template._str_short}"
-                if template
-                else "any ~template"
+                f"~template={template._str_short}" if template else "any ~template"
             )
             logger.warning(f"No notes found with {template_desc}")
     else:
@@ -198,9 +191,7 @@ def _sync_template(
             # select first ~template relation
             selected_template = note.relations.get_target("template")
             if not selected_template:
-                logger.warning(
-                    f"Note {note._str_short} does not have a ~template"
-                )
+                logger.warning(f"Note {note._str_short} does not have a ~template")
                 continue
 
         # sync this note with this template

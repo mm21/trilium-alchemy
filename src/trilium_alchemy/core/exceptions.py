@@ -10,9 +10,7 @@ class ReadOnlyError(Exception):
     """
 
     def __init__(self, field, entity):
-        super().__init__(
-            self, f"Attempt to set read-only field {field} of {entity}"
-        )
+        super().__init__(self, f"Attempt to set read-only field {field} of {entity}")
 
 
 class ValidationError(Exception):
@@ -36,8 +34,8 @@ class ValidationError(Exception):
 
 class _ValidationError(Exception):
     """
-    Raised internally during flush if there are any errors for this
-    entity, but aggregated before raising ValidationErrors to user.
+    Raised internally during flush if there are any errors for this entity, but
+    aggregated before raising ValidationErrors to user.
     """
 
 

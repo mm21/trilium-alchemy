@@ -34,9 +34,7 @@ __rollup__ = [
 ]
 
 
-class BaseEntity[ModelT: BaseEntityModel](
-    ABC, SessionContainer, ModelContainer
-):
+class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer):
     """
     Base class for Trilium entities.
 
@@ -148,8 +146,7 @@ class BaseEntity[ModelT: BaseEntityModel](
 
     @classmethod
     @abstractmethod
-    def _from_model(self, model: BaseModel):
-        ...
+    def _from_model(self, model: BaseModel): ...
 
     @property
     def state(self) -> State:
@@ -177,8 +174,7 @@ class BaseEntity[ModelT: BaseEntityModel](
     @property
     def str_summary(self) -> str:
         """
-        Get a summary of this entity, including its current state and model
-        values.
+        Get a summary of this entity, including its current state and model values.
         """
         indent = f"\n{' '*4}"
         return indent.join(
@@ -206,8 +202,7 @@ class BaseEntity[ModelT: BaseEntityModel](
     @abstractmethod
     def _str_short(self):
         """
-        Implementation of str_short so as to keep it next to str_summary
-        in docs.
+        Implementation of str_short so as to keep it next to str_summary in docs.
         """
         ...
 
@@ -241,15 +236,11 @@ class BaseEntity[ModelT: BaseEntityModel](
 
     @property
     def _is_abandoned(self) -> bool:
-        return (
-            self._state in {State.CLEAN, State.DELETE} and self._model._nexists
-        )
+        return self._state in {State.CLEAN, State.DELETE} and self._model._nexists
 
     @property
     def _is_orphan(self) -> bool:
-        return any(
-            dep._is_abandoned or dep._is_delete for dep in self._dependencies
-        )
+        return any(dep._is_abandoned or dep._is_delete for dep in self._dependencies)
 
     def flush(self):
         """
@@ -260,6 +251,7 @@ class BaseEntity[ModelT: BaseEntityModel](
     def invalidate(self):
         """
         Discard cached contents and user-provided data for this object.
+
         Upon next access, data will be fetched from Trilium.
         """
         for entity in [self] + self._associated_entities:
@@ -282,8 +274,8 @@ class BaseEntity[ModelT: BaseEntityModel](
 
     def _delete(self):
         """
-        Use wrapper so delete() is listed in a consistent order when
-        _delete() is subclassed.
+        Use wrapper so delete() is listed in a consistent order when _delete() is
+        subclassed.
         """
         self._model.setup_check()
         self._set_dirty(State.DELETE)
@@ -317,7 +309,6 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         Commit changes to Trilium database for this object.
         """
-
         self.session._logger.debug(f"Flushing: {self.str_summary}")
 
         model_new: BaseModel | None = None
@@ -369,7 +360,6 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         Invoked upon field update by user.
         """
-
         # handle dirty state based on entity state
         if self._state is State.CLEAN:
             # compare model fields valid for update and set dirty if different
@@ -447,8 +437,8 @@ class BaseEntity[ModelT: BaseEntityModel](
         """
         Check if this object is in a valid state to be committed to database.
 
-        Upon invalid state, should raise AssertionError with useful
-        description of problem.
+        Upon invalid state, should raise AssertionError with useful description of
+        problem.
         """
         ...
 
@@ -497,12 +487,10 @@ class EntityIdDescriptor:
     """
 
     @overload
-    def __get__(self, ent: None, objtype: None) -> EntityIdDescriptor:
-        ...
+    def __get__(self, ent: None, objtype: None) -> EntityIdDescriptor: ...
 
     @overload
-    def __get__(self, ent: BaseEntity, objtype: type[BaseEntity]) -> str:
-        ...
+    def __get__(self, ent: BaseEntity, objtype: type[BaseEntity]) -> str: ...
 
     def __get__(
         self,
@@ -517,17 +505,15 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", ent)
 
 
-def normalize_entities[
-    CollectionT: Iterable
-](
+def normalize_entities[CollectionT: Iterable](
     entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
     collection_cls: type[CollectionT] = list,
 ) -> CollectionT:
     """
     Take an entity or iterable of entities and return an iterable.
+
     Also supports tuples, e.g. (child, "prefix")
     """
-
     if (
         isinstance(entities, Iterable)
         and not isinstance(entities, tuple)

@@ -1,7 +1,6 @@
 """
-Library which builds upon {obj}`BaseDeclarativeNote` to facilitate 
-development of note hierarchies and extensions encapsulated in a Python 
-package.
+Library which builds upon {obj}`BaseDeclarativeNote` to facilitate development of note
+hierarchies and extensions encapsulated in a Python package.
 """
 
 from pyrollup import rollup

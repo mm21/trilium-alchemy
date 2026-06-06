@@ -39,7 +39,5 @@ class BaseYamlModel(BaseModel):
         Dump model to .yaml file.
         """
         model = self.model_dump(by_alias=True)
-        model_yaml = yaml.safe_dump(
-            model, default_flow_style=False, sort_keys=False
-        )
+        model_yaml = yaml.safe_dump(model, default_flow_style=False, sort_keys=False)
         file.write_text(model_yaml)

@@ -46,7 +46,6 @@ class Relation(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-
         model_backing = kwargs.get("_model_backing")
 
         super().__init__(
@@ -63,8 +62,8 @@ class Relation(BaseAttribute):
     @property
     def target(self) -> Note:
         """
-        Getter/setter for target note, with getter validating that the target
-        has already been assigned.
+        Getter/setter for target note, with getter validating that the target has
+        already been assigned.
         """
         assert self._target is not None
         return self._target
@@ -109,12 +108,11 @@ class Relation(BaseAttribute):
 
     def _flush_prep(self):
         """
-        Set target note_id if target is being newly created and didn't have a
-        note_id before.
+        Set target note_id if target is being newly created and didn't have a note_id
+        before.
 
-        If this is the case, 'value' field will be None. This should
-        automatically maintain dirty state correctly since any existing value
-        can't be None.
+        If this is the case, 'value' field will be None. This should automatically
+        maintain dirty state correctly since any existing value can't be None.
         """
         assert self._target_obj is not None
 

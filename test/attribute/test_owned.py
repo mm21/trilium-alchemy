@@ -90,7 +90,6 @@ def test_relation_update_target_new(session: Session, relation: Relation):
     """
     Update relation target to a new Note which doesn't have a note_id yet.
     """
-
     assert relation._is_clean
 
     root = Note(note_id="root", session=session)
@@ -347,9 +346,8 @@ def _test_attribute_update_inheritable(attr: BaseAttribute):
     """
     Common routine to check update of isInheritable for label/relation.
 
-    isInheritable uses a different code path since it can't be changed -- the
-    attribute needs to be deleted and created again, so need to have separate
-    tests for it.
+    isInheritable uses a different code path since it can't be changed -- the attribute
+    needs to be deleted and created again, so need to have separate tests for it.
     """
     assert attr._is_clean
 

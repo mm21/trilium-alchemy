@@ -1,6 +1,7 @@
 """
 Filesystem operations on a single note.
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,8 +44,7 @@ def dump_note(
 
     # ensure there are no unexpected contents in destination
     if not all(
-        p.is_file() and p.name in ["content.txt", "content.bin"]
-        for p in extra_paths
+        p.is_file() and p.name in ["content.txt", "content.bin"] for p in extra_paths
     ):
         raise Exception(
             f"Unexpected files in export destination '{dest_dir}': {extra_paths}"
@@ -63,9 +63,7 @@ def dump_note(
     # write metadata if it doesn't exist or differs from existing metadata
     if meta != current_meta:
         if dry_run:
-            logger.info(
-                f"Would write metadata for {note._str_short}: '{meta_path}'"
-            )
+            logger.info(f"Would write metadata for {note._str_short}: '{meta_path}'")
         else:
             meta.dump_yaml(meta_path)
         updated = True
@@ -81,9 +79,7 @@ def dump_note(
     )
     if not content_file.exists() or current_blob_id != note.blob_id:
         if dry_run:
-            logger.info(
-                f"Would write content for {note._str_short}: '{meta_path}'"
-            )
+            logger.info(f"Would write content for {note._str_short}: '{meta_path}'")
         else:
             if note.is_string:
                 content_file.write_text(note.content_str)
@@ -108,7 +104,6 @@ def load_note(src_dir: Path, session: Session) -> Note:
     """
     Load note from source folder.
     """
-
     meta_path = src_dir / META_FILENAME
     assert meta_path.is_file()
 
@@ -126,9 +121,7 @@ def load_note(src_dir: Path, session: Session) -> Note:
         assert content_file.is_file()
 
         note.content = (
-            content_file.read_text()
-            if note.is_string
-            else content_file.read_bytes()
+            content_file.read_text() if note.is_string else content_file.read_bytes()
         )
 
     # set attributes
@@ -154,9 +147,9 @@ def _load_attributes(note: Note, meta: NoteMeta) -> list[BaseAttribute]:
         else:
             attr_dict[attr.name] = [attr]
 
-    def get_attr[
-        T: BaseAttribute
-    ](name: str, attr_dict: dict[str, list[T]]) -> T | None:
+    def get_attr[T: BaseAttribute](
+        name: str, attr_dict: dict[str, list[T]]
+    ) -> T | None:
         """
         Get and remove first existing attribute with the given name.
         """
@@ -191,9 +184,7 @@ def _load_attributes(note: Note, meta: NoteMeta) -> list[BaseAttribute]:
                 attr_meta.name, session=note.session
             )
 
-            relation.target = Note(
-                note_id=attr_meta.value, session=note.session
-            )
+            relation.target = Note(note_id=attr_meta.value, session=note.session)
             relation.inheritable = attr_meta.inheritable
             attributes.append(relation)
 
@@ -209,9 +200,7 @@ def _load_child_branches(note: Note, meta: NoteMeta) -> list[Branch]:
     branches: list[Branch] = []
 
     for branch_meta in meta.children:
-        branch_id = Branch._gen_branch_id(
-            note.note_id, branch_meta.child_note_id
-        )
+        branch_id = Branch._gen_branch_id(note.note_id, branch_meta.child_note_id)
         child = Note(note_id=branch_meta.child_note_id, session=note.session)
         branch = Branch(
             parent=note,

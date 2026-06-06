@@ -4,15 +4,16 @@ Entry point of `trilium-alchemy` CLI.
 Planned commands:
 
 - `extensions`
-    - Manage extensions: List currently installed, install/uninstall/upgrade 
+    - Manage extensions: List currently installed, install/uninstall/upgrade
     from filesystem dump/zip/git repo
-        - User-defined destination note for extensions given by 
+        - User-defined destination note for extensions given by
         `#extensionsRoot` label
 - `test`
     - Run sanity tests for ETAPI functionality
     - Run stress tests: generate hierarchy with many notes to stress test
     both Trilium itself and TriliumAlchemy
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -44,20 +45,17 @@ def main(
         help="Trilium host, e.g. http://localhost:8080. Can also be set via TRILIUM_HOST environment variable.",
         envvar="TRILIUM_HOST",
     ),
-    token: str
-    | None = Option(
+    token: str | None = Option(
         None,
         help="ETAPI token",
         envvar="TRILIUM_TOKEN",
     ),
-    password: str
-    | None = Option(
+    password: str | None = Option(
         None,
         help="Trilium password",
         envvar="TRILIUM_PASSWORD",
     ),
-    instance_name: str
-    | None = Option(
+    instance_name: str | None = Option(
         None,
         "--instance",
         help="Instance name as configured in .yaml",
@@ -111,7 +109,7 @@ app.add_typer(note.app)
 @app.command()
 def check(ctx: Context):
     """
-    Check Trilium connection
+    Check Trilium connection.
     """
     root_context = get_root_context(ctx)
     session = root_context.create_session()

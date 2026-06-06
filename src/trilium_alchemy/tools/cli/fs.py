@@ -3,9 +3,10 @@ Filesystem dump/load functionality.
 
 Possible dump option: --build-hierarchy [dest: Path]
 - recreates note hierarchy in destination using symlinks
-    - name folders using branch prefix + note titles, suffix w/note_id 
+    - name folders using branch prefix + note titles, suffix w/note_id
     if duplicate prefix+title
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -47,8 +48,7 @@ def dump(
         "root",
         help="Note id to dump",
     ),
-    search: str
-    | None = Option(
+    search: str | None = Option(
         None,
         help="Search string to identify note(s) to dump, e.g. '#myProjectRoot'",
     ),
@@ -74,9 +74,8 @@ def dump(
     ),
 ):
     """
-    Dump notes to folder
+    Dump notes to folder.
     """
-
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
@@ -103,9 +102,7 @@ def dump(
     extra = f"{stats.update_count} written, {stats.prune_count} pruned"
 
     if dry_run:
-        logger.info(
-            f"Would dump {stats.note_count} notes to '{dest}' ({extra})"
-        )
+        logger.info(f"Would dump {stats.note_count} notes to '{dest}' ({extra})")
     else:
         logger.info(f"Dumped {stats.note_count} notes to '{dest}' ({extra})")
 
@@ -122,8 +119,7 @@ def load(
         None,
         help="Optional note id of parent under which to place loaded notes",
     ),
-    parent_search: str
-    | None = Option(
+    parent_search: str | None = Option(
         None,
         help="Optional search string to identify parent under which to place loaded notes, e.g. '#myExtensionsRoot'",
     ),
@@ -140,9 +136,8 @@ def load(
     ),
 ):
     """
-    Load notes from dump folder and optionally add as children of given parent
+    Load notes from dump folder and optionally add as children of given parent.
     """
-
     root_context = get_root_context(ctx)
     session = root_context.create_session()
 
@@ -186,6 +181,6 @@ def scan(
     ),
 ):
     """
-    Scan dump folder for content file changes and update metadata if out of date
+    Scan dump folder for content file changes and update metadata if out of date.
     """
     scan_content(dump_dir, logger=logger, dry_run=dry_run)

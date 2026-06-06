@@ -33,7 +33,6 @@ def test_dump_note(
     """
     Dump a single note and verify output, also verifying overwrite.
     """
-
     content_txt_path = tmp_path / "content.txt"
     content_bin_path = tmp_path / "content.bin"
 
@@ -70,7 +69,6 @@ def test_load_note(request: FixtureRequest, session: Session, note: Note):
     """
     Load a single note and verify it.
     """
-
     # load and check
     note_1 = load_note(NOTE_1_DUMP_PATH, session)
     check_note_1(note_1, State.CREATE)
@@ -192,7 +190,6 @@ def test_load_tree(request: FixtureRequest, session: Session, note: Note):
     """
     Load note hierarchy from folder.
     """
-
     notes = load_tree(TREE_DUMP_PATH, session, parent_note=note)
 
     # find and check note 1

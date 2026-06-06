@@ -22,13 +22,10 @@ __all__ = [
 ]
 
 
-def normalize_tuple(
-    note_spec: Note | tuple[Note, str]
-) -> tuple[Note, str | None]:
+def normalize_tuple(note_spec: Note | tuple[Note, str]) -> tuple[Note, str | None]:
     """
     Returns a tuple of (Note, prefix) where prefix may be None.
     """
-
     if type(note_spec) is tuple:
         note, prefix = note_spec
     else:
@@ -43,14 +40,12 @@ class BranchLookupMixin:
     Enables looking up a branch given a related Note, either parent or child.
     """
 
-    def __iter__(self) -> Iterator[Branch]:
-        ...
+    def __iter__(self) -> Iterator[Branch]: ...
 
     def lookup_branch(self, note: Note) -> Branch | None:
         """
         Lookup a branch given a related {obj}`Note`, either parent or child.
         """
-
         for branch in self:
             if note in {branch.parent, branch.child}:
                 return branch
@@ -63,15 +58,12 @@ class NoteLookupMixin:
     Enables looking up a note given a title, either parent or child.
     """
 
-    def __iter__(self) -> Iterator[Note]:
-        ...
+    def __iter__(self) -> Iterator[Note]: ...
 
     def lookup_note(self, title: str) -> Note | None:
         """
-        Lookup a parent or child note given a title, or `None` if no such
-        note exists.
+        Lookup a parent or child note given a title, or `None` if no such note exists.
         """
-
         for note in self:
             if note.title == title:
                 return note
@@ -92,7 +84,6 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         Implement helper:
         note1 in note2.branches.parents
         """
-
         from .note import Note
 
         assert isinstance(val, (Branch, Note))
@@ -103,17 +94,16 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
             return val in {branch.parent for branch in self._entity_set}
 
     @overload
-    def __getitem__(self, i: int) -> Branch:
-        ...
+    def __getitem__(self, i: int) -> Branch: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[Branch]:
-        ...
+    def __getitem__(self, i: slice) -> list[Branch]: ...
 
     def __getitem__(self, i: int | slice) -> Branch | list[Branch]:
         """
-        Parent branches are inherently unsorted, but sort set by object id
-        so traversal by index is deterministic.
+        Parent branches are inherently unsorted, but sort set by object id so traversal
+        by index is deterministic.
+
         We can't use parent note_id since it may not be known yet.
         """
         return sorted(self._entity_set, key=lambda branch: id(branch))[i]
@@ -133,7 +123,6 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         """
         When adding a new parent branch, also add to parent's child branches.
         """
-
         super()._bind_entity(parent_branch)
 
         assert parent_branch.child is self._note
@@ -197,9 +186,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
                 for branch_id in model.child_branch_ids:
                     if not branch_id.startswith("root__"):
                         self._entity_list.append(
-                            Branch._from_id(
-                                branch_id, session=self._note.session
-                            )
+                            Branch._from_id(branch_id, session=self._note.session)
                         )
 
             # sort list by position
@@ -209,7 +196,6 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
         """
         When adding a new child branch, also add to child's parent branches.
         """
-
         super()._bind_entity(child_branch)
 
         assert child_branch.parent is self._note
@@ -246,9 +232,8 @@ class Branches(NoteExtension, BranchLookupMixin):
     """
     Interface to a note's parent and child branches.
 
-    This object is stateless; `Note.branches.parents` and
-    `Note.branches.children` are the sources of truth
-    for parent and child branches respectively.
+    This object is stateless; `Note.branches.parents` and `Note.branches.children` are
+    the sources of truth for parent and child branches respectively.
     """
 
     _parents: ParentBranches
@@ -264,12 +249,10 @@ class Branches(NoteExtension, BranchLookupMixin):
         return iter(list(self.parents) + list(self.children))
 
     @overload
-    def __getitem__(self, i: int) -> Branch:
-        ...
+    def __getitem__(self, i: int) -> Branch: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[Branch]:
-        ...
+    def __getitem__(self, i: slice) -> list[Branch]: ...
 
     def __getitem__(self, i: int | slice) -> Branch | list[Branch]:
         return list(self)[i]
@@ -308,8 +291,8 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
     """
     Interface to a note's parent notes.
 
-    This object is stateless; `Note.branches.parents` is the source of
-    truth for parent branches.
+    This object is stateless; `Note.branches.parents` is the source of truth for parent
+    branches.
     """
 
     def __iadd__(
@@ -321,9 +304,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
 
         note.parents += branch_spec
         """
-        self._note.branches.parents |= normalize_entities(
-            parent, collection_cls=set
-        )
+        self._note.branches.parents |= normalize_entities(parent, collection_cls=set)
         return self
 
     def __contains__(self, val: Note) -> bool:
@@ -341,18 +322,17 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
         return len(self._note.branches.parents)
 
     @overload
-    def __getitem__(self, i: int) -> Note:
-        ...
+    def __getitem__(self, i: int) -> Note: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[Note]:
-        ...
+    def __getitem__(self, i: slice) -> list[Note]: ...
 
     def __getitem__(self, i: int | slice) -> Note | list[Note]:
         """
-        Return parent Note of Branch given by index. Not required for a set,
-        but used to access the provided index of the serialized parent
-        branches.
+        Return parent Note of Branch given by index.
+
+        Not required for a set, but used to access the provided index of the serialized
+        parent branches.
         """
         return self._note.branches.parents[i].parent
 
@@ -373,8 +353,8 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     """
     Interface to a note's child notes.
 
-    This object is stateless; `Note.branches.children` is the source of
-    truth for child branches.
+    This object is stateless; `Note.branches.children` is the source of truth for child
+    branches.
     """
 
     def __iadd__(
@@ -400,12 +380,10 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         return val in self._note.branches.children
 
     @overload
-    def __getitem__(self, i: int) -> Note:
-        ...
+    def __getitem__(self, i: int) -> Note: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[Note]:
-        ...
+    def __getitem__(self, i: slice) -> list[Note]: ...
 
     def __getitem__(self, i: int | slice) -> Note | list[Note]:
         assert isinstance(i, (int, slice))
@@ -416,23 +394,19 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
             return [b.child for b in self._note.branches.children[i]]
 
     @overload
-    def __setitem__(self, i: int, value: Note):
-        ...
+    def __setitem__(self, i: int, value: Note): ...
 
     @overload
-    def __setitem__(self, i: slice, value: Iterable[Note]):
-        ...
+    def __setitem__(self, i: slice, value: Iterable[Note]): ...
 
     def __setitem__(self, i: int | slice, value: Note | Iterable[Note]):
         self._note.branches.children[i] = value
 
     @overload
-    def __delitem__(self, i: int):
-        ...
+    def __delitem__(self, i: int): ...
 
     @overload
-    def __delitem__(self, i: slice):
-        ...
+    def __delitem__(self, i: slice): ...
 
     def __delitem__(self, i: int | slice):
         del self._note.branches.children[i]

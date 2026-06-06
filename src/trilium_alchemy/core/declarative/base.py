@@ -21,8 +21,8 @@ __all__ = [
 
 class DeclarativeMeta(ABCMeta):
     """
-    To generate documentation for added attributes and children, use
-    initialize the list of descriptions for decorators added to it.
+    To generate documentation for added attributes and children, use initialize the list
+    of descriptions for decorators added to it.
     """
 
     def __new__(cls, name, bases, attrs) -> Self:
@@ -53,8 +53,7 @@ class BaseDeclarativeMixin(
 
     _sequence_map: dict[type, dict[str, int]]
     """
-    State to keep track of sequence numbers for deterministic attribute/
-    child ids.
+    State to keep track of sequence numbers for deterministic attribute/ child ids.
     """
 
     _note: BaseDeclarativeNote
@@ -71,13 +70,13 @@ class BaseDeclarativeMixin(
 
     _force_leaf: bool = False
     """
-    If we applied the triliumAlchemyDeclarative CSS class to templates and
-    their children, the user wouldn't be able to modify children of instances
-    of that template in the UI since the cssClass would be inherited as well.
+    If we applied the triliumAlchemyDeclarative CSS class to templates and their
+    children, the user wouldn't be able to modify children of instances of that template
+    in the UI since the cssClass would be inherited as well.
 
-    This is a simple way to work around that by forcing this note to act as
-    a leaf note for the purpose of checking whether to add the cssClass,
-    even though we still want to maintain the template itself declaratively.
+    This is a simple way to work around that by forcing this note to act as a leaf note
+    for the purpose of checking whether to add the cssClass, even though we still want
+    to maintain the template itself declaratively.
     """
 
     def init(
@@ -106,19 +105,16 @@ class BaseDeclarativeMixin(
         :param children: List of children to which user can append using {obj}`BaseDeclarativeMixin.create_declarative_child`
         """
         if self.icon and all(a.name != "iconClass" for a in attributes):
-            attributes.append(
-                self.create_declarative_label("iconClass", self.icon)
-            )
+            attributes.append(self.create_declarative_label("iconClass", self.icon))
 
     def create_declarative_label(
         self, name: str, value: str = "", inheritable: bool = False
     ) -> Label:
         """
-        Create and return a {obj}`Label` with deterministic `attribute_id`
-        based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`BaseDeclarativeNote.init` or
-        {obj}`BaseDeclarativeMixin.init` to generate the same `attribute_id`
-        upon every instantiation.
+        Create and return a {obj}`Label` with deterministic `attribute_id` based on its
+        `name` and note's `note_id`. Should be used in subclassed
+        {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init` to generate
+        the same `attribute_id` upon every instantiation.
 
         Multiple attributes of the same name are supported.
         """
@@ -136,11 +132,10 @@ class BaseDeclarativeMixin(
         self, name: str, target: Note, inheritable: bool = False
     ) -> Relation:
         """
-        Create and return a {obj}`Relation` with deterministic `attribute_id`
-        based on its `name` and note's `note_id`. Should be used in
-        subclassed {obj}`BaseDeclarativeNote.init` or
-        {obj}`BaseDeclarativeMixin.init` to generate the same `attribute_id`
-        upon every instantiation.
+        Create and return a {obj}`Relation` with deterministic `attribute_id` based on
+        its `name` and note's `note_id`. Should be used in subclassed
+        {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init` to generate
+        the same `attribute_id` upon every instantiation.
 
         Multiple attributes of the same name are supported.
         """
@@ -169,19 +164,18 @@ class BaseDeclarativeMixin(
         expanded: bool | None = None,
     ) -> Branch:
         """
-        Creates a child {obj}`BaseDeclarativeNote` with deterministic
-        `note_id` and returns a {obj}`Branch`. Should be used in subclassed
-        {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init`
-        to generate the same child `note_id` upon every instantiation.
+        Creates a child {obj}`BaseDeclarativeNote` with deterministic `note_id` and
+        returns a {obj}`Branch`. Should be used in subclassed
+        {obj}`BaseDeclarativeNote.init` or {obj}`BaseDeclarativeMixin.init` to generate
+        the same child `note_id` upon every instantiation.
 
-        If the parent note's `note_id` set, the child note will be assigned
-        one so as to create the same `note_id` upon every instantiation.
+        If the parent note's `note_id` set, the child note will be assigned one so as to
+        create the same `note_id` upon every instantiation.
 
-        If the child's `note_id` is not fixed, a new note will be created upon
-        every instantiation. This is the case for non-singleton subclasses.
+        If the child's `note_id` is not fixed, a new note will be created upon every
+        instantiation. This is the case for non-singleton subclasses.
 
-        Params following `child_cls` are passed to the `Note` and `Branch`
-        initializers.
+        Params following `child_cls` are passed to the `Note` and `Branch` initializers.
 
         :param child_cls: Class of child to instantiate
         """
@@ -250,10 +244,9 @@ class BaseDeclarativeMixin(
 
     def _get_sequence(self, cls: type[BaseEntity], base: str):
         """
-        Get entity id sequence number given entity type and a base name,
-        e.g. note id seed or attribute name.
+        Get entity id sequence number given entity type and a base name, e.g. note id
+        seed or attribute name.
         """
-
         if cls not in self._sequence_map:
             self._sequence_map[cls] = dict()
 
@@ -266,11 +259,11 @@ class BaseDeclarativeMixin(
 
     def _derive_id(self, cls: type[BaseEntity], base: str) -> str | None:
         """
-        Generate a declarative entity id unique to this note with namespace
-        per entity type.
+        Generate a declarative entity id unique to this note with namespace per entity
+        type.
 
-        Increments a sequence number per base, so e.g. there can be
-        multiple attributes with the same name.
+        Increments a sequence number per base, so e.g. there can be multiple attributes
+        with the same name.
         """
         id_seed: str | None = self._derive_id_seed(cls, base)
         return id_hash(id_seed) if id_seed is not None else None
@@ -279,7 +272,6 @@ class BaseDeclarativeMixin(
         """
         Attempt to derive id seed for the provided entity based on this note.
         """
-
         # derive from parent's final note_id_seed if possible,
         # fall back to note_id
         prefix: str | None = self._note_id_seed_final or self._note_id
@@ -298,7 +290,6 @@ class BaseDeclarativeMixin(
         """
         Invoke declarative init and return tuple of attributes and children.
         """
-
         attributes: list[BaseAttribute] = []
         children: list[Branch] = []
 
@@ -389,75 +380,74 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     content_file: str | None = None
     """
-    Name of file to use as content, relative to module's location. Also adds
-    `#originalFilename` label.
+    Name of file to use as content, relative to module's location.
 
-    ```{note}
-    Currently Trilium only shows `#originalFilename` if the note's type is
-    `file`.
-    ```
+    Also adds `#originalFilename` label.
+
+    ```{note} Currently Trilium only shows `#originalFilename` if the note's type is
+    `file`. ```
     """
 
     note_id_seed: str | None = None
     """
-    Seed from which to generate `note_id`. Useful to generate a
-    collision-avoidant id from a human-friendly identifier.
+    Seed from which to generate `note_id`.
+
+    Useful to generate a collision-avoidant id from a human-friendly identifier.
     Generated as base64-encoded hash of seed.
     """
 
     note_id_segment: str | None = None
     """
-    Segment with which to generate `note_id` given the parent's `note_id`,
-    if no `note_id` is otherwise specified.
+    Segment with which to generate `note_id` given the parent's `note_id`, if no
+    `note_id` is otherwise specified.
     """
 
     singleton: bool = False
     """
-    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic 
-    calculation of `note_id` based on the fully qualified class name. 
-    This means the same class will always have the same `note_id` when 
-    instantiated.
+    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic calculation
+    of `note_id` based on the fully qualified class name. This means the same class will
+    always have the same `note_id` when instantiated.
 
-    ```{warning}
-    If you move this class to a different module, it will result in a different
-    `note_id` which will break any non-declarative relations to it. 
-    To enable more portable behavior, set 
-    {obj}`BaseDeclarativeNote.idempotent` or assign 
-    {obj}`BaseDeclarativeNote.note_id_seed` explicitly.
-    ```
+    ```{warning} If you move this class to a different module, it will result in a
+    different `note_id` which will break any non-declarative relations to it. To enable
+    more portable behavior, set {obj}`BaseDeclarativeNote.idempotent` or assign
+    {obj}`BaseDeclarativeNote.note_id_seed` explicitly. ```
     """
 
     idempotent: bool = False
     """
-    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic 
-    calculation of `note_id` based on the class name. Similar to 
-    {obj}`BaseDeclarativeNote.singleton`, but only the class name 
-    (not fully qualified) is used.
+    If set on a {obj}`BaseDeclarativeNote` subclass, enables deterministic calculation
+    of `note_id` based on the class name.
+
+    Similar to {obj}`BaseDeclarativeNote.singleton`, but only the class name (not fully
+    qualified) is used.
     """
 
     idempotent_segment: bool = False
     """
-    If set on a {obj}`BaseDeclarativeNote` subclass, sets segment name to 
-    class name for the purpose of `note_id` calculation. 
-    An explicitly provided {obj}`BaseDeclarativeNote.note_id_segment` 
-    takes precedence.
+    If set on a {obj}`BaseDeclarativeNote` subclass, sets segment name to class name for
+    the purpose of `note_id` calculation.
+
+    An explicitly provided {obj}`BaseDeclarativeNote.note_id_segment` takes precedence.
     """
 
     leaf: bool = False
     """
-    If set to `True`{l=python} on a {obj}`BaseDeclarativeNote` subclass,
-    disables setting of child notes declaratively, allowing children to be 
-    manually maintained by the user. Otherwise, notes added by the user will be
-    deleted to match the children added declaratively.
+    If set to `True`{l=python} on a {obj}`BaseDeclarativeNote` subclass, disables
+    setting of child notes declaratively, allowing children to be manually maintained by
+    the user. Otherwise, notes added by the user will be deleted to match the children
+    added declaratively.
 
     Should be set on notes intended to hold user notes, e.g. todo lists.
     """
 
     hide_new_note: bool = False
     """
-    Whether to hide "new note" button, regardless of whether it would otherwise
-    be hidden. Can be used to hide "new note" button for e.g. 
-    {obj}`Templates` which otherwise would show it.
+    Whether to hide "new note" button, regardless of whether it would otherwise be
+    hidden.
+
+    Can be used to hide "new note" button for e.g. {obj}`Templates` which otherwise
+    would show it.
     """
 
     _stem_title: bool = False
@@ -470,8 +460,9 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     @property
     def note_id_seed_final(self) -> str | None:
         """
-        Get the seed from which this note's id was derived. Useful for
-        debugging.
+        Get the seed from which this note's id was derived.
+
+        Useful for debugging.
         """
         return self._note_id_seed_final
 
@@ -537,9 +528,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
             )
 
             if self._stem_title:
-                container.title = os.path.basename(self.content_file).split(
-                    "."
-                )[0]
+                container.title = os.path.basename(self.content_file).split(".")[0]
 
         container.title = container.title or self.title_ or type(self).__name__
 
@@ -575,10 +564,11 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         cls, parent: BaseDeclarativeNote | None = None
     ) -> tuple[str, str | None] | None:
         """
-        Try to get a note_id. If one is returned, this note has a deterministic
-        note_id and will get the same one every time it's instantiated.
-        """
+        Try to get a note_id.
 
+        If one is returned, this note has a deterministic note_id and will get the same
+        one every time it's instantiated.
+        """
         module: ModuleType | None = inspect.getmodule(cls)
         assert module is not None
 
@@ -668,9 +658,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
                 del module_path[-1]
 
             module_content = ".".join(module_path + module_rel)
-            content_path = str(
-                importlib.resources.files(module_content) / basename
-            )
+            content_path = str(importlib.resources.files(module_content) / basename)
 
         except ModuleNotFoundError:
             # not in a package context (e.g. test code, standalone script)
@@ -692,6 +680,5 @@ def is_inherited(cls: type[BaseDeclarativeMixin], attr: str) -> bool:
     """
     value = getattr(cls, attr)
     return any(
-        value is getattr(cls_super, attr, object())
-        for cls_super in cls.__bases__
+        value is getattr(cls_super, attr, object()) for cls_super in cls.__bases__
     )

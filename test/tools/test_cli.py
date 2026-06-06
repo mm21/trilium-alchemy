@@ -73,9 +73,7 @@ def test_config(request: FixtureRequest, session: Session, tmp_path: Path):
     config = Config(
         root_data_dir=root_data_dir,
         instances={
-            "test-instance": InstanceConfig(
-                host=session.host, token=session._token
-            ),
+            "test-instance": InstanceConfig(host=session.host, token=session._token),
             "bad-instance": InstanceConfig(
                 host=session.host,
                 token="bad_token",
@@ -446,9 +444,7 @@ def test_tree_push(
     )
 
 
-def test_tree_cleanup_positions(
-    request: FixtureRequest, session: Session, note: Note
-):
+def test_tree_cleanup_positions(request: FixtureRequest, session: Session, note: Note):
     # create child note to verify recursion
     child = Note("Test child", session=session)
     child ^= note
@@ -492,9 +488,7 @@ def test_tree_cleanup_positions(
     assert child_label3.position == 30
 
 
-def test_fs(
-    request: FixtureRequest, session: Session, note: Note, tmp_path: Path
-):
+def test_fs(request: FixtureRequest, session: Session, note: Note, tmp_path: Path):
     # add a label to parent note so we can search for it later
     note["note1_parent"] = ""
 
@@ -553,9 +547,7 @@ def test_fs(
     teardown_note_1(request, session)
 
 
-def test_note_sync_template(
-    request: FixtureRequest, session: Session, note: Note
-):
+def test_note_sync_template(request: FixtureRequest, session: Session, note: Note):
     def modify_template(template: Note):
         """
         Add a child note to this template.
@@ -717,7 +709,6 @@ def _restart_trilium(callable: Callable[[], None]):
     """
     Restart Trilium using docker, invoking the provided callback while shutdown.
     """
-
     # shutdown trilium
     subprocess.check_call(["docker", "compose", "down"])
 
@@ -739,7 +730,6 @@ def _run(
     """
     Run command and verify exit code.
     """
-
     cmd_norm = _normalize_cmd(cmd)
     print_stdout = bool(request.config.getoption("--cli-stdout"))
 
@@ -763,7 +753,6 @@ def _normalize_cmd(cmd: list[str | Path]) -> list[str]:
 
 def _get_shell_cmd(cmd: list[str]) -> str:
     """
-    Get command in the form it could be run in a shell, including required
-    quotes.
+    Get command in the form it could be run in a shell, including required quotes.
     """
     return " ".join(f'"{c}"' if " " in c else c for c in cmd)

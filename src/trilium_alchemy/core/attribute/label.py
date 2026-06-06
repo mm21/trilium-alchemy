@@ -12,8 +12,8 @@ class Label(BaseAttribute):
     """
     Encapsulates a label.
 
-    Once instantiated, the label needs to be added to a {obj}`Note`; see
-    {ref}`working-with-attributes` for details.
+    Once instantiated, the label needs to be added to a {obj}`Note`; see {ref}`working-
+    with-attributes` for details.
     """
 
     _attribute_type: str = "label"
@@ -33,7 +33,6 @@ class Label(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-
         model_backing = kwargs.get("_model_backing")
 
         super().__init__(

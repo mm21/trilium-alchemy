@@ -19,15 +19,18 @@ if TYPE_CHECKING:
 
 class Cache:
     """
-    Combines a cache and unit of work collection. Maintains changes made by user
-    and synchronizes with Trilium upon flush.
+    Combines a cache and unit of work collection.
+
+    Maintains changes made by user and synchronizes with Trilium upon flush.
     """
 
     entity_map: dict[str, BaseEntity]
     """Mapping of entity id to entity object"""
 
     dirty_set: set[BaseEntity]
-    """Set of objects which need to be synchronized with Trilium"""
+    """
+    Set of objects which need to be synchronized with Trilium.
+    """
 
     _session: Session
 
@@ -37,17 +40,15 @@ class Cache:
         self.dirty_set = set()
 
     def __str__(self):
-        return (
-            f"Cache: entity_map={self.entity_map}, dirty_set={self.dirty_set}"
-        )
+        return f"Cache: entity_map={self.entity_map}, dirty_set={self.dirty_set}"
 
     def flush(
         self,
         entities: Iterable[BaseEntity] | None = None,
     ):
         """
-        Flushes provided entities and all dependencies, or all dirty entities
-        if entities not provided.
+        Flushes provided entities and all dependencies, or all dirty entities if
+        entities not provided.
         """
         from .branch import Branch
         from .entity.types import State
@@ -139,10 +140,10 @@ class Cache:
 
     def add(self, entity: BaseEntity):
         """
-        Add provided entity to cache. Should be invoked as soon as entity_id
-        is set.
-        """
+        Add provided entity to cache.
 
+        Should be invoked as soon as entity_id is set.
+        """
         if entity._entity_id in self.entity_map:
             assert entity is self.entity_map[entity._entity_id]
         else:
@@ -153,8 +154,8 @@ class Cache:
 
     def _validate(self, entity_set: set[BaseEntity]):
         """
-        Check all provided entities and if errors encountered, raise an
-        exception with a list of errors.
+        Check all provided entities and if errors encountered, raise an exception with a
+        list of errors.
         """
         errors: list[str] = []
         for entity in entity_set:
@@ -182,10 +183,10 @@ class Cache:
 
     def _check_refresh_ordering(self, dirty_set: set[BaseEntity]) -> set[Note]:
         """
-        Return set of notes with changed child branch positions. These need
-        to be refreshed in the UI after they're flushed.
-        """
+        Return set of notes with changed child branch positions.
 
+        These need to be refreshed in the UI after they're flushed.
+        """
         from .branch import Branch
 
         notes: set[Note] = set()
@@ -202,10 +203,11 @@ class Cache:
 
     def _check_refresh_notes(self, dirty_set: set[BaseEntity]) -> set[Note]:
         """
-        Return set of notes with changed relations which affect inherited
-        attributes or children. These need to be refreshed to pick up
-        changes to inherited attributes and automatically-added children
-        (from new templates).
+        Return set of notes with changed relations which affect inherited attributes or
+        children.
+
+        These need to be refreshed to pick up changes to inherited attributes and
+        automatically-added children (from new templates).
         """
         from .note import Note
 
@@ -220,9 +222,7 @@ class Cache:
                     relations += entity.relations.get_all(relation)
 
                 if any(
-                    r._is_create
-                    or r._is_delete
-                    or r._model.is_field_changed("value")
+                    r._is_create or r._is_delete or r._model.is_field_changed("value")
                     for r in relations
                 ):
                     notes.add(entity)
@@ -233,7 +233,6 @@ class Cache:
         """
         Return a brief summary of how many entities are in each state.
         """
-
         from .attribute import BaseAttribute
         from .branch import Branch
         from .entity.types import State

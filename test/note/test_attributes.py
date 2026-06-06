@@ -81,9 +81,7 @@ def test_multi(session: Session, note: Note):
 
 @mark.attribute("label1", "value1", inheritable=True, fixture="note1")
 @mark.attribute("label1", "value2", fixture="note2")
-@mark.attribute(
-    "relation1", "root", inheritable=True, fixture="note1", type="relation"
-)
+@mark.attribute("relation1", "root", inheritable=True, fixture="note1", type="relation")
 @mark.attribute("relation1", "root", fixture="note2", type="relation")
 def test_filter_labels(note1: Note, note2: Note, branch: Branch):
     # note1, owned/inherited labels

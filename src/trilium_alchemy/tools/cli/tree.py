@@ -36,8 +36,7 @@ def main(
         "root",
         help="Note id on which to perform operation",
     ),
-    search: str
-    | None = Option(
+    search: str | None = Option(
         None,
         help="Search string to identify note on which to perform operation, e.g. '#myProjectRoot'",
     ),
@@ -88,7 +87,7 @@ def export(
     ),
 ):
     """
-    Export subtree to .zip file
+    Export subtree to .zip file.
     """
     if not dest.parent.exists():
         raise BadParameter(
@@ -125,7 +124,7 @@ def import_(
     ),
 ):
     """
-    Import subtree from .zip file
+    Import subtree from .zip file.
     """
     tree_context = _get_tree_context(ctx)
 
@@ -136,8 +135,7 @@ def import_(
 @app.command()
 def push(
     ctx: Context,
-    note_fqcn: str
-    | None = Argument(
+    note_fqcn: str | None = Argument(
         None,
         help="Fully-qualified class name of BaseDeclarativeNote subclass",
     ),
@@ -154,9 +152,8 @@ def push(
     ),
 ):
     """
-    Push declarative note subtree to target note
+    Push declarative note subtree to target note.
     """
-
     tree_context = _get_tree_context(ctx)
     root_note_fqcn = tree_context.root_context.instance.root_note_fqcn
     fqcn = note_fqcn or root_note_fqcn
@@ -215,9 +212,8 @@ def cleanup_positions(
     ),
 ):
     """
-    Set attribute and branch positions to intervals of 10, starting with 10
+    Set attribute and branch positions to intervals of 10, starting with 10.
     """
-
     tree_context = _get_tree_context(ctx)
     notes = recurse_notes([tree_context.target_note])
 

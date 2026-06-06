@@ -29,7 +29,6 @@ def test_create(session: Session, note: Note):
     """
     Create new note as a child of provided note.
     """
-
     parent = note
 
     # generate title based on timestamp
@@ -164,10 +163,8 @@ def test_delete(session: Session, note: Note):
 
 def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
     """
-    Modify attributes/branches and ensure they get flushed when note is
-    flushed.
+    Modify attributes/branches and ensure they get flushed when note is flushed.
     """
-
     # make note and attributes/branches dirty
     note1.title = "title2"
     note1["label1"] = ""
@@ -197,10 +194,8 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
 
 def test_flush_dependency(session: Session, note: Note):
     """
-    Build note tree and ensure dependencies are handled correctly when
-    flushing.
+    Build note tree and ensure dependencies are handled correctly when flushing.
     """
-
     note2 = Note(session=session)
     note3 = Note(session=session)
     note4 = Note(session=session)
@@ -235,10 +230,9 @@ def test_flush_dependency(session: Session, note: Note):
 
 def test_flush_orphan(session: Session):
     """
-    Create a simple hierarchy and then abandon the root note before it's
-    created; should get warnings, but no crash.
+    Create a simple hierarchy and then abandon the root note before it's created; should
+    get warnings, but no crash.
     """
-
     note = Note(parents=session.root, session=session)
     note.branches.parents[0].prefix = "Expected warning"
     note += Label("expectedWarning", session=session)
@@ -277,9 +271,7 @@ def test_refresh(session: Session, note: Note):
     assert label1.value == "value1"
 
     # modify branch/label using ETAPI directly
-    session.api.patch_branch_by_id(
-        branch.branch_id, EtapiBranchModel(prefix="prefix2")
-    )
+    session.api.patch_branch_by_id(branch.branch_id, EtapiBranchModel(prefix="prefix2"))
     session.api.patch_attribute_by_id(
         label1.attribute_id, EtapiAttributeModel(value="value2")
     )
@@ -298,10 +290,7 @@ def test_paths(session: Session):
     """
     Verify API to get note paths.
     """
-
-    a, b1, b2, c, d = [
-        Note(title=f"Note{i}", session=session) for i in range(5)
-    ]
+    a, b1, b2, c, d = [Note(title=f"Note{i}", session=session) for i in range(5)]
 
     a += [b1, b2]
     c.parents += [b1, b2]
@@ -420,7 +409,6 @@ def test_export_import(note: Note, tmp_path: Path):
     """
     Verify export and import for both html and markdown.
     """
-
     CONTENT = "<p>Hello, world!</p>"
 
     note.content = CONTENT
@@ -477,7 +465,6 @@ def test_subclass(note: Note):
     """
     Verify subclass with convenience property.
     """
-
     note.title = "Test note"
     subclass = note.transmute(NoteSubclass)
 
@@ -556,18 +543,14 @@ def test_template(session: Session, note1: Note, note2: Note):
         assert len(child2.children) == 0
 
     # create with template
-    inst1 = Note(
-        title="Instance", session=session, parents=note2, template=template
-    )
+    inst1 = Note(title="Instance", session=session, parents=note2, template=template)
 
     # explicitly add ~template
     inst2 = Note(title="Instance", session=session, parents=note2)
     inst2.relations.append_target("template", template)
 
     # declaratively added template
-    inst3 = TemplateInstanceTest(
-        title="Instance", parents=note2, session=session
-    )
+    inst3 = TemplateInstanceTest(title="Instance", parents=note2, session=session)
 
     session.flush()
 
@@ -614,7 +597,6 @@ def test_cleanup_positions(session: Session, note: Note):
     """
     Set inconsistent positions and test cleaning them up to intervals of 10.
     """
-
     # create attributes directly
     create_label(session.api, note, "label1", "value1", 1)
     create_label(session.api, note, "label2", "value2", 3)

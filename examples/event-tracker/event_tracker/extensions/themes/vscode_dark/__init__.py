@@ -1,5 +1,5 @@
 """
-TriliumAlchemy wrapper for VSCode-Dark theme: 
+TriliumAlchemy wrapper for VSCode-Dark theme:
 https://github.com/greengeek/trilium-vscode-dark-theme
 """
 

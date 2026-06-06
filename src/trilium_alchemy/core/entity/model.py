@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
 class BaseDriver(ABC):
     """
-    Implements interface to backing store for note, either to Trilium itself
-    (through ETAPI) or another mechanism like a filesystem.
+    Implements interface to backing store for note, either to Trilium itself (through
+    ETAPI) or another mechanism like a filesystem.
     """
 
     entity: BaseEntity
@@ -62,9 +62,8 @@ class BaseDriver(ABC):
 
 class BaseEntityModel(ABC):
     """
-    Abstraction of data model which is stored as a record in Trilium's
-    database, encapsulating both locally modified data and data as received
-    from Trilium.
+    Abstraction of data model which is stored as a record in Trilium's database,
+    encapsulating both locally modified data and data as received from Trilium.
     """
 
     # pydantic model used in etapi
@@ -173,7 +172,6 @@ class BaseEntityModel(ABC):
         """
         Flush model if any fields are changed.
         """
-
         if self.entity._state in [State.CREATE, State.UPDATE]:
             # if creating or updating, invoke flush prep
             self.entity._flush_prep()
@@ -224,11 +222,7 @@ class BaseEntityModel(ABC):
 
     @property
     def is_changed(self) -> bool:
-        return (
-            self.entity._is_create
-            or self.fields_changed
-            or self.extension_changed
-        )
+        return self.entity._is_create or self.fields_changed or self.extension_changed
 
     def is_field_changed(self, field) -> bool:
         if self._working is None or self._backing is None:
@@ -265,8 +259,8 @@ class BaseEntityModel(ABC):
 
     def setup_check_init(self, model: BaseModel, create: bool | None = None):
         """
-        Setup model if necessary and backing model provided
-        during init (entity already retrieved from database).
+        Setup model if necessary and backing model provided during init (entity already
+        retrieved from database).
         """
         setup = False
 
@@ -285,14 +279,12 @@ class BaseEntityModel(ABC):
             or model.utc_date_modified > self._backing["utc_date_modified"]
         )
 
-    def setup(
-        self, model_backing: BaseModel | None = None, create: bool | None = None
-    ):
+    def setup(self, model_backing: BaseModel | None = None, create: bool | None = None):
         """
-        Populate state from database for this object. May occur any number of times
-        per object.
-        """
+        Populate state from database for this object.
 
+        May occur any number of times per object.
+        """
         if create is True:
             # if creating, just set flag: no need to query database
             self._exists = False
@@ -321,9 +313,7 @@ class BaseEntityModel(ABC):
             self._working = None
         else:
             # populate new working fields
-            self._working = {
-                f: self._get_default_field(f) for f in self.fields_update
-            }
+            self._working = {f: self._get_default_field(f) for f in self.fields_update}
 
             # move to create state
             self.entity._set_dirty(State.CREATE)
@@ -344,10 +334,8 @@ class BaseEntityModel(ABC):
     # TODO: param check_type: check and return given type
     def get_field(self, field: str) -> str | int | bool | None:
         """
-        Get field from model, with working state taking precedence over
-        database state.
+        Get field from model, with working state taking precedence over database state.
         """
-
         assert field in self._etapi_fields
 
         # perform model setup if not done
@@ -374,7 +362,6 @@ class BaseEntityModel(ABC):
         """
         Set field in working model.
         """
-
         # ensure field is writeable
         assert field in self.fields_update
 
@@ -409,6 +396,7 @@ class BaseEntityModel(ABC):
     def register_extension(self, extension: StatefulExtension):
         """
         Register extension to receive model updates and handle teardown().
+
         Only stateful extensions are registered.
         """
         self._extensions.append(extension)
@@ -454,8 +442,7 @@ class ModelContainer:
 
 class Extension(ABC, ModelContainer):
     """
-    Enables an entity to be extended with additional state besides the
-    entity's model.
+    Enables an entity to be extended with additional state besides the entity's model.
     """
 
     _entity: BaseEntity
@@ -474,8 +461,9 @@ class Extension(ABC, ModelContainer):
 
 class StatefulExtension(Extension):
     """
-    Extension which has state derived by model. This state is populated during
-    setup() and cleared during teardown().
+    Extension which has state derived by model.
+
+    This state is populated during setup() and cleared during teardown().
     """
 
     # TODO: driver to handle fetch, flush
@@ -503,9 +491,8 @@ class StatefulExtension(Extension):
         """
         Returns whether there is a state needing to be flushed.
 
-        Stateful extensions may or may not have state needing to be flushed.
-        Default to not requiring flush (currently only note content requires
-        flush).
+        Stateful extensions may or may not have state needing to be flushed. Default to
+        not requiring flush (currently only note content requires flush).
         """
         return False
 
@@ -529,9 +516,7 @@ def require_setup_prop(func):
     if isinstance(func, property):
         # if decorating a property, wrap its getter and return a new property
         getter = require_setup_prop(func.fget)
-        setter = (
-            require_setup_prop(func.fset) if func.fset is not None else None
-        )
+        setter = require_setup_prop(func.fset) if func.fset is not None else None
         return property(getter, setter, func.fdel, func.__doc__)
 
     @wraps(func)
@@ -546,9 +531,9 @@ class FieldDescriptor:
     """
     Accessor for a model field, e.g. a {obj}`Note`'s `title` field.
 
-    When written, updates the working state which will be committed
-    to Trilium upon flush. When read, returns the working state if
-    set by user, or the state from Trilium if not.
+    When written, updates the working state which will be committed to Trilium upon
+    flush. When read, returns the working state if set by user, or the state from
+    Trilium if not.
     """
 
     _field: str
@@ -565,8 +550,8 @@ class FieldDescriptor:
 
 class WriteThroughDescriptor:
     """
-    Accessor for class attribute which immediately populates the
-    underlying model field when updated.
+    Accessor for class attribute which immediately populates the underlying model field
+    when updated.
     """
 
     # attribute which holds value
@@ -589,21 +574,19 @@ class WriteThroughDescriptor:
 
     def __set__(self, ent: BaseEntity, value: Any):
         assert value is not None
-
         # set attr of entity
         setattr(ent, self._attr, value)
-
         # write through to model
         ent._model.set_field(self._field, getattr(value, self._attr_attr))
 
 
 class WriteOnceDescriptor:
     """
-    Accessor for field which is only allowed a single value. Subsequent
-    assignments are a no-op if they set the same value.
+    Accessor for field which is only allowed a single value.
 
-    :raises ReadOnlyError: Upon write attempt with different value than
-    currently set
+    Subsequent assignments are a no-op if they set the same value.
+
+    :raises ReadOnlyError: Upon write attempt with different value than currently set
     """
 
     # attribute which holds value

@@ -24,8 +24,8 @@ __all__ = [
 
 def check_name(name: str, accumulate=False):
     """
-    Check if attribute with this name already exists, and bail out if so
-    and accumulate is False.
+    Check if attribute with this name already exists, and bail out if so and accumulate
+    is False.
     """
 
     def _check_name(func):
@@ -51,8 +51,8 @@ def label(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Label` to a {obj}`BaseDeclarativeNote` or
-    {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Label` to a {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
+    subclass.
 
     Example:
 
@@ -74,9 +74,7 @@ def label(
         _: list[Branch],
     ):
         attributes.append(
-            self.create_declarative_label(
-                name, value=value, inheritable=inheritable
-            )
+            self.create_declarative_label(name, value=value, inheritable=inheritable)
         )
 
     if value == "":
@@ -135,9 +133,7 @@ def relation(
         target: BaseDeclarativeNote = target_cls(session=self._session)
 
         attributes.append(
-            self.create_declarative_relation(
-                name, target, inheritable=inheritable
-            )
+            self.create_declarative_relation(name, target, inheritable=inheritable)
         )
 
     doc = f"`~{name}=`{{obj}}`{target_cls.__module__}.{target_cls.__name__}`"
@@ -246,9 +242,9 @@ def children(
     *children: type[BaseDeclarativeNote] | tuple[type[BaseDeclarativeNote], str]
 ):
     """
-    Add {obj}`BaseDeclarativeNote` subclasses as children, implicitly
-    creating a {obj}`Branch`. May use a tuple of `(child_cls, prefix)` to
-    additionally set branch prefix.
+    Add {obj}`BaseDeclarativeNote` subclasses as children, implicitly creating a
+    {obj}`Branch`. May use a tuple of `(child_cls, prefix)` to additionally set branch
+    prefix.
 
     Example:
 
@@ -287,17 +283,15 @@ def children(
             assert issubclass(
                 child_cls, BaseDeclarativeNote
             ), f"Unexpected child type, must subclass BaseDeclarativeNote: {type(child_cls)}, {child_cls}"
-            children_.append(
-                self.create_declarative_child(child_cls, prefix=prefix)
-            )
+            children_.append(self.create_declarative_child(child_cls, prefix=prefix))
 
     return _patch_init_decl(init)
 
 
 def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
     """
-    Instantiate provided class and add as child, creating a
-    {obj}`Branch` and setting provided kwargs.
+    Instantiate provided class and add as child, creating a {obj}`Branch` and setting
+    provided kwargs.
 
     Example:
 
@@ -321,9 +315,7 @@ def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
         children: list[Branch],
     ):
         children.append(
-            self.create_declarative_child(
-                child, prefix=prefix, expanded=expanded
-            )
+            self.create_declarative_child(child, prefix=prefix, expanded=expanded)
         )
 
     return _patch_init_decl(init)
@@ -334,9 +326,7 @@ def _patch_init_decl(init, doc: str | None = None):
     Insert provided init function in class's declarative init sequence.
     """
 
-    def init_decl_new[
-        MixinT: BaseDeclarativeMixin
-    ](cls: type[MixinT]) -> type[MixinT]:
+    def init_decl_new[MixinT: BaseDeclarativeMixin](cls: type[MixinT]) -> type[MixinT]:
         assert issubclass(cls, BaseDeclarativeMixin)
         init_decl_old = cls._init_decl
 

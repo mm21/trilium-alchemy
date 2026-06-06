@@ -1,6 +1,6 @@
 """
-Provides a runner to install example declarative note hierarchy and populate 
-it with example notes imperatively.
+Provides a runner to install example declarative note hierarchy and populate it with
+example notes imperatively.
 """
 
 import logging
@@ -36,9 +36,7 @@ logging.basicConfig(
 
 # ensure we have expected environment variables
 if not "TRILIUM_HOST" in os.environ:
-    sys.exit(
-        "TRILIUM_HOST not defined, use .env or set environment variable manually"
-    )
+    sys.exit("TRILIUM_HOST not defined, use .env or set environment variable manually")
 
 if not "TRILIUM_TOKEN" in os.environ and not "TRILIUM_PASSWORD" in os.environ:
     sys.exit(
@@ -54,12 +52,13 @@ session = Session(host, token=token, password=password)
 
 def exit(msg: str):
     """
-    Define helper to logout and exit upon error. We could also use a context
-    manager (with Session(...) as session) to automatically logout, but prefer
-    to reduce indentation.
-    Note that logout is only necessary if the user provided a password and not
-    a token, otherwise it's a no-op. It's harmless if we used a password and
-    forget to logout but it will clutter Trilium with generated tokens.
+    Define helper to logout and exit upon error.
+
+    We could also use a context manager (with Session(...) as session) to automatically
+    logout, but prefer to reduce indentation. Note that logout is only necessary if the
+    user provided a password and not a token, otherwise it's a no-op. It's harmless if
+    we used a password and forget to logout but it will clutter Trilium with generated
+    tokens.
     """
     session.logout()
     sys.exit(msg)

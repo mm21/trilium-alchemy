@@ -8,7 +8,6 @@ def test_index_get(session: Session, note: Note):
     """
     Test setting an attribute by indexing into .attributes.
     """
-
     assert note["label1"] == ""
 
     attr = note.labels[0]
@@ -102,9 +101,7 @@ def test_relations(session: Session, note: Note):
     assert "relation1" not in note.relations.inherited
 
     # create list of attributes
-    note.attributes.owned = [
-        Relation("relation1", session.root, session=session)
-    ]
+    note.attributes.owned = [Relation("relation1", session.root, session=session)]
 
     assert "relation1" in note.attributes
     assert "relation1" in note.relations
@@ -137,9 +134,7 @@ def test_relations(session: Session, note: Note):
     session.flush()
 
     # replace with different attribute
-    note.attributes.owned[0] = Relation(
-        "relation2", session.root, session=session
-    )
+    note.attributes.owned[0] = Relation("relation2", session.root, session=session)
 
     assert note.attributes.owned[0].name == "relation2"
     assert note.relations.get("relation2").target is session.root
@@ -189,9 +184,7 @@ def test_index_del(session: Session, note: Note):
 
 @mark.attribute("label1", inheritable=True, fixture="note1")
 @mark.attribute("label1", "value2", fixture="note2")
-def test_index_inherited(
-    session: Session, note1: Note, note2: Note, branch: Branch
-):
+def test_index_inherited(session: Session, note1: Note, note2: Note, branch: Branch):
     assert len(note1.attributes) == 1
     assert len(note2.attributes) == 2
 
@@ -295,9 +288,9 @@ def test_slice(session: Session, note: Note):
     session.flush()
 
     # shift attributes
-    note.attributes.owned[0:3] = [
-        Label("label0", session=session)
-    ] + note.attributes[0:2]
+    note.attributes.owned[0:3] = [Label("label0", session=session)] + note.attributes[
+        0:2
+    ]
 
     label0, label1, label2 = note.attributes
 

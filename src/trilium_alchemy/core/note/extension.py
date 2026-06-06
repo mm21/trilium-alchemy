@@ -62,7 +62,6 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
         """
         Associate provided entity with this note.
         """
-
         assert not entity._is_delete
 
         # ensure already in collection
@@ -84,7 +83,6 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
         """
         Remove provided entity from note.
         """
-
         # ensure not in collection
         assert not self._contains(entity)
 
@@ -93,10 +91,8 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
 
     def _resolve_changes(self, old: set[EntityT], new: set[EntityT]):
         """
-        Compare entity collections and ensure changed entities are in
-        correct state.
+        Compare entity collections and ensure changed entities are in correct state.
         """
-
         # get sets of created/deleted entities
         created = new - old
         deleted = old - new
@@ -119,8 +115,9 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
 
     def _normalize(self, value: Any) -> EntityT:
         """
-        Default normalizer to be overridden if necessary. Invoked if
-        an entity whose class doesn't match self._child_cls is bound.
+        Default normalizer to be overridden if necessary.
+
+        Invoked if an entity whose class doesn't match self._child_cls is bound.
         """
         raise NotImplementedError(
             f"No normalizer defined for {type(self)}, but required to handle {value}"
@@ -147,8 +144,9 @@ class BaseEntityList[EntityT: OrderedEntity](
     BaseEntityCollection[EntityT], MutableSequence[EntityT]
 ):
     """
-    Maintain list of entities bound to a note. Used for OwnedAttributes and
-    ChildBranches.
+    Maintain list of entities bound to a note.
+
+    Used for OwnedAttributes and ChildBranches.
     """
 
     _entity_list: list[EntityT] | None = None
@@ -157,31 +155,29 @@ class BaseEntityList[EntityT: OrderedEntity](
     """
 
     def __str__(self) -> str:
-        return f"List: {None if self._entity_list is None else pformat(self._entity_list)}"
+        return (
+            f"List: {None if self._entity_list is None else pformat(self._entity_list)}"
+        )
 
     def __len__(self) -> int:
         assert self._entity_list is not None
         return len(self._entity_list)
 
     @overload
-    def __getitem__(self, i: int) -> EntityT:
-        ...
+    def __getitem__(self, i: int) -> EntityT: ...
 
     @overload
-    def __getitem__(self, i: slice) -> list[EntityT]:
-        ...
+    def __getitem__(self, i: slice) -> list[EntityT]: ...
 
     def __getitem__(self, i: int | slice) -> EntityT | list[EntityT]:
         assert self._entity_list is not None
         return self._entity_list[i]
 
     @overload
-    def __setitem__(self, i: int, value: EntityT):
-        ...
+    def __setitem__(self, i: int, value: EntityT): ...
 
     @overload
-    def __setitem__(self, i: slice, value: Iterable[EntityT]):
-        ...
+    def __setitem__(self, i: slice, value: Iterable[EntityT]): ...
 
     def __setitem__(self, i: int | slice, value: EntityT | Iterable[EntityT]):
         assert self._entity_list is not None
@@ -205,12 +201,10 @@ class BaseEntityList[EntityT: OrderedEntity](
         self._validate()
 
     @overload
-    def __delitem__(self, i: int):
-        ...
+    def __delitem__(self, i: int): ...
 
     @overload
-    def __delitem__(self, i: slice):
-        ...
+    def __delitem__(self, i: slice): ...
 
     def __delitem__(self, i: int | slice):
         assert self._entity_list is not None
@@ -245,7 +239,6 @@ class BaseEntityList[EntityT: OrderedEntity](
         """
         Ensure list is in a valid state.
         """
-
         assert self._entity_list is not None
 
         entity_set: set[EntityT] = set()
@@ -311,9 +304,7 @@ class BaseEntityList[EntityT: OrderedEntity](
 
         for i in range(index, len(self._entity_list)):
             current_position = self._entity_list[i]._position
-            prev_position = (
-                self._entity_list[i - 1]._position if i > 0 else None
-            )
+            prev_position = self._entity_list[i - 1]._position if i > 0 else None
             next_position = (
                 self._entity_list[i + 1]._position
                 if i < len(self._entity_list) - 1
@@ -322,9 +313,7 @@ class BaseEntityList[EntityT: OrderedEntity](
 
             needs_update = (
                 prev_position is not None and current_position <= prev_position
-            ) or (
-                next_position is not None and current_position >= next_position
-            )
+            ) or (next_position is not None and current_position >= next_position)
 
             if needs_update or cleanup or self._entity._force_position_cleanup:
                 self._entity_list[i]._position = self._get_position(i)
@@ -334,10 +323,10 @@ class BaseEntitySet[EntityT: BaseEntity](
     BaseEntityCollection[EntityT], MutableSet[EntityT]
 ):
     """
-    Maintain set of entities bound to a note. Used for ParentBranches.
+    Maintain set of entities bound to a note.
 
-    Since sets aren't ordered, it emphasizes the fact that there are no
-    position values to maintain.
+    Used for ParentBranches.     Since sets aren't ordered, it emphasizes the fact that
+    there are no     position values to maintain.
     """
 
     _entity_set: set[EntityT] | None = None
