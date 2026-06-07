@@ -20,6 +20,10 @@ if TYPE_CHECKING:
 
 
 class AttributeListMixin[AttributeT: BaseAttribute]:
+    """
+    Mixin to enable filtering of attributes.
+    """
+
     _value_name: str
     """
     Name of attribute containing the value, i.e. "value" or "target".
@@ -117,13 +121,17 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
-    @abstractmethod
     def _create_attr(self, name: str) -> AttributeT:
         """
         Overridden by subclass to create an attribute of the respective type, already
         bound to this note.
+
+        :raises NotImplementedError: If this subclass is a read-only interface
         """
-        ...
+        _ = name
+        raise NotImplementedError(
+            f"{type(self).__name__} is read-only and does not support _create_attr"
+        )
 
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](AttributeListMixin[AttributeT]):

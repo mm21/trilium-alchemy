@@ -1,7 +1,19 @@
+"""
+Exception definitions.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 __all__ = [
     "ReadOnlyError",
     "ValidationError",
 ]
+
+
+if TYPE_CHECKING:
+    from .entity.entity import BaseEntity
 
 
 class ReadOnlyError(Exception):
@@ -9,7 +21,7 @@ class ReadOnlyError(Exception):
     Raised when user attempts to write a field which is read-only.
     """
 
-    def __init__(self, field, entity):
+    def __init__(self, field: str, entity: BaseEntity):
         super().__init__(self, f"Attempt to set read-only field {field} of {entity}")
 
 

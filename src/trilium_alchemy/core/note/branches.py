@@ -109,15 +109,16 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         return sorted(self._entity_set, key=lambda branch: id(branch))[i]
 
     def _setup(self, model: EtapiNoteModel | None):
-        if self._entity_set is None:
-            self._entity_set = set()
+        if self._entity_set is not None:
+            return
+        self._entity_set = set()
 
-            if model is not None:
-                # populate set of parent branches
-                for branch_id in model.parent_branch_ids:
-                    self._entity_set.add(
-                        Branch._from_id(branch_id, session=self._note.session)
-                    )
+        if model is None:
+            return
+        assert model.parent_branch_ids is not None
+
+        for branch_id in model.parent_branch_ids:
+            self._entity_set.add(Branch._from_id(branch_id, session=self._note.session))
 
     def _bind_entity(self, parent_branch: Branch):
         """
@@ -178,19 +179,22 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
             return val in {branch.child for branch in self._entity_list}
 
     def _setup(self, model: EtapiNoteModel | None):
-        if self._entity_list is None:
-            self._entity_list = []
+        if self._entity_list is not None:
+            return
+        self._entity_list = []
 
-            if model is not None:
-                # populate list of child branches
-                for branch_id in model.child_branch_ids:
-                    if not branch_id.startswith("root__"):
-                        self._entity_list.append(
-                            Branch._from_id(branch_id, session=self._note.session)
-                        )
+        if model is None:
+            return
+        assert model.child_branch_ids is not None
 
-            # sort list by position
-            self._entity_list.sort(key=lambda x: x._position)
+        # populate list of child branches
+        for branch_id in model.child_branch_ids:
+            if not branch_id.startswith("root__"):
+                self._entity_list.append(
+                    Branch._from_id(branch_id, session=self._note.session)
+                )
+
+        self._entity_list.sort(key=lambda x: x._position)
 
     def _bind_entity(self, child_branch: Branch):
         """
@@ -281,8 +285,9 @@ class Branches(NoteExtension, BranchLookupMixin):
     def children(self, val: list[Branch]):
         self._children._setattr(val)
 
-    def _setattr(self, val: list[Branch]):
-        raise Exception(
+    def _setattr(self, obj: list[Branch]):
+        _ = obj
+        raise AttributeError(
             "Ambiguous assignment: must specify branches.parents or branches.children"
         )
 
@@ -345,8 +350,8 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
                 self._note.branches.parents.discard(branch)
                 break
 
-    def _setattr(self, val: set[Note]):
-        self._note.branches.parents = val
+    def _setattr(self, obj: set[Note]):
+        self._note.branches.parents = obj
 
 
 class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
@@ -421,5 +426,5 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     ):
         self._note.branches.children.insert(i, val)
 
-    def _setattr(self, val: list[Note]):
-        self._note.branches.children = val
+    def _setattr(self, obj: list[Note]):
+        self._note.branches.children = obj

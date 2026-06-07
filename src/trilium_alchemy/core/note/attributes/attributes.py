@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -49,32 +50,29 @@ class OwnedAttributes(
         return self._entity_list
 
     def _setup(self, model: EtapiNoteModel | None):
-        # only populate if None (no changes by user or explicitly called
-        # invalidate()) - don't want to discard user's changes
-        # TODO: re-resolve list with latest from backing (to implement refresh()
-        # and in case a new model comes in e.g. a search result)
+        if self._entity_list is not None:
+            return
+        self._entity_list = []
 
-        if self._entity_list is None:
-            self._entity_list = []
+        if model is None:
+            return
+        assert model.attributes is not None
 
-            # populate attributes
-            if model is not None:
-                for attr_model in model.attributes:
-                    assert attr_model.note_id
+        for attr_model in model.attributes:
+            assert attr_model.note_id
 
-                    # only consider owned attributes
-                    if attr_model.note_id == self._note_getter.note_id:
-                        # create attribute object from model
-                        attr: BaseAttribute = BaseAttribute._from_model(
-                            attr_model,
-                            session=self._note_getter._session,
-                            owning_note=self._note_getter,
-                        )
+            # only consider owned attributes
+            if attr_model.note_id != self._note_getter.note_id:
+                continue
 
-                        self._entity_list.append(attr)
+            attr = BaseAttribute._from_model(
+                attr_model,
+                session=self._note_getter._session,
+                owning_note=self._note_getter,
+            )
+            self._entity_list.append(attr)
 
-            # sort list by position
-            self._entity_list.sort(key=lambda x: x._position)
+        self._entity_list.sort(key=lambda e: e._position)
 
 
 class InheritedAttributes(
@@ -88,67 +86,53 @@ class InheritedAttributes(
     :raises ReadOnlyError: Upon attempt to modify
     """
 
-    _list: list[BaseAttribute] = None
+    _entity_list: list[BaseAttribute] | None = None
 
     @property
     def _attr_list(self) -> list[BaseAttribute]:
-        assert self._list is not None
-        return self._list
+        assert self._entity_list is not None
+        return self._entity_list
 
     @property
     def _note_getter(self) -> Note:
         return self._note
 
-    def _setattr(self, value: Any):
-        raise ReadOnlyError
+    def _setattr(self, obj: Any):
+        _ = obj
+        raise ReadOnlyError("attributes.inherited", self._entity)
 
     def _setup(self, model: EtapiNoteModel | None):
-        # init list every time: unlike owned attributes, no need to preserve
-        # local version which may have changes
-
         from ..note import Note
 
+        if self._entity_list is not None:
+            return
+        self._entity_list = []
+
         if model is None:
-            self._list = []
-        else:
-            inherited_list = []
+            return
+        assert model.attributes is not None
 
-            for attr_model in model.attributes:
-                assert attr_model.note_id
+        attr_map: dict[str, list[BaseAttribute]] = defaultdict(list)
+        for attr_model in model.attributes:
+            assert attr_model.note_id
 
-                # only consider inherited attributes
-                if attr_model.note_id != self._note._entity_id:
-                    owning_note = Note._from_id(
-                        attr_model.note_id, session=self._note._session
-                    )
+            # only consider inherited attributes
+            if attr_model.note_id == self._note._entity_id:
+                continue
 
-                    # create attribute object from model
-                    attr: BaseAttribute = BaseAttribute._from_model(
-                        attr_model,
-                        session=self._note._session,
-                        owning_note=owning_note,
-                    )
+            owning_note = Note._from_id(attr_model.note_id, session=self._note._session)
+            attr = BaseAttribute._from_model(
+                attr_model,
+                session=self._note._session,
+                owning_note=owning_note,
+            )
+            attr_map[attr_model.note_id].append(attr)
 
-                    inherited_list.append(attr)
-
-            # group by note id
-            attr_map: dict[str, list[BaseAttribute]] = dict()
-            for attr in inherited_list:
-                if attr.note.note_id not in attr_map:
-                    attr_map[attr.note.note_id] = []
-
-                attr_map[attr.note.note_id].append(attr)
-
-            # generate sorted list
-            list_sorted = []
-            for note_id in attr_map:
-                attr_map[note_id].sort(key=lambda x: x._position)
-                list_sorted += attr_map[note_id]
-
-            self._list = list_sorted
+        for note_id in sorted(attr_map.keys()):
+            self._entity_list += sorted(attr_map[note_id], key=lambda a: a._position)
 
     def _teardown(self):
-        self._list = None
+        self._entity_list = None
 
 
 class Attributes(
@@ -205,5 +189,6 @@ class Attributes(
     def _attr_list(self) -> list[BaseAttribute]:
         return list(self._owned) + list(self._inherited)
 
-    def _setattr(self, val: list[BaseAttribute]):
-        raise ReadOnlyError
+    def _setattr(self, obj: list[BaseAttribute]):
+        _ = obj
+        raise ReadOnlyError("attributes", self._entity)

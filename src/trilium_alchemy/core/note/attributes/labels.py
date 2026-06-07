@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ...attribute import label
+from ...attribute.label import Label
 from ._filters import (
     AttributeListMixin,
     BaseCombinedFilteredAttributes,
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
+class BaseReadableLabelMixin(AttributeListMixin[Label]):
     def get_value(self, name: str) -> str | None:
         """
         Get value of first label with provided name.
@@ -33,10 +33,6 @@ class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
         Get values of all labels with provided name.
         """
         return [attr.value for attr in self.get_all(name)]
-
-    def _create_attr(self, name: str) -> label.Label:
-        _ = name
-        raise NotImplementedError
 
 
 class BaseWriteableLabelMixin(BaseReadableLabelMixin):
@@ -61,28 +57,26 @@ class BaseWriteableLabelMixin(BaseReadableLabelMixin):
         """
         self._append_value(name, val, inheritable)
 
-    def _create_attr(self, name: str) -> label.Label:
-        attr = label.Label(name, session=self._note_getter.session)
+    def _create_attr(self, name: str) -> Label:
+        attr = Label(name, session=self._note_getter.session)
         self._note_getter.attributes.owned.append(attr)
         return attr
 
 
-class OwnedLabels(BaseOwnedFilteredAttributes[label.Label], BaseWriteableLabelMixin):
+class OwnedLabels(BaseOwnedFilteredAttributes[Label], BaseWriteableLabelMixin):
     """
     Accessor for owned labels.
     """
 
 
-class InheritedLabels(
-    BaseInheritedFilteredAttributes[label.Label], BaseReadableLabelMixin
-):
+class InheritedLabels(BaseInheritedFilteredAttributes[Label], BaseReadableLabelMixin):
     """
     Accessor for inherited labels.
     """
 
 
 class Labels(
-    BaseCombinedFilteredAttributes[label.Label],
+    BaseCombinedFilteredAttributes[Label],
     BaseWriteableLabelMixin,
 ):
     """

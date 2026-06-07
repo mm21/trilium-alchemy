@@ -95,7 +95,8 @@ class Content(NoteStatefulExtension):
         # efficiently check digest
         return self._backing.digest != self._working.digest
 
-    def _setattr(self, val: Any):
+    def _setattr(self, obj: Any):
+        _ = obj
         # set via _set()
         raise NotImplementedError
 

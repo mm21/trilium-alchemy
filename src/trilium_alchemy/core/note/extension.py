@@ -91,13 +91,13 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
         if not entity._is_delete:
             entity.delete()
 
-    def _resolve_changes(self, old: set[EntityT], new: set[EntityT]):
+    def _resolve_changes(self, prev: set[EntityT], new: set[EntityT]):
         """
         Compare entity collections and ensure changed entities are in correct state.
         """
         # get sets of created/deleted entities
-        created = new - old
-        deleted = old - new
+        created = new - prev
+        deleted = prev - new
 
         # process new entities
         for entity in created:
@@ -195,10 +195,10 @@ class BaseEntityList[EntityT: OrderedEntity](
             v = [self._invoke_normalize(value)]
 
         # get previous entities at slice and set new ones
-        entities_del: Iterable[EntityT] = self._entity_list[s]
+        prev_entity_list = self._entity_list[s]
         self._entity_list[s] = v
 
-        self._resolve_changes(set(entities_del), set(v))
+        self._resolve_changes(set(prev_entity_list), set(v))
         self._set_positions()
         self._validate()
 
@@ -261,7 +261,7 @@ class BaseEntityList[EntityT: OrderedEntity](
             prev_position = entity._position
 
     @check_bailout
-    def _setattr(self, new_list: list[EntityT]):
+    def _setattr(self, obj: list[EntityT]):
         """
         Invoked when set by user.
         """
@@ -269,14 +269,14 @@ class BaseEntityList[EntityT: OrderedEntity](
 
         # normalize list
         normalized_list: list[EntityT] = [
-            self._invoke_normalize(entity) for entity in new_list
+            self._invoke_normalize(entity) for entity in obj
         ]
 
         # assign new list
-        entity_list_prev = self._entity_list
+        prev_entity_list = self._entity_list
         self._entity_list = normalized_list
 
-        self._resolve_changes(set(entity_list_prev), set(normalized_list))
+        self._resolve_changes(set(prev_entity_list), set(normalized_list))
         self._set_positions()
         self._validate()
 
@@ -375,7 +375,7 @@ class BaseEntitySet[EntityT: BaseEntity](
         """
 
     @check_bailout
-    def _setattr(self, val: Set[EntityT]):
+    def _setattr(self, obj: Set[EntityT]):
         """
         Invoked when set by user.
         """
@@ -383,15 +383,15 @@ class BaseEntitySet[EntityT: BaseEntity](
 
         # normalize set
         normalized_set: set[EntityT] = {
-            self._invoke_normalize(entity) for entity in val
+            self._invoke_normalize(entity) for entity in obj
         }
 
         # assign new set
-        entity_set_prev = self._entity_set
+        prev_entity_set = self._entity_set
         self._entity_set = normalized_set
 
         # resolve changes
-        self._resolve_changes(entity_set_prev, normalized_set)
+        self._resolve_changes(prev_entity_set, normalized_set)
 
     def _teardown(self):
         self._entity_set = None

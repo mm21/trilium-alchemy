@@ -485,7 +485,7 @@ class Extension(ABC, ModelContainer):
         self._entity = entity
 
     @abstractmethod
-    def _setattr(self, val: Any):
+    def _setattr(self, obj: Any):
         """
         Invoked to set data.
         """

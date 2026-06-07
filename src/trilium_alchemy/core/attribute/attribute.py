@@ -210,11 +210,14 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         return self._model.get_field("utc_date_modified", str, allow_none=True)
 
     @property
-    def note(self) -> Note | None:
+    def note(self) -> Note:
         """
-        Getter for note which owns this attribute, or `None` if it hasn't been bound to
-        a note yet.
+        Getter for note which owns this attribute.
+
+        :raises ValueError: If note has not been set
         """
+        if not self._note:
+            raise ValueError(f"Attribute {self} has not been assigned to a note")
         return self._note
 
     @property
