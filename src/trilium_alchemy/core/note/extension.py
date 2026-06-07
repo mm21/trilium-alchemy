@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import MutableSequence, MutableSet
+from collections.abc import MutableSequence, MutableSet, Set
 from functools import wraps
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, overload
@@ -339,7 +339,7 @@ class BaseEntitySet[EntityT: BaseEntity](
     def __str__(self) -> str:
         return f"Set: {None if self._entity_set is None else pformat(self._entity_set)}"
 
-    def __contains__(self, entity: EntityT) -> bool:
+    def __contains__(self, entity: object) -> bool:
         assert self._entity_set is not None
         return entity in self._entity_set
 
@@ -375,7 +375,7 @@ class BaseEntitySet[EntityT: BaseEntity](
         """
 
     @check_bailout
-    def _setattr(self, new_set: set[EntityT]):
+    def _setattr(self, val: Set[EntityT]):
         """
         Invoked when set by user.
         """
@@ -383,7 +383,7 @@ class BaseEntitySet[EntityT: BaseEntity](
 
         # normalize set
         normalized_set: set[EntityT] = {
-            self._invoke_normalize(entity) for entity in new_set
+            self._invoke_normalize(entity) for entity in val
         }
 
         # assign new set

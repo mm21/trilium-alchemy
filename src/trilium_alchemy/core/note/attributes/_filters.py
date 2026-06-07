@@ -24,10 +24,11 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
     Name of attribute containing the value, i.e. "value" or "target".
     """
 
-    def __contains__(self, obj: Any) -> bool:
+    def __contains__(self, obj: object) -> bool:
         if isinstance(obj, str):
             return self.get(obj) is not None
-        return super().__contains__(obj)
+        # provided by cooperating class via MRO
+        return super().__contains__(obj)  # type: ignore
 
     def get(self, name: str) -> AttributeT | None:
         """

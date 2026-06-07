@@ -34,6 +34,10 @@ class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
         """
         return [attr.target for attr in self.get_all(name)]
 
+    def _create_attr(self, name: str) -> relation.Relation:
+        _ = name
+        raise NotImplementedError
+
 
 class BaseWriteableRelationMixin(BaseReadableRelationMixin):
     _value_name = "target"
@@ -93,7 +97,6 @@ class Relations(
 
     def __init__(self, note: Note):
         super().__init__(note)
-
         self._owned = OwnedRelations(note)
         self._inherited = InheritedRelations(note)
 

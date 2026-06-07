@@ -34,6 +34,10 @@ class BaseReadableLabelMixin(AttributeListMixin[label.Label]):
         """
         return [attr.value for attr in self.get_all(name)]
 
+    def _create_attr(self, name: str) -> label.Label:
+        _ = name
+        raise NotImplementedError
+
 
 class BaseWriteableLabelMixin(BaseReadableLabelMixin):
     _value_name = "value"

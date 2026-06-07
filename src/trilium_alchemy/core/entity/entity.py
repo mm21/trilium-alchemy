@@ -511,8 +511,7 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", obj)
 
 
-# MTODO: use typecraft
-def normalize_entities[CollectionT: Iterable](
+def normalize_entities[CollectionT: list | set](
     entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
     collection_cls: type[CollectionT] = list,
 ) -> CollectionT:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import MutableSequence, MutableSet
+from collections.abc import MutableSequence, MutableSet, Set
 from typing import TYPE_CHECKING, Iterable, Iterator, overload
 
 from trilium_client.models.note import Note as EtapiNoteModel
@@ -266,7 +266,7 @@ class Branches(NoteExtension, BranchLookupMixin):
         return self._parents
 
     @parents.setter
-    def parents(self, val: set[Branch]):
+    def parents(self, val: Set[Branch]):
         self._parents._setattr(val)
 
     @require_setup_prop
@@ -304,7 +304,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
 
         note.parents += branch_spec
         """
-        self._note.branches.parents |= normalize_entities(parent, collection_cls=set)
+        self._note.branches.parents |= normalize_entities(parent, set)
         return self
 
     def __contains__(self, val: Note) -> bool:
