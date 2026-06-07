@@ -148,10 +148,16 @@ class Content(NoteStatefulExtension):
         """
         Set new content and generate digest.
         """
-        blob: str | bytes = self._normalize_blob(blob)
+        blob_: str | bytes = self._normalize_blob(blob)
+        if self._is_string:
+            if not isinstance(blob_, str):
+                raise ValueError(f"Got binary content for string note {self._note}")
+        else:
+            if not isinstance(blob_, bytes):
+                raise ValueError(f"Got string content for binary note {self._note}")
 
-        self._working.blob = blob
-        self._working.digest = get_digest(blob)
+        self._working.blob = blob_
+        self._working.digest = get_digest(blob_)
 
         # could potentially change clean/dirty state, so reevaluate
         self._note._check_state()
@@ -167,11 +173,10 @@ class Content(NoteStatefulExtension):
         """
         Get note content from server.
         """
-        blob: str | bytes = None
-
         response = requests.get(self._url, headers=self._note._session._etapi_headers)
         assert response.status_code == 200
 
+        blob: str | bytes
         if self._is_string:
             blob = response.text
             assert isinstance(blob, str)
@@ -185,7 +190,7 @@ class Content(NoteStatefulExtension):
         """
         Push note content to server and return the updated note model.
         """
-        blob: str | bytes = self._working.blob
+        blob = self._working.blob
         assert blob is not None
 
         digest = self._working.digest
@@ -199,17 +204,16 @@ class Content(NoteStatefulExtension):
 
         if self._is_string:
             assert isinstance(blob, str)
-
-            blob: bytes = blob.encode("utf-8")
+            bytes_blob = blob.encode("utf-8")
             headers["Content-Type"] = "text/plain; charset=utf-8"
         else:
             assert isinstance(blob, bytes)
-
+            bytes_blob = blob
             headers["Content-Type"] = "application/octet-stream"
             headers["Content-Transfer-Encoding"] = "binary"
 
         # generated ETAPI client only supports text, so make request manually
-        response = requests.put(self._url, headers=headers, data=blob)
+        response = requests.put(self._url, headers=headers, data=bytes_blob)
 
         assert (
             response.status_code == 204
@@ -228,27 +232,13 @@ class Content(NoteStatefulExtension):
         return new_model
 
     def _normalize_blob(self, blob: str | bytes | IO) -> str | bytes:
-        if isinstance(blob, IOBase):
-            fh = blob
-
-            if self._is_string:
-                assert (
-                    "b" not in fh.mode
-                ), f"Note content type is string, but file in binary mode: {self._note}"
-            else:
-                assert (
-                    "b" in fh.mode
-                ), f"Note content type is binary, but file in text mode: {self._note}"
-
-            fh.seek(0)
-            blob = fh.read()
+        # IOBase (runtime class) isn't in the hierarchy of IO (typing construct),
+        # so check both to satisfy type checking and runtime check
+        if isinstance(blob, (IO, IOBase)):
+            blob.seek(0)
+            return blob.read()
         else:
-            if self._is_string:
-                assert isinstance(blob, str)
-            else:
-                assert isinstance(blob, bytes)
-
-        return blob
+            return blob
 
     @property
     def _url(self) -> str:

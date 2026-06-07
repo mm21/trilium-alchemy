@@ -385,7 +385,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     MIME type to set.
     """
 
-    content_: str | bytes | IO | None = None
+    content_: str | bytes | None = None
     """
     Content to set.
     """

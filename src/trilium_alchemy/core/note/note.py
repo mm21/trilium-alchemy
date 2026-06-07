@@ -18,7 +18,6 @@ from trilium_client.models.note_with_branch import NoteWithBranch
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
 from ..entity.entity import BaseEntity, normalize_entities
-from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
 from ..utils import base_n_hash
@@ -533,7 +532,6 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         return self._model.get_field("utc_date_modified", str, allow_none=True)
 
-    @require_setup_prop
     @property
     def attributes(self) -> Attributes:
         """
@@ -541,6 +539,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         :setter: Sets list of owned attributes, replacing the existing list
         """
+        self._model.setup_check()
         return self._attributes
 
     @property
@@ -548,6 +547,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
+        self._model.setup_check()
         return self._labels
 
     @property
@@ -555,17 +555,17 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
+        self._model.setup_check()
         return self._relations
 
-    @require_setup_prop
     @property
     def branches(self) -> Branches:
         """
         Getter for branches, both parents (`.parents`) and children (`.children`).
         """
+        self._model.setup_check()
         return self._branches
 
-    @require_setup_prop
     @property
     def parents(self) -> ParentNotes:
         """
@@ -573,13 +573,14 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         :setter: Sets set of parent notes, replacing the existing set
         """
+        self._model.setup_check()
         return self._parents
 
     @parents.setter
     def parents(self, val: set[Note]):
+        self._model.setup_check()
         self._parents._setattr(val)
 
-    @require_setup_prop
     @property
     def children(self) -> ChildNotes:
         """
@@ -587,22 +588,25 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         :setter: Sets list of child notes, replacing the existing list
         """
+        self._model.setup_check()
         return self._children
 
     @children.setter
     def children(self, val: list[Note]):
+        self._model.setup_check()
         self._children._setattr(val)
 
-    @require_setup_prop
     @property
     def content(self) -> str | bytes:
         """
         Getter/setter for note content.
         """
+        self._model.setup_check()
         return self._content._get()
 
     @content.setter
     def content(self, val: str | bytes | IO):
+        self._model.setup_check()
         self._content._set(val)
 
     @property

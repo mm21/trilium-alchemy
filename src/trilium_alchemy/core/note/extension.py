@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import MutableSequence, MutableSet, Set
-from functools import wraps
+from collections.abc import MutableSequence, MutableSet
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, overload
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Iterable,
+    Iterator,
+    Sequence,
+    overload,
+)
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -22,7 +29,7 @@ class NoteExtension(Extension):
 
     @property
     def _note(self) -> Note:
-        return self._entity
+        return self._entity  # type: ignore
 
 
 class NoteStatefulExtension(StatefulExtension[EtapiNoteModel], NoteExtension):
@@ -60,7 +67,7 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
         """
         ...
 
-    def _bind_entity(self, entity: EntityT):
+    def _bind_entity(self, entity: EntityT, /):
         """
         Associate provided entity with this note.
         """
@@ -115,31 +122,15 @@ class BaseEntityCollection[EntityT: BaseEntity](NoteStatefulExtension, ABC):
             ), f"{value} is not an instance of {self._child_cls}"
         return value
 
-    def _normalize(self, value: Any) -> EntityT:
+    def _normalize(self, obj: Any, /) -> EntityT:
         """
         Default normalizer to be overridden if necessary.
 
         Invoked if an entity whose class doesn't match self._child_cls is bound.
         """
         raise NotImplementedError(
-            f"No normalizer defined for {type(self)}, but required to handle {value}"
+            f"No normalizer defined for {type(self)}, but required to handle {obj}"
         )
-
-
-def check_bailout(func):
-    """
-    Bail out if assigning to self (gets called for __iadd__ helpers)
-    - This works fine without early bailout, but adds overhead
-    """
-
-    @wraps(func)
-    def wrapper(self, new: Any):
-        if self is new:
-            return
-        else:
-            func(self, new)
-
-    return wrapper
 
 
 class BaseEntityList[EntityT: OrderedEntity](
@@ -162,8 +153,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         )
 
     def __len__(self) -> int:
-        assert self._entity_list is not None
-        return len(self._entity_list)
+        return len(self._norm_entity_list)
 
     @overload
     def __getitem__(self, i: int) -> EntityT: ...
@@ -172,8 +162,7 @@ class BaseEntityList[EntityT: OrderedEntity](
     def __getitem__(self, i: slice) -> list[EntityT]: ...
 
     def __getitem__(self, i: int | slice) -> EntityT | list[EntityT]:
-        assert self._entity_list is not None
-        return self._entity_list[i]
+        return self._norm_entity_list[i]
 
     @overload
     def __setitem__(self, i: int, value: EntityT): ...
@@ -182,21 +171,21 @@ class BaseEntityList[EntityT: OrderedEntity](
     def __setitem__(self, i: slice, value: Iterable[EntityT]): ...
 
     def __setitem__(self, i: int | slice, value: EntityT | Iterable[EntityT]):
-        assert self._entity_list is not None
-
         s: slice
         v: Iterable[EntityT]
 
-        if isinstance(i, slice):
-            s = i
-            v = [self._invoke_normalize(v) for v in value]
-        else:
+        if isinstance(i, int):
+            assert isinstance(value, self._child_cls)
             s = slice(i, i + 1)
-            v = [self._invoke_normalize(value)]
+            v = [value]
+        else:
+            assert isinstance(value, Iterable)
+            s = i
+            v = value
 
         # get previous entities at slice and set new ones
-        prev_entity_list = self._entity_list[s]
-        self._entity_list[s] = v
+        prev_entity_list = self._norm_entity_list[s]
+        self._norm_entity_list[s] = v
 
         self._resolve_changes(set(prev_entity_list), set(v))
         self._set_positions()
@@ -209,44 +198,43 @@ class BaseEntityList[EntityT: OrderedEntity](
     def __delitem__(self, i: slice): ...
 
     def __delitem__(self, i: int | slice):
-        assert self._entity_list is not None
+        s = i if isinstance(i, slice) else slice(i, i + 1)
 
-        s: slice = i if isinstance(i, slice) else slice(i, i + 1)
+        del_entities = self._norm_entity_list[s]
+        del self._norm_entity_list[s]
 
-        entities_del = self._entity_list[s]
-        del self._entity_list[s]
-
-        [self._unbind_entity(entity) for entity in entities_del]
+        [self._unbind_entity(entity) for entity in del_entities]
         self._set_positions()
         self._validate()
 
     def __iter__(self) -> Iterator[EntityT]:
-        return iter(self._entity_list)
+        return iter(self._norm_entity_list)
 
-    def insert(self, i: int, value: EntityT):
-        assert self._entity_list is not None
-
-        entity: EntityT = self._invoke_normalize(value)
-        self._entity_list.insert(i, entity)
-
-        self._bind_entity(entity)
-        self._set_positions(i)
+    def insert(self, index: int, value: EntityT):
+        self._norm_entity_list.insert(index, value)
+        self._bind_entity(value)
+        self._set_positions(index)
         self._validate()
 
-    def _contains(self, entity: EntityT) -> bool:
+    @property
+    def _norm_entity_list(self) -> list[EntityT]:
+        """
+        Accessor for entity list, ensuring it was initialized.
+        """
         assert self._entity_list is not None
-        return entity in self._entity_list
+        return self._entity_list
+
+    def _contains(self, entity: EntityT) -> bool:
+        return entity in self._norm_entity_list
 
     def _validate(self):
         """
         Ensure list is in a valid state.
         """
-        assert self._entity_list is not None
-
         entity_set: set[EntityT] = set()
         entity: EntityT
         prev_position: int = -1
-        for entity in self._entity_list:
+        for entity in self._norm_entity_list:
             # ensure entity hasn't been seen before
             assert (
                 entity not in entity_set
@@ -260,23 +248,18 @@ class BaseEntityList[EntityT: OrderedEntity](
             entity_set.add(entity)
             prev_position = entity._position
 
-    @check_bailout
-    def _setattr(self, obj: list[EntityT]):
+    def _setattr(self, obj: Sequence[EntityT]):
         """
         Invoked when set by user.
         """
-        assert self._entity_list is not None
+        if self is obj:
+            return
 
-        # normalize list
-        normalized_list: list[EntityT] = [
-            self._invoke_normalize(entity) for entity in obj
-        ]
+        new_list = [e for e in obj]
+        prev_entity_list = self._norm_entity_list
+        self._entity_list = new_list
 
-        # assign new list
-        prev_entity_list = self._entity_list
-        self._entity_list = normalized_list
-
-        self._resolve_changes(set(prev_entity_list), set(normalized_list))
+        self._resolve_changes(set(prev_entity_list), set(new_list))
         self._set_positions()
         self._validate()
 
@@ -287,11 +270,9 @@ class BaseEntityList[EntityT: OrderedEntity](
         """
         Get position for the provided index.
         """
-        assert self._entity_list is not None
-
         if index > 0:
             # if not first, get position from index before it
-            prev_position = self._entity_list[index - 1]._position
+            prev_position = self._norm_entity_list[index - 1]._position
         else:
             # if first, start from 10
             prev_position = 0
@@ -302,15 +283,12 @@ class BaseEntityList[EntityT: OrderedEntity](
         """
         Assign positions starting with provided index.
         """
-        assert self._entity_list is not None
-
-        for i in range(index, len(self._entity_list)):
-            current_position = self._entity_list[i]._position
-            prev_position = self._entity_list[i - 1]._position if i > 0 else None
+        entity_list = self._norm_entity_list
+        for i in range(index, len(entity_list)):
+            current_position = entity_list[i]._position
+            prev_position = entity_list[i - 1]._position if i > 0 else None
             next_position = (
-                self._entity_list[i + 1]._position
-                if i < len(self._entity_list) - 1
-                else None
+                entity_list[i + 1]._position if i < len(entity_list) - 1 else None
             )
 
             needs_update = (
@@ -318,7 +296,7 @@ class BaseEntityList[EntityT: OrderedEntity](
             ) or (next_position is not None and current_position >= next_position)
 
             if needs_update or cleanup or self._entity._force_position_cleanup:
-                self._entity_list[i]._position = self._get_position(i)
+                entity_list[i]._position = self._get_position(i)
 
 
 class BaseEntitySet[EntityT: BaseEntity](
@@ -340,58 +318,48 @@ class BaseEntitySet[EntityT: BaseEntity](
         return f"Set: {None if self._entity_set is None else pformat(self._entity_set)}"
 
     def __contains__(self, entity: object) -> bool:
-        assert self._entity_set is not None
-        return entity in self._entity_set
+        return entity in self._norm_entity_set
 
     def __iter__(self) -> Iterator[EntityT]:
-        assert self._entity_set is not None
-        return iter(self._entity_set)
+        return iter(self._norm_entity_set)
 
     def __len__(self) -> int:
-        assert self._entity_set is not None
-        return len(self._entity_set)
+        return len(self._norm_entity_set)
 
     def add(self, value: EntityT):
-        assert self._entity_set is not None
-
-        entity: EntityT = self._invoke_normalize(value)
-        self._entity_set.add(entity)
-        self._bind_entity(entity)
+        self._norm_entity_set.add(value)
+        self._bind_entity(value)
 
     def discard(self, value: EntityT):
-        assert self._entity_set is not None
+        self._norm_entity_set.discard(value)
+        self._unbind_entity(value)
 
-        entity: EntityT = self._invoke_normalize(value)
-        self._entity_set.discard(entity)
-        self._unbind_entity(entity)
+    @property
+    def _norm_entity_set(self) -> set[EntityT]:
+        assert self._entity_set is not None
+        return self._entity_set
 
     def _contains(self, entity: EntityT) -> bool:
-        assert self._entity_set is not None
-        return entity in self._entity_set
+        return entity in self._norm_entity_set
 
     def _validate(self):
         """
         Ensure set is in a valid state.
         """
 
-    @check_bailout
-    def _setattr(self, obj: Set[EntityT]):
+    def _setattr(self, obj: AbstractSet[EntityT]):
         """
         Invoked when set by user.
         """
-        assert self._entity_set is not None
+        if self is obj:
+            return
 
-        # normalize set
-        normalized_set: set[EntityT] = {
-            self._invoke_normalize(entity) for entity in obj
-        }
-
-        # assign new set
-        prev_entity_set = self._entity_set
-        self._entity_set = normalized_set
+        new_set = {e for e in obj}
+        prev_entity_set = self._norm_entity_set
+        self._entity_set = new_set
 
         # resolve changes
-        self._resolve_changes(prev_entity_set, normalized_set)
+        self._resolve_changes(prev_entity_set, new_set)
 
     def _teardown(self):
         self._entity_set = None

@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ...attribute.attribute import BaseAttribute
-from ...entity.model import require_setup_prop
 from ...exceptions import ReadOnlyError
 from ..extension import BaseEntityList, NoteExtension, NoteStatefulExtension
 from ._filters import BaseFilteredAttributes
@@ -161,7 +160,6 @@ class Attributes(
         self._owned = OwnedAttributes(note)
         self._inherited = InheritedAttributes(note)
 
-    @require_setup_prop
     @property
     def owned(self) -> OwnedAttributes:
         """
@@ -169,13 +167,13 @@ class Attributes(
 
         Same interface as {obj}`Note.attributes` but filtered by owned attributes.
         """
+        self._model.setup_check()
         return self._owned
 
     @owned.setter
     def owned(self, val: list[BaseAttribute]):
         self._owned._setattr(val)
 
-    @require_setup_prop
     @property
     def inherited(self) -> InheritedAttributes:
         """
@@ -183,6 +181,7 @@ class Attributes(
 
         Same interface as {obj}`Note.attributes` but filtered by inherited attributes.
         """
+        self._model.setup_check()
         return self._inherited
 
     @property

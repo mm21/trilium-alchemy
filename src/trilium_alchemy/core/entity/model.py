@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from functools import wraps
 from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Any, Generator, Literal, Self, overload
 
@@ -472,7 +471,6 @@ class ModelContainer:
         self._model = model
 
 
-# TODO: EntityT: BaseEntity
 class Extension(ABC, ModelContainer):
     """
     Enables an entity to be extended with additional state besides the entity's model.
@@ -481,7 +479,7 @@ class Extension(ABC, ModelContainer):
     _entity: BaseEntity
 
     def __init__(self, entity: BaseEntity):
-        ModelContainer.__init__(self, entity._model)
+        super().__init__(entity._model)
         self._entity = entity
 
     @abstractmethod
@@ -532,21 +530,6 @@ class StatefulExtension[EtapiModelT: BaseModel](Extension):
         Commit changes to database, returning the latest model if applicable.
         """
         ...
-
-
-def require_setup_prop(func):
-    if isinstance(func, property):
-        # if decorating a property, wrap its getter and return a new property
-        getter = require_setup_prop(func.fget)
-        setter = require_setup_prop(func.fset) if func.fset is not None else None
-        return property(getter, setter, func.fdel, func.__doc__)
-
-    @wraps(func)
-    def wrapper(self: BaseEntity, *args, **kwargs):
-        self._model.setup_check()
-        return func(self, *args, **kwargs)
-
-    return wrapper
 
 
 class WriteThroughDescriptor[T]:
