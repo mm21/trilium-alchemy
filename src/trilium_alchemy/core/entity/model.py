@@ -4,7 +4,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import wraps
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Generator, Self, cast, overload
+from typing import TYPE_CHECKING, Any, Generator, Literal, Self, overload
 
 from pydantic import BaseModel
 
@@ -294,7 +294,7 @@ class BaseEntityModel(ABC):
             setup = True
 
         if setup:
-            self.setup(model_backing=model, create=create)
+            self.setup(model=model, create=create)
 
     def check_newer(self, model: BaseModel) -> bool:
         return (
@@ -302,7 +302,7 @@ class BaseEntityModel(ABC):
             or model.utc_date_modified > self.backing_data["utc_date_modified"]
         )
 
-    def setup(self, model_backing: BaseModel | None = None, create: bool | None = None):
+    def setup(self, model: BaseModel | None = None, create: bool | None = None):
         """
         Populate state from database for this object.
 
@@ -313,19 +313,19 @@ class BaseEntityModel(ABC):
             self._exists = False
 
             # there can't be a backing model if it doesn't exist in db
-            assert model_backing is None
+            assert model is None
         else:
             # attempt to fetch from database if not provided
-            if model_backing is None:
-                model_backing = self.driver.fetch()
+            if model is None:
+                model = self.driver.fetch()
 
-            if model_backing is None:
+            if model is None:
                 self.backing_data = None
 
                 # create is False means expected to exist
                 assert create is None
             else:
-                self.backing_data = dict(model_backing)
+                self.backing_data = dict(model)
 
             # set exists flag
             self._exists = self.backing_data is not None
@@ -343,9 +343,9 @@ class BaseEntityModel(ABC):
             # move to create state
             self.entity._set_dirty(State.CREATE)
 
-        if model_backing is not None:
+        if model is not None:
             # invoke setup callback for entity
-            self.entity._setup(model_backing)
+            self.entity._setup(model)
 
         # set setup_done before extensions are setup; they may refer to state
         # from model (e.g. is_string requires note's type and mime fields)
@@ -354,36 +354,54 @@ class BaseEntityModel(ABC):
         if self._extensions is not None:
             # invoke setup callback for extensions
             for ext in self._extensions:
-                ext._setup(model_backing)
+                ext._setup(model)
 
-    # MTODO: param check_type: check and return given type
-    def get_field(self, field: str) -> str | int | bool | None:
+    @overload
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: Literal[False] = False
+    ) -> T: ...
+
+    @overload
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: Literal[True]
+    ) -> T | None: ...
+
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: bool = False
+    ) -> T | None:
         """
         Get field from model, with working state taking precedence over database state.
         """
-        assert field in self._etapi_fields
+        assert field in self.etapi_model.model_fields
+
+        def get_value(data: dict[str, Any]) -> T | None:
+            assert field in data
+            val = data[field]
+            if val is not None or not allow_none:
+                assert isinstance(val, check_type)
+            return val
 
         # perform model setup if not done
         self.setup_check()
 
-        # attempt to get from working model
-        if self.working_data is not None and field in self.working_data:
-            # get field from working model
-            return self.working_data[field]
+        # attempt to get value from working model
+        if self.working_data and field in self.working_data:
+            return get_value(self.working_data)
 
         if not self.entity._is_create:
             # backing model should be populated at this point
-            assert self.backing_data is not None
+            assert self.backing_data
 
-        # get field from backing model
-        if self.backing_data is not None:
-            return self.backing_data[field]
+        # attempt to get value from backing model
+        if self.backing_data:
+            return get_value(self.backing_data)
 
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
+        assert allow_none
         return None
 
-    def set_field(self, field: str, value: Any, bypass_validate: bool = False):
+    def set_field(self, field: str, value: Any, *, bypass_validate: bool = False):
         """
         Set field in working model.
         """
@@ -442,15 +460,8 @@ class BaseEntityModel(ABC):
         """
         Get default field for initializing working model.
         """
-        assert field in self.default_fields, f"{field} not in defaults"
+        assert field in self.default_fields
         return self.default_fields[field]
-
-    @property
-    def _etapi_fields(self) -> set[str]:
-        """
-        Return all fields in pydantic model.
-        """
-        return {k for k in self.etapi_model.model_fields.keys()}
 
 
 class ModelContainer:
@@ -541,34 +552,6 @@ def require_setup_prop(func):
         return func(self, *args, **kwargs)
 
     return wrapper
-
-
-class FieldDescriptor[T]:
-    """
-    Accessor for a model field, e.g. a {obj}`Note`'s `title` field.
-
-    When written, updates the working state which will be committed to Trilium upon
-    flush. When read, returns the working state if set by user, or the state from
-    Trilium if not.
-    """
-
-    _field: str
-
-    def __init__(self, field: str):
-        self._field = field
-
-    @overload
-    def __get__(self, obj: None, objtype: type) -> Self: ...
-    @overload
-    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
-    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
-        _ = objtype
-        if obj is None:
-            return self
-        return cast(T, obj._model.get_field(self._field))
-
-    def __set__(self, obj: BaseEntity, val: T):
-        obj._model.set_field(self._field, val)
 
 
 class WriteThroughDescriptor[T]:

@@ -11,7 +11,6 @@ from ..entity.entity import BaseEntity, OrderedEntity, State
 from ..entity.model import (
     BaseDriver,
     BaseEntityModel,
-    FieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..exceptions import _assert_validate
@@ -137,7 +136,6 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
 
     _attribute_type: str
     _model_cls = AttributeModel
-    _position = FieldDescriptor[int]("position")
 
     # name of attribute, ensuring only one name is assigned
     _name = WriteOnceDescriptor[str]("_name_obj")
@@ -204,18 +202,18 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         Getter/setter for whether this attribute is inherited to children and by
         `template`/`inherit` relations.
         """
-        return self._model.get_field("is_inheritable")
+        return self._model.get_field("is_inheritable", bool)
 
     @inheritable.setter
     def inheritable(self, val: bool):
         self._model.set_field("is_inheritable", val)
 
     @property
-    def utc_date_modified(self) -> str:
+    def utc_date_modified(self) -> str | None:
         """
         UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_modified")
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
 
     @property
     def note(self) -> Note | None:
@@ -234,6 +232,14 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         in its note's {obj}`Note.attributes` list. ```
         """
         return self._position
+
+    @property
+    def _position(self) -> int:
+        return self._model.get_field("position", int)
+
+    @_position.setter
+    def _position(self, val: int):
+        self._model.set_field("position", val)
 
     @classmethod
     def _from_id(

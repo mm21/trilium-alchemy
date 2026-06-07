@@ -60,9 +60,7 @@ class NoteMeta(BaseYamlModel):
         for attribute in note.attributes.owned:
             assert attribute.attribute_id
 
-            value = attribute._model.get_field("value")
-            assert isinstance(value, str)
-
+            value = attribute._model.get_field("value", str)
             attributes.append(
                 AttributeMeta(
                     attribute_id=attribute.attribute_id,

@@ -53,7 +53,7 @@ def test_relation_update(session: Session, note: Note, relation: Relation):
     assert relation._is_clean
 
     assert relation.target is not None
-    assert relation._model.get_field("value") == "root"
+    assert relation._model.get_field("value", str) == "root"
 
     # change target to note which owns this relation
     relation.target = note
@@ -104,7 +104,7 @@ def test_relation_update_target_new(session: Session, relation: Relation):
     assert relation._is_dirty
 
     # value (target note id) should be None as target has no note_id
-    assert not relation._model.get_field("value")
+    assert relation._model.get_field("value", str, allow_none=True) is None
 
     relation.target = root
     assert relation._is_clean
@@ -120,7 +120,7 @@ def test_relation_update_target_new(session: Session, relation: Relation):
 
     assert relation.target is note_new
     assert note_new.note_id is not None
-    assert relation._model.get_field("value") == note_new.note_id
+    assert relation._model.get_field("value", str) == note_new.note_id
 
     # cleanup
     note_new.delete()

@@ -468,7 +468,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for note title.
         """
-        return self._model.get_field("title")
+        return self._model.get_field("title", str)
 
     @title.setter
     def title(self, val: str):
@@ -479,7 +479,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for note title.
         """
-        return self._model.get_field("type")
+        return self._model.get_field("type", str)
 
     @note_type.setter
     def note_type(self, val: str):
@@ -492,7 +492,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for MIME type.
         """
-        return self._model.get_field("mime")
+        return self._model.get_field("mime", str)
 
     @mime.setter
     def mime(self, val: str):
@@ -503,35 +503,35 @@ class Note(BaseEntity[NoteModel]):
         """
         Protected state, can only be changed in Trilium UI.
         """
-        return self._model.get_field("is_protected")
+        return self._model.get_field("is_protected", bool)
 
     @property
-    def date_created(self) -> str:
+    def date_created(self) -> str | None:
         """
         Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
         """
-        return self._model.get_field("date_created")
+        return self._model.get_field("date_created", str, allow_none=True)
 
     @property
-    def date_modified(self) -> str:
+    def date_modified(self) -> str | None:
         """
         Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
         """
-        return self._model.get_field("date_modified")
+        return self._model.get_field("date_modified", str, allow_none=True)
 
     @property
-    def utc_date_created(self) -> str:
+    def utc_date_created(self) -> str | None:
         """
         UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_created")
+        return self._model.get_field("utc_date_created", str, allow_none=True)
 
     @property
-    def utc_date_modified(self) -> str:
+    def utc_date_modified(self) -> str | None:
         """
         UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_modified")
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
 
     @require_setup_prop
     @property

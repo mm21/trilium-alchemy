@@ -12,7 +12,6 @@ from ..exceptions import *
 from ..session import Session, SessionContainer, normalize_session
 from .model import (
     BaseEntityModel,
-    FieldDescriptor,
     ModelContainer,
     WriteOnceDescriptor,
     WriteThroughDescriptor,
@@ -23,7 +22,6 @@ __all__ = [
     "BaseEntity",
     "State",
     "EntityIdDescriptor",
-    "FieldDescriptor",
     "WriteThroughDescriptor",
     "WriteOnceDescriptor",
 ]
@@ -303,7 +301,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         Discard current model and update with new one.
         """
         self.invalidate()
-        self._model.setup(model_backing=model, create=False)
+        self._model.setup(model=model, create=False)
 
     def _flush(self, sorter: TopologicalSorter):
         """
@@ -464,12 +462,18 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         return []
 
 
-class PositionMixin:
+class PositionMixin(ABC):
     """
     Mixin to indicate that an Entity subclass has a position field.
     """
 
-    _position: int
+    @property
+    @abstractmethod
+    def _position(self) -> int: ...
+
+    @_position.setter
+    @abstractmethod
+    def _position(self, val: int): ...
 
 
 # TODO: this is better suited as an intersection type, not yet supported

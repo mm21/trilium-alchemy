@@ -10,7 +10,6 @@ from ..entity.entity import OrderedEntity
 from ..entity.model import (
     BaseDriver,
     BaseEntityModel,
-    FieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..entity.types import State
@@ -128,8 +127,6 @@ class Branch(OrderedEntity[BranchModel]):
     _child = WriteOnceDescriptor["Note | None"]("_child_obj", validator="_validate")
     _child_obj: Note | None = None
 
-    _position = FieldDescriptor[int]("note_position")
-
     def __new__(cls, *_, **kwargs) -> Self:
         return super().__new__(
             cls,
@@ -221,7 +218,7 @@ class Branch(OrderedEntity[BranchModel]):
         """
         Getter/setter for branch prefix.
         """
-        return self._model.get_field("prefix")
+        return self._model.get_field("prefix", str, allow_none=True) or ""
 
     @prefix.setter
     def prefix(self, val: str):
@@ -232,18 +229,18 @@ class Branch(OrderedEntity[BranchModel]):
         """
         Getter/setter for whether child note (as a folder) appears expanded in UI.
         """
-        return self._model.get_field("is_expanded")
+        return self._model.get_field("is_expanded", bool)
 
     @expanded.setter
     def expanded(self, val: bool):
         self._model.set_field("is_expanded", val)
 
     @property
-    def utc_date_modified(self) -> str:
+    def utc_date_modified(self) -> str | None:
         """
         UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_modified")
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
 
     @property
     def position(self) -> int:
@@ -254,6 +251,14 @@ class Branch(OrderedEntity[BranchModel]):
         its parent note's {obj}`Note.branches.children <Note.branches>` list. ```
         """
         return self._position
+
+    @property
+    def _position(self) -> int:
+        return self._model.get_field("note_position", int)
+
+    @_position.setter
+    def _position(self, val: int):
+        self._model.set_field("note_position", val)
 
     @property
     def _str_short(self):

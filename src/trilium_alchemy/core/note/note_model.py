@@ -57,7 +57,7 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
 
         # assign writeable fields from branch
         for field in parent_branch._model.update_fields:
-            model_dict[field] = parent_branch._model.get_field(field)
+            model_dict[field] = parent_branch._model.get_field(field, object)
 
         model = CreateNoteDef(**model_dict)
 

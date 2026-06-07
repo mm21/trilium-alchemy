@@ -119,10 +119,11 @@ class Relation(BaseAttribute):
         target_note_id = self._target_obj.note_id
         assert target_note_id is not None
 
-        if not self._model.get_field("value"):
+        value = self._model.get_field("value", str, allow_none=True)
+        if not value:
             self._model.set_field("value", target_note_id)
         else:
-            assert self._model.get_field("value") == target_note_id
+            assert value == target_note_id
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
