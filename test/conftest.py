@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Generator
 
 import dotenv
-from pytest import Config, FixtureRequest, Parser, fixture, raises
+import pytest
+from pytest import Config, FixtureRequest, Item, Parser, fixture, raises
 from trilium_client import DefaultApi
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -57,12 +58,21 @@ MARKERS = [
     "skip_cleanup",
     "setup",
     "temp_file",
+    "slow",
 ]
 
 
-def pytest_configure(config: Config) -> None:
+def pytest_configure(config: Config):
     for marker in MARKERS:
         config.addinivalue_line("markers", marker)
+
+
+def pytest_collection_modifyitems(config: Config, items: list[Item]):
+    if config.getoption("--fast"):
+        skip = pytest.mark.skip(reason="Skipped by --fast")
+        for item in items:
+            if item.get_closest_marker("slow"):
+                item.add_marker(skip)
 
 
 def pytest_addoption(parser: Parser):
@@ -80,6 +90,11 @@ def pytest_addoption(parser: Parser):
         "--cli-stdout",
         action="store_true",
         help="Print stdout of CLI commands",
+    )
+    parser.addoption(
+        "--fast",
+        action="store_true",
+        help="Skip slow tests",
     )
 
 

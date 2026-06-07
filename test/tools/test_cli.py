@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import pytest
 from pytest import FixtureRequest, skip
 from typer.testing import CliRunner
 
@@ -184,6 +185,7 @@ def test_config(request: FixtureRequest, session: Session, tmp_path: Path):
     )
 
 
+@pytest.mark.slow
 def test_db(
     request: FixtureRequest,
     session: Session,
