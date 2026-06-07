@@ -144,6 +144,8 @@ class Cache:
 
         Should be invoked as soon as entity_id is set.
         """
+        assert entity._entity_id
+
         if entity._entity_id in self.entity_map:
             assert entity is self.entity_map[entity._entity_id]
         else:
@@ -251,16 +253,11 @@ class Cache:
             Branch: state_map(),
         }
 
-        def get_cls(entity: BaseEntity) -> type[BaseEntity]:
-            classes = [
-                Note,
-                BaseAttribute,
-                Branch,
-            ]
-
-            for cls in classes:
+        def get_cls(entity: BaseEntity) -> type[BaseEntity] | None:
+            for cls in (Note, BaseAttribute, Branch):
                 if isinstance(entity, cls):
                     return cls
+            return None
 
         for entity in entities:
             cls = get_cls(entity)

@@ -9,6 +9,6 @@ __all__ = rollup(
     attribute,
     label,
     relation,
-)
+)  # type: ignore
 
 __canonical_syms__ = __all__
