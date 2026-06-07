@@ -46,7 +46,7 @@ class Relation(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-        model_backing = kwargs.get("_model_backing")
+        backing_model = kwargs.get("_model_backing")
 
         super().__init__(
             name,
@@ -56,7 +56,7 @@ class Relation(BaseAttribute):
         )
 
         # set target if provided and not getting from database
-        if model_backing is None and target is not None:
+        if backing_model is None and target is not None:
             self.target = target
 
     @property

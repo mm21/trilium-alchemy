@@ -33,7 +33,7 @@ class Label(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-        model_backing = kwargs.get("_model_backing")
+        backing_model = kwargs.get("_model_backing")
 
         super().__init__(
             name,
@@ -43,7 +43,7 @@ class Label(BaseAttribute):
         )
 
         # set value if not getting from database
-        if model_backing is None:
+        if backing_model is None:
             self.value = value
 
     @property

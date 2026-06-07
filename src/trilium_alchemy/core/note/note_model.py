@@ -93,7 +93,7 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
         assert self.note.note_id
 
         # assemble note model based on needed fields
-        model = EtapiNoteModel(**self.note._model.get_fields_changed())
+        model = EtapiNoteModel(**self.note._model.get_changed_fields())
 
         # invoke api and return new model
         new_model = self.session.api.patch_note_by_id(self.note.note_id, model)

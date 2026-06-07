@@ -7,6 +7,9 @@ from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Any, Generator, Literal, Self, overload
 
 from pydantic import BaseModel
+from trilium_client.models.attribute import Attribute as EtapiAttributeModel
+from trilium_client.models.branch import Branch as EtapiBranchModel
+from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..session import Session
 from .types import State
@@ -57,11 +60,7 @@ class BaseDriver[ModelT: BaseModel](ABC):
         ...
 
 
-# TODO: parameterize BaseEntityModel with BaseModel subclass, BaseDriver subclass
-# for this entity
-
-
-class BaseEntityModel(ABC):
+class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
     """
     Abstraction of data model which is stored as a record in Trilium's database,
     encapsulating both locally modified data and data as received from Trilium.
@@ -71,7 +70,7 @@ class BaseEntityModel(ABC):
     entity: BaseEntity
 
     # driver to interface with backing store
-    driver: BaseDriver
+    driver: DriverT
 
     # cached data fetched from backing store, or None if not fetched
     backing_data: dict[str, Any] | None = None
@@ -87,7 +86,7 @@ class BaseEntityModel(ABC):
     _exists: bool | None = None
 
     # list of stateful extensions registered by subclass
-    _extensions: list[StatefulExtension]
+    _extensions: list[StatefulExtension[EtapiModelT]]
 
     def __init__(self, entity: BaseEntity):
         self.entity = entity
@@ -151,7 +150,7 @@ class BaseEntityModel(ABC):
 
     @property
     @abstractmethod
-    def etapi_model(self) -> type[BaseModel]:
+    def etapi_model(self) -> type[EtapiModelT]:
         """
         Pydantic model used in etapi.
         """
@@ -159,7 +158,7 @@ class BaseEntityModel(ABC):
 
     @property
     @abstractmethod
-    def driver_cls(self) -> type[BaseDriver]:
+    def driver_cls(self) -> type[DriverT]:
         """
         Class to interface with ETAPI.
         """
@@ -191,7 +190,7 @@ class BaseEntityModel(ABC):
 
     def flush(
         self, sorter: TopologicalSorter
-    ) -> tuple[BaseModel | None, Generator | None]:
+    ) -> tuple[EtapiModelT | None, Generator | None]:
         """
         Flush model if any fields are changed.
         """
@@ -207,7 +206,7 @@ class BaseEntityModel(ABC):
         }[self.entity._state]
 
         # invoke flush method
-        new_model: BaseModel | None
+        new_model: EtapiModelT | None
         if inspect.isgeneratorfunction(func):
             # generator function: yields model, then performs extra processing
             gen = func(sorter)
@@ -253,10 +252,12 @@ class BaseEntityModel(ABC):
 
         return self.backing_data[field] != self.working_data[field]
 
-    def get_fields_changed(self) -> dict[str, Any]:
+    def get_changed_fields(self) -> dict[str, Any]:
         """
         Return a dict of all fields which are changed.
         """
+        assert self.backing_data
+        assert self.working_data
         fields = dict()
 
         for field in self.update_fields:
@@ -280,29 +281,25 @@ class BaseEntityModel(ABC):
         if self._setup_done is False:
             self.setup()
 
-    def setup_check_init(self, model: BaseModel, create: bool | None = None):
+    def setup_check_init(self, model: EtapiModelT, create: bool | None = None):
         """
         Setup model if necessary and backing model provided during init (entity already
         retrieved from database).
         """
-        setup = False
-
-        if create:
-            setup = True
-        elif model is not None and self.check_newer(model):
-            # no existing model or provided model is newer
-            setup = True
-
-        if setup:
+        if create or (model is not None and self.check_newer(model)):
             self.setup(model=model, create=create)
 
-    def check_newer(self, model: BaseModel) -> bool:
+    def check_newer(self, model: EtapiModelT) -> bool:
+        assert isinstance(
+            model, (EtapiNoteModel, EtapiAttributeModel, EtapiBranchModel)
+        )
+        assert model.utc_date_modified
         return (
             self.backing_data is None
             or model.utc_date_modified > self.backing_data["utc_date_modified"]
         )
 
-    def setup(self, model: BaseModel | None = None, create: bool | None = None):
+    def setup(self, model: EtapiModelT | None = None, create: bool | None = None):
         """
         Populate state from database for this object.
 
@@ -436,7 +433,7 @@ class BaseEntityModel(ABC):
         # set as dirty/clean if needed
         self.entity._check_state()
 
-    def register_extension(self, extension: StatefulExtension):
+    def register_extension(self, extension: StatefulExtension[EtapiModelT]):
         """
         Register extension to receive model updates and handle teardown().
 
@@ -444,11 +441,11 @@ class BaseEntityModel(ABC):
         """
         self._extensions.append(extension)
 
-    def flush_extensions(self) -> BaseModel | None:
+    def flush_extensions(self) -> EtapiModelT | None:
         """
         Flush extensions and return the latest model, if applicable.
         """
-        new_model: BaseModel | None = None
+        new_model: EtapiModelT | None = None
 
         for ext in self._extensions:
             if ext._is_changed:
@@ -469,8 +466,7 @@ class ModelContainer:
     Indicates that subclasses contain a model instance.
     """
 
-    # instance of Model
-    _model: BaseEntityModel = None
+    _model: BaseEntityModel
 
     def __init__(self, model: BaseEntityModel):
         self._model = model
@@ -495,7 +491,7 @@ class Extension(ABC, ModelContainer):
         ...
 
 
-class StatefulExtension(Extension):
+class StatefulExtension[EtapiModelT: BaseModel](Extension):
     """
     Extension which has state derived by model.
 
@@ -509,7 +505,7 @@ class StatefulExtension(Extension):
         entity._model.register_extension(self)
 
     @abstractmethod
-    def _setup(self, model: BaseModel | None):
+    def _setup(self, model: EtapiModelT | None):
         """
         Invoked after model is initially setup, or if a model is refreshed.
         """
@@ -532,7 +528,7 @@ class StatefulExtension(Extension):
         """
         return False
 
-    def _flush(self) -> BaseModel | None:
+    def _flush(self) -> EtapiModelT | None:
         """
         Commit changes to database, returning the latest model if applicable.
         """

@@ -6,6 +6,8 @@ from functools import wraps
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, overload
 
+from trilium_client.models.note import Note as EtapiNoteModel
+
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
 
@@ -23,7 +25,7 @@ class NoteExtension(Extension):
         return self._entity
 
 
-class NoteStatefulExtension(StatefulExtension, NoteExtension):
+class NoteStatefulExtension(StatefulExtension[EtapiNoteModel], NoteExtension):
     pass
 
 

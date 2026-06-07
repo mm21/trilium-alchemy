@@ -196,7 +196,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             cls,
             session=kwargs.get("session"),
             entity_id=note_id,
-            model_backing=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_model_backing"),
         )
 
     # TODO: add:
@@ -234,7 +234,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         note_id_seed_final = (
             kwargs.pop("_note_id_seed_final", None) or note_id_seed_final
         )
-        model_backing = kwargs.pop("_model_backing", None)
+        backing_model = kwargs.pop("_model_backing", None)
         force_leaf = kwargs.pop("_force_leaf", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
@@ -245,7 +245,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         super().__init__(
             entity_id=note_id,
             session=session,
-            model_backing=model_backing,
+            backing_model=backing_model,
         )
 
         if init_done:

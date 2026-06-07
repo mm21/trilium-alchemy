@@ -76,7 +76,7 @@ class AttributeDriver(BaseDriver[EtapiAttributeModel]):
             return self.flush_create(sorter)
         else:
             # can just use patch
-            model = EtapiAttributeModel(**self.attribute._model.get_fields_changed())
+            model = EtapiAttributeModel(**self.attribute._model.get_changed_fields())
             new_model = self.session.api.patch_attribute_by_id(
                 self.attribute.attribute_id, model
             )
@@ -145,7 +145,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
             cls,
             session=kwargs.get("session"),
             entity_id=kwargs.get("_attribute_id"),
-            model_backing=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_model_backing"),
         )
 
     @abstractmethod
@@ -161,7 +161,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         super().__init__(
             entity_id=_attribute_id,
             session=session,
-            model_backing=_model_backing,
+            backing_model=_model_backing,
         )
 
         assert type(name) is str

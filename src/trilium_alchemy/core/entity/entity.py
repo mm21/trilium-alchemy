@@ -64,7 +64,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         # session, or None to use default session
         session: Session | None = None,
         # backing model, if already loaded
-        model_backing: ModelT | None = None,
+        backing_model: ModelT | None = None,
         # whether entity is being created (otherwise inferred from whether
         # entity_id provided)
         create: bool | None = None,
@@ -87,7 +87,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
                 entity.__class__ = cls
 
             # return cached object
-            return entity
+            return cast(Self, entity)
         # proceed with creation of new object
         return super().__new__(cls)
 
@@ -96,7 +96,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         *,
         entity_id: str | None = None,
         session: Session | None = None,
-        model_backing: ModelT | None = None,
+        backing_model: ModelT | None = None,
         create: bool | None = None,
     ):
         session = normalize_session(session)
@@ -108,7 +108,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
                 self._session is session
             ), f"Attempt to associate new session {session} with entity having existing session {self._session}"
 
-            self._model.setup_check_init(model_backing)
+            self._model.setup_check_init(backing_model)
             return
 
         # set early since if this is a declarative note, it may create children
@@ -130,7 +130,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         self._init()
 
         # setup model if needed
-        self._model.setup_check_init(model_backing, create)
+        self._model.setup_check_init(backing_model, create)
 
     def __str__(self):
         return self.str_short
@@ -511,6 +511,7 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", obj)
 
 
+# MTODO: use typecraft
 def normalize_entities[CollectionT: Iterable](
     entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
     collection_cls: type[CollectionT] = list,

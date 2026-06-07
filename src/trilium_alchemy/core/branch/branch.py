@@ -71,7 +71,7 @@ class BranchDriver(BaseDriver[EtapiBranchModel]):
         _ = sorter
         assert self.branch.branch_id
 
-        model = EtapiBranchModel(**self.branch._model.get_fields_changed())
+        model = EtapiBranchModel(**self.branch._model.get_changed_fields())
         new_model = self.session.api.patch_branch_by_id(self.branch.branch_id, model)
         return new_model
 

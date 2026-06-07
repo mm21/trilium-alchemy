@@ -53,12 +53,10 @@ class Cache:
         from .branch import Branch
         from .entity.types import State
 
-        entities_iter: Iterable[BaseEntity]
-
-        entities_iter = self.dirty_set if entities is None else entities
+        entities_ = entities if entities is not None else self.dirty_set
 
         # filter by dirty state
-        dirty_set = {entity for entity in entities_iter if entity._is_dirty}
+        dirty_set = {entity for entity in entities_ if entity._is_dirty}
 
         # first pass validation of entities provided by user
         self._validate(dirty_set)
