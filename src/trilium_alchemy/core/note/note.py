@@ -8,7 +8,7 @@ from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Generator, Literal, Self, cast
+from typing import IO, Generator, Literal, Self, Sequence, cast
 
 import requests
 from trilium_client.exceptions import NotFoundException
@@ -270,7 +270,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
             return
 
-        def combine_lists[T](*lists: list[T] | None) -> list[T] | None:
+        def combine_iterables[T](*lists: Iterable[T] | None) -> list[T] | None:
             result: list[T] | None = None
             for lst in lists:
                 if lst is not None:
@@ -312,13 +312,13 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         note_type_set = note_type or init_container.note_type
         mime_set = normalize_mime(title_set, note_type_set, mime or init_container.mime)
         content_set = content or init_container.content
-        attributes_set = combine_lists(attributes, init_container.attributes)
+        attributes_set = combine_iterables(attributes, init_container.attributes)
         parents_set: Iterable[Note | Branch] | None = (
             None
             if parents is None
             else cast(Iterable[Note | Branch], normalize_entities(parents))
         )
-        children_set = combine_lists(children, init_container.children)
+        children_set = combine_iterables(children, init_container.children)
 
         if template is not None:
             # create and append new relation
@@ -1066,8 +1066,8 @@ class InitContainer:
     title: str | None = None
     note_type: str | None = None
     mime: str | None = None
-    attributes: list[BaseAttribute] | None = None
-    children: list[Note | Branch] | None = None
+    attributes: Sequence[BaseAttribute] | None = None
+    children: Sequence[Note | Branch] | None = None
     content: str | bytes | IO | None = None
 
 

@@ -5,7 +5,7 @@ import inspect
 import os
 from abc import ABC, ABCMeta
 from types import ModuleType
-from typing import IO, Iterable, Self
+from typing import IO, Any, Iterable
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
@@ -21,19 +21,26 @@ __all__ = [
 
 class DeclarativeMeta(ABCMeta):
     """
-    To generate documentation for added attributes and children, use initialize the list
-    of descriptions for decorators added to it.
+    To generate documentation for added attributes and children, initialize the list of
+    descriptions for decorators added to it.
     """
 
-    def __new__(cls, name, bases, attrs) -> Self:
-        attrs["_decorator_doc"] = []
+    def __new__(
+        cls,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        /,
+        **kwargs: Any,
+    ) -> DeclarativeMeta:
+        namespace["_decorator_doc"] = []
 
         # add decorators from bases first
         for base in bases:
             if hasattr(base, "_decorator_doc"):
-                attrs["_decorator_doc"] += base._decorator_doc
+                namespace["_decorator_doc"] += base._decorator_doc
 
-        return super().__new__(cls, name, bases, attrs)
+        return super().__new__(cls, name, bases, namespace, **kwargs)
 
 
 class BaseDeclarativeMixin(
@@ -230,14 +237,14 @@ class BaseDeclarativeMixin(
         note: BaseDeclarativeNote,
         note_id: str | None,
         note_id_seed_final: str | None,
-        force_leaf: bool,
+        force_leaf: bool | None,
     ):
         self._note = note
         self._note_id = note_id
         self._note_id_seed_final = note_id_seed_final
 
         # get from parent if True
-        if force_leaf is True:
+        if force_leaf:
             self._force_leaf = force_leaf
 
         self._sequence_map = {}
@@ -489,7 +496,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         note_id_seed_final: str | None,
         force_leaf: bool | None,
     ) -> InitContainer:
-        super()._init_decl_mixin(self, note_id, note_id_seed_final, force_leaf)
+        self._init_decl_mixin(self, note_id, note_id_seed_final, force_leaf)
 
         container = InitContainer()
 
@@ -524,7 +531,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
             ]
 
             container.content = self._get_content_fh(
-                container.note_type, container.mime
+                container.note_type, container.mime or ""
             )
 
             if self._stem_title:
@@ -538,7 +545,7 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
         # since the cssClass would be inherited to instances created
         # by user)
         if note_id is not None:
-            if self.hide_new_note or not any([self.leaf, self._force_leaf]):
+            if self.hide_new_note or not any((self.leaf, self._force_leaf)):
                 attributes.append(
                     self.create_declarative_label(
                         "cssClass", value="triliumAlchemyDeclarative"
