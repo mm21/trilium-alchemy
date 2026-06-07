@@ -143,7 +143,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         if parent_ in self._note.parents:
             # already in parents
             branch_obj = self._note.branches.parents.lookup_branch(parent_)
-            assert branch_obj is not None
+            assert branch_obj
         else:
             # create a new branch
             branch_obj = Branch(
@@ -229,23 +229,23 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
         if child_branch not in child_branch.child.branches.parents:
             child_branch.child.branches.parents.add(child_branch)
 
-    def _normalize(self, child: Note) -> Branch:
+    def _normalize(self, child: Note | tuple[Note, str]) -> Branch:
         from .note import Note
 
-        child, prefix = normalize_tuple(child)
+        child_, prefix = normalize_tuple(child)
 
         assert isinstance(
-            child, Note
-        ), f"Unexpected type added to ChildBranches: {child}, {type(child)}"
+            child_, Note
+        ), f"Unexpected type added to ChildBranches: {child_}, {type(child_)}"
 
-        if child in self._note.children:
+        if child_ in self._note.children:
             # already in children
-            branch_obj = self._note.branches.children.lookup_branch(child)
-            assert branch_obj is not None
+            branch_obj = self._note.branches.children.lookup_branch(child_)
+            assert branch_obj
         else:
             # create a new branch
             branch_obj = Branch(
-                parent=self._note, child=child, session=self._note.session
+                parent=self._note, child=child_, session=self._note.session
             )
 
         if prefix is not None:
