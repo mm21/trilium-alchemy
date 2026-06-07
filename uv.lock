@@ -1538,6 +1538,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "trilium-client" },
+    { name = "typecraft" },
     { name = "typer" },
 ]
 
@@ -1576,6 +1577,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2,<7" },
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "trilium-client", specifier = ">=0.1.3,<0.2.0" },
+    { name = "typecraft", specifier = ">=0.2.0" },
     { name = "typer", specifier = ">=0.15.4" },
 ]
 
@@ -1619,6 +1621,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/13/5e/ba38905cffb897ab1551740274e60f240078dcbe620e0bdc91a309f3dc1e/trilium_client-0.1.3.tar.gz", hash = "sha256:f41ef4e184f3a0de2c54ee6b6004dc2b7c3fdfe9666a2192cb0a1db6c559f62e", size = 36014, upload-time = "2026-06-06T06:30:30.952Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/20/f5/5fe6b7cc9ea7a095e81cf4b746b54fb5ef75b184ebd27c3ae4b2c4115eaf/trilium_client-0.1.3-py3-none-any.whl", hash = "sha256:9c2b7113cd3871e8678ffcd2eff3e5e94ff41fdb6ef3c197c10c0dc647dc795a", size = 50050, upload-time = "2026-06-06T06:30:29.54Z" },
+]
+
+[[package]]
+name = "typecraft"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/46/c27e6407a4df396abadf3d06d4062ceb76fee4961bca77a9e43a8e57f311/typecraft-0.2.0.tar.gz", hash = "sha256:c2a4c2c8224e3809d58d2405f21a8d0e9c3986f4c7912abbd15304ba501d64c9", size = 49851, upload-time = "2026-04-27T09:11:16.988Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/f7/8787efcbc95747813ee9be81ad0aa084bb3337717aaa0e7adcf2aa5c77c9/typecraft-0.2.0-py3-none-any.whl", hash = "sha256:89b8e064e40d5d482902ea46a415832d03e9de87aed34d491186c02e247565b6", size = 64501, upload-time = "2026-04-27T09:11:18.258Z" },
 ]
 
 [[package]]

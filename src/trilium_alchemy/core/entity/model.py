@@ -472,6 +472,7 @@ class ModelContainer:
         self._model = model
 
 
+# TODO: EntityT: BaseEntity
 class Extension(ABC, ModelContainer):
     """
     Enables an entity to be extended with additional state besides the entity's model.
@@ -497,8 +498,6 @@ class StatefulExtension[EtapiModelT: BaseModel](Extension):
 
     This state is populated during setup() and cleared during teardown().
     """
-
-    # TODO: driver to handle fetch, flush
 
     def __init__(self, entity: BaseEntity):
         super().__init__(entity)

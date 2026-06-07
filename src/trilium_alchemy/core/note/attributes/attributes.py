@@ -171,7 +171,7 @@ class Attributes(
     _owned: OwnedAttributes
     _inherited: InheritedAttributes
 
-    def __init__(self, note):
+    def __init__(self, note: Note):
         super().__init__(note)
 
         self._owned = OwnedAttributes(note)
