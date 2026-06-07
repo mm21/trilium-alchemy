@@ -89,18 +89,19 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
         parent_branch._model.setup(response.branch)
 
     def flush_update(self, sorter: TopologicalSorter) -> EtapiNoteModel:
+        _ = sorter
+        assert self.note.note_id
+
         # assemble note model based on needed fields
         model = EtapiNoteModel(**self.note._model.get_fields_changed())
 
         # invoke api and return new model
-        model_new: EtapiNoteModel = self.session.api.patch_note_by_id(
-            self.note.note_id, model
-        )
-        assert model_new is not None
-
-        return model_new
+        new_model = self.session.api.patch_note_by_id(self.note.note_id, model)
+        return new_model
 
     def flush_delete(self, sorter: TopologicalSorter):
+        assert self.note.note_id
+
         self.session.api.delete_note_by_id(self.note.note_id)
 
         # mark attributes as clean

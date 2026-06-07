@@ -101,6 +101,8 @@ class Relation(BaseAttribute):
     def _flush_check(self):
         from ..note.note import Note
 
+        super()._flush_check()
+
         _assert_validate(
             self._target_obj is not None, f"Relation {self} has no target note"
         )

@@ -18,8 +18,6 @@ from ..session import Session, normalize_session
 
 if TYPE_CHECKING:
     from ..note.note import Note
-    from .label import Label
-    from .relation import Relation
 
 __all__ = [
     "BaseAttribute",
@@ -59,10 +57,8 @@ class AttributeDriver(BaseDriver[EtapiAttributeModel]):
         if self.attribute.attribute_id is not None:
             model.attribute_id = self.attribute.attribute_id
 
-        model_new = self.session.api.post_attribute(model)
-        assert model_new is not None
-
-        return model_new
+        new_model = self.session.api.post_attribute(model)
+        return new_model
 
     def flush_update(self, sorter: TopologicalSorter) -> EtapiAttributeModel:
         assert self.attribute.attribute_id
@@ -81,12 +77,10 @@ class AttributeDriver(BaseDriver[EtapiAttributeModel]):
         else:
             # can just use patch
             model = EtapiAttributeModel(**self.attribute._model.get_fields_changed())
-            model_new = self.session.api.patch_attribute_by_id(
+            new_model = self.session.api.patch_attribute_by_id(
                 self.attribute.attribute_id, model
             )
-            assert model_new is not None
-
-            return model_new
+            return new_model
 
     def flush_delete(self, sorter: TopologicalSorter):
         _ = sorter
@@ -116,7 +110,7 @@ class AttributeModel(BaseEntityModel):
         return {"value": "", "is_inheritable": False, "position": 10}
 
 
-class BaseAttribute(OrderedEntity[AttributeModel], ABC):
+class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
 
@@ -242,29 +236,25 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         self._model.set_field("position", val)
 
     @classmethod
-    def _from_id(
-        cls, attribute_id: str, session: Session | None = None
-    ) -> Label | Relation:
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
         """
         Get instance of appropriate concrete class given an `attributeId`.
         """
-        # need to know type in order to create appropriate subclass,
-        # so get model from id first
-
+        # need to know type in order to create appropriate subclass, so get model
+        # from id first
         session = normalize_session(session)
-
-        model: EtapiAttributeModel = session.api.get_attribute_by_id(attribute_id)
-        assert model is not None
-
+        model = session.api.get_attribute_by_id(entity_id)
         return cls._from_model(model, session=session)
 
     @classmethod
     def _from_model(
         cls,
         model: EtapiAttributeModel,
-        session: Session = None,
-        owning_note: Note = None,
-    ) -> BaseAttribute:
+        session: Session | None = None,
+        owning_note: Note | None = None,
+    ) -> Self:
+        assert model.name
+
         # localize import so as to not introduce circular dependency.
         # this is a rare case of an abstract class knowing about its
         # concrete classes
@@ -296,34 +286,16 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         else:
             raise Exception(f"Unexpected attribute type: {model.type}")
 
+        assert isinstance(attr, cls)
         return attr
-
-    def _setup(self, model: EtapiAttributeModel):
-        assert model.note_id
-
-        from ..note.note import Note
-
-        if self._note_obj is None:
-            self._note = Note(note_id=model.note_id, session=self._session)
-        else:
-            assert self._note_obj.note_id == model.note_id
-
-    def _delete(self):
-        super()._delete()
-
-        if self._note is not None:
-            if self in self._note.attributes.owned:
-                self._note.attributes.owned.remove(self)
-
-    def _flush_check(self):
-        _assert_validate(self._note is not None, "Attribute not assigned to note")
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
         """
         Attribute depends on note which owns it.
         """
-        deps = {self._note}
+        assert self._note
+        deps: set[BaseEntity] = {self._note}
 
         if self._state is not State.DELETE:
             # get index of this attribute
@@ -344,3 +316,33 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             deps.add(branch)
 
         return deps
+
+    @property
+    def _associated_entities(self) -> list[BaseEntity]:
+        return []
+
+    def _init(self):
+        pass
+
+    def _setup(self, model: EtapiAttributeModel):
+        assert model.note_id
+
+        from ..note.note import Note
+
+        if self._note_obj is None:
+            self._note = Note(note_id=model.note_id, session=self._session)
+        else:
+            assert self._note_obj.note_id == model.note_id
+
+    def _flush_check(self):
+        _assert_validate(self._note is not None, "Attribute not assigned to note")
+
+    def _flush_prep(self):
+        pass
+
+    def _delete(self):
+        super()._delete()
+
+        if self._note is not None:
+            if self in self._note.attributes.owned:
+                self._note.attributes.owned.remove(self)

@@ -218,13 +218,13 @@ class Content(NoteStatefulExtension):
         self._working = BlobState()
 
         # refresh note model to update blob_id and modified time
-        model_new = self._note._model.driver.fetch()
-        assert isinstance(model_new, EtapiNoteModel)
+        new_model = self._note._model.driver.fetch()
+        assert isinstance(new_model, EtapiNoteModel)
 
         # sanity check to ensure blob_id is expected
-        assert model_new.blob_id == digest
+        assert new_model.blob_id == digest
 
-        return model_new
+        return new_model
 
     def _normalize_blob(self, blob: str | bytes | IO) -> str | bytes:
         if isinstance(blob, IOBase):

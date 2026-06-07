@@ -613,10 +613,8 @@ def create_attribute(api: DefaultApi, **kwargs) -> EtapiAttributeModel:
     model = EtapiAttributeModel(**kwargs)
 
     # invoke api
-    model_new = api.post_attribute(model)
-    assert model_new is not None
-
-    return model_new
+    new_model = api.post_attribute(model)
+    return new_model
 
 
 def get_attribute(api: DefaultApi, attribute_id: str) -> EtapiAttributeModel:
@@ -641,10 +639,8 @@ def create_branch(api: DefaultApi, **kwargs) -> EtapiBranchModel:
     model = EtapiBranchModel(**kwargs)
 
     # invoke api
-    model_new = api.post_branch(model)
-    assert model_new is not None
-
-    return model_new
+    new_model = api.post_branch(model)
+    return new_model
 
 
 def delete_branch(api: DefaultApi, branch: EtapiBranchModel) -> None:

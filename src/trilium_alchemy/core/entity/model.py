@@ -57,7 +57,7 @@ class BaseDriver[ModelT: BaseModel](ABC):
         ...
 
 
-# TODO: parameterize BaseEntityModel with BaseModel subclass
+# TODO: parameterize BaseEntityModel with BaseModel subclass, BaseDriver subclass
 # for this entity
 
 
@@ -207,29 +207,29 @@ class BaseEntityModel(ABC):
         }[self.entity._state]
 
         # invoke flush method
-        model_new: BaseModel | None
+        new_model: BaseModel | None
         if inspect.isgeneratorfunction(func):
             # generator function: yields model, then performs extra processing
             gen = func(sorter)
-            model_new = next(gen)
+            new_model = next(gen)
         else:
             # not generator function: just returns model
             gen = None
-            model_new = func(sorter)
+            new_model = func(sorter)
 
         # ensure we got the updated model
         if self.entity._state in [State.CREATE, State.UPDATE]:
-            assert model_new is not None
+            assert new_model is not None
         else:
-            assert model_new is None
+            assert new_model is None
 
         if self.entity._state is State.CREATE:
             # set entity id if needed
             if self.entity._entity_id is None:
-                entity_id = getattr(model_new, self.entity_id_field)
+                entity_id = getattr(new_model, self.entity_id_field)
                 self.entity._set_entity_id(entity_id)
 
-        return (model_new, gen)
+        return (new_model, gen)
 
     @property
     def fields_changed(self) -> bool:
@@ -448,13 +448,13 @@ class BaseEntityModel(ABC):
         """
         Flush extensions and return the latest model, if applicable.
         """
-        model_new: BaseModel | None = None
+        new_model: BaseModel | None = None
 
         for ext in self._extensions:
             if ext._is_changed:
-                model_new = ext._flush() or model_new
+                new_model = ext._flush() or new_model
 
-        return model_new
+        return new_model
 
     def _get_default_field(self, field: str) -> str:
         """

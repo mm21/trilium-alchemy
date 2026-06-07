@@ -169,7 +169,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     return cast(type[Note], type(ent))
 
 
-class Note(BaseEntity[NoteModel]):
+class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     """
     Encapsulates a note.
 
@@ -860,31 +860,17 @@ class Note(BaseEntity[NoteModel]):
 
         self._session.flush(flush_set)
 
-    def _init(self):
-        """
-        Perform additional init prior to model setup.
-        """
-        # create extensions
-        self._attributes = Attributes(self)
-        self._branches = Branches(self)
-        self._parents = ParentNotes(self)
-        self._children = ChildNotes(self)
-        self._content = Content(self)
+    @classmethod
+    def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
+        return (note_id, None)
 
-        # create accessors
-        self._labels = Labels(self)
-        self._relations = Relations(self)
+    @classmethod
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Note:
+        return Note(note_id=entity_id, session=session)
 
-    def _init_hook(
-        self,
-        note_id: str | None,
-        note_id_seed_final: str | None,
-        force_leaf: bool | None,
-    ) -> InitContainer:
-        """
-        Override to perform additional init for subclasses.
-        """
-        return InitContainer()
+    @classmethod
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
+        return Note(note_id=model.note_id, session=session, _model_backing=model)
 
     @property
     def _dependencies(self):
@@ -910,7 +896,7 @@ class Note(BaseEntity[NoteModel]):
         for path in self.paths:
             if len(path) > 1:
                 paths_ret.append(
-                    " > ".join([f"'{note._title_escape}'" for note in path[:-1]])
+                    " > ".join([f"'{note._escaped_title}'" for note in path[:-1]])
                 )
 
         return sorted(paths_ret)
@@ -930,36 +916,35 @@ class Note(BaseEntity[NoteModel]):
         return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
 
     @property
-    def _str_short(self):
+    def _str_short(self) -> str:
         note_id = f"'{self.note_id}'" if self.note_id else None
-        return f"Note('{self._title_escape}', note_id={note_id})"
+        return f"Note('{self._escaped_title}', note_id={note_id})"
 
     @property
     def _str_safe(self):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
     @property
-    def _title_escape(self) -> str:
+    def _escaped_title(self) -> str:
         return self.title.replace("'", "\\'")
 
-    @classmethod
-    def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
-        return (note_id, None)
+    def _init(self):
+        """
+        Perform additional init prior to model setup.
+        """
+        # create extensions
+        self._attributes = Attributes(self)
+        self._branches = Branches(self)
+        self._parents = ParentNotes(self)
+        self._children = ChildNotes(self)
+        self._content = Content(self)
 
-    @classmethod
-    def _from_id(cls, note_id: str, session: Session | None = None) -> Note:
-        return Note(note_id=note_id, session=session)
+        # create accessors
+        self._labels = Labels(self)
+        self._relations = Relations(self)
 
-    @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
-        return Note(note_id=model.note_id, session=session, _model_backing=model)
-
-    def _delete(self):
-        super()._delete()
-
-        # also delete each parent branch so parents' child lists are updated
-        for branch in self.branches.parents:
-            branch.delete()
+    def _setup(self, model: EtapiNoteModel):
+        _ = model
 
     def _flush_check(self):
         if not self._is_delete:
@@ -979,6 +964,27 @@ class Note(BaseEntity[NoteModel]):
 
         for branch in self.branches.children:
             _assert_validate(branch.parent is self)
+
+    def _flush_prep(self):
+        pass
+
+    def _delete(self):
+        super()._delete()
+
+        # also delete each parent branch so parents' child lists are updated
+        for branch in self.branches.parents:
+            branch.delete()
+
+    def _init_hook(
+        self,
+        note_id: str | None,
+        note_id_seed_final: str | None,
+        force_leaf: bool | None,
+    ) -> InitContainer:
+        """
+        Override to perform additional init for subclasses.
+        """
+        return InitContainer()
 
     def _sync_subtree(self, src: Note, copy_context: CopyContext):
         """

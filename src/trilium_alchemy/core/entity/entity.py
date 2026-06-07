@@ -32,7 +32,9 @@ __rollup__ = [
 ]
 
 
-class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer):
+class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
+    ABC, SessionContainer, ModelContainer
+):
     """
     Base class for Trilium entities.
 
@@ -49,8 +51,10 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
     _state: State
 
     # type used to create _model
+    # MTODO: abstract property
     _model_cls: type[ModelT]
 
+    # MTODO: abstract property
     _force_position_cleanup: bool = False
 
     def __new__(
@@ -134,18 +138,6 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
     def __repr__(self):
         return str(self)
 
-    @classmethod
-    @abstractmethod
-    def _from_id(self, entity_id: str, session: Session = None):
-        """
-        Instantiate this entity from an id.
-        """
-        ...
-
-    @classmethod
-    @abstractmethod
-    def _from_model(self, model: BaseModel): ...
-
     @property
     def state(self) -> State:
         """
@@ -195,22 +187,6 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         Get extra lines to be inserted at end of summary.
         """
         return []
-
-    @property
-    @abstractmethod
-    def _str_short(self):
-        """
-        Implementation of str_short so as to keep it next to str_summary in docs.
-        """
-        ...
-
-    @property
-    @abstractmethod
-    def _str_safe(self):
-        """
-        Return string for debugging and don't invoke model setup.
-        """
-        ...
 
     @property
     def _is_clean(self) -> bool:
@@ -278,7 +254,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         self._model.setup_check()
         self._set_dirty(State.DELETE)
 
-    def _set_attrs(self, **kwargs):
+    def _set_attrs(self, **kwargs: Any):
         for attr, val in kwargs.items():
             if val is not None:
                 # set attribute on self
@@ -296,7 +272,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         else:
             assert self._entity_id == entity_id
 
-    def _refresh_model(self, model: BaseModel):
+    def _refresh_model(self, model: EtapiModelT):
         """
         Discard current model and update with new one.
         """
@@ -309,7 +285,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         """
         self.session._logger.debug(f"Flushing: {self.str_summary}")
 
-        model_new: BaseModel | None = None
+        new_model: EtapiModelT | None = None
         gen: Generator | None = None
 
         assert self._is_dirty
@@ -330,7 +306,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
                     self._state in {State.CREATE, State.DELETE}
                     or self._model.fields_changed
                 ):
-                    model_new, gen = self._model.flush(sorter)
+                    new_model, gen = self._model.flush(sorter)
             except (NotFoundException, ApiException) as e:
                 self.session._logger.warning(
                     f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
@@ -338,14 +314,14 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
             else:
                 if self._state is not State.DELETE:
                     # get latest model from extensions if applicable
-                    model_new = self._model.flush_extensions() or model_new
+                    new_model = self._model.flush_extensions() or new_model
 
         # mark as clean
         self._set_clean()
 
         # perform setup if we got a new model
-        if model_new is not None:
-            self._model.setup(model_new)
+        if new_model is not None:
+            self._model.setup(new_model)
 
         # continue flush sequence, if needed by subclass
         if gen is not None:
@@ -414,17 +390,59 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
 
             self._state = state
 
-    # --------------------------------------------------------------------------
-    # To be implemented by subclass
-    # --------------------------------------------------------------------------
+    @property
+    @abstractmethod
+    def _str_short(self) -> str:
+        """
+        Implementation of str_short so as to keep it next to str_summary in docs.
+        """
+        ...
 
+    @property
+    @abstractmethod
+    def _str_safe(self) -> str:
+        """
+        Return string for debugging and don't invoke model setup.
+        """
+        ...
+
+    @classmethod
+    @abstractmethod
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
+        """
+        Instantiate this entity from an id.
+        """
+        ...
+
+    @classmethod
+    @abstractmethod
+    def _from_model(cls, model: EtapiModelT) -> Self: ...
+
+    @property
+    @abstractmethod
+    def _dependencies(self) -> set[BaseEntity]:
+        """
+        Return entities this entity depends on.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def _associated_entities(self) -> list[BaseEntity]:
+        """
+        Return entities to be refreshed/cleaned up along with this one.
+        """
+        ...
+
+    @abstractmethod
     def _init(self):
         """
         Register model extensions or any other init needed before model setup.
         """
         ...
 
-    def _setup(self, model: ModelT | None):
+    @abstractmethod
+    def _setup(self, model: EtapiModelT):
         """
         Populate fields based on model retrieved from database.
         """
@@ -440,26 +458,12 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         """
         ...
 
+    @abstractmethod
     def _flush_prep(self):
         """
         Propagate any values to fields if needed before flush.
         """
         ...
-
-    @property
-    @abstractmethod
-    def _dependencies(self) -> set[BaseEntity]:
-        """
-        Return entities this entity depends on.
-        """
-        ...
-
-    @property
-    def _associated_entities(self) -> list[BaseEntity]:
-        """
-        Return entities to be refreshed/cleaned up along with this one.
-        """
-        return []
 
 
 class PositionMixin(ABC):
@@ -476,10 +480,12 @@ class PositionMixin(ABC):
     def _position(self, val: int): ...
 
 
-# TODO: this is better suited as an intersection type, not yet supported
+# NOTE: this is better suited as an intersection type, not yet supported
 # - https://github.com/python/typing/issues/213
 # - https://github.com/CarliJoy/intersection_examples/issues/8
-class OrderedEntity[ModelT: BaseEntityModel](BaseEntity[ModelT], PositionMixin):
+class OrderedEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
+    BaseEntity[ModelT, EtapiModelT], PositionMixin
+):
     pass
 
 
