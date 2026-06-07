@@ -49,10 +49,7 @@ class BranchDriver(BaseDriver[EtapiBranchModel]):
 
     def flush_create(self, sorter: TopologicalSorter):
         _ = sorter
-
-        assert self.branch.child
         assert self.branch.child.note_id
-        assert self.branch.parent
         assert self.branch._model.working_data
 
         model = EtapiBranchModel(
@@ -198,10 +195,12 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         return self._entity_id
 
     @property
-    def parent(self) -> Note | None:
+    def parent(self) -> Note:
         """
         Getter/setter for branch's parent note.
         """
+        if not self._parent:
+            raise ValueError(f"Branch {self} has no parent note")
         return self._parent
 
     @parent.setter
@@ -209,10 +208,12 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         self._parent = val
 
     @property
-    def child(self) -> Note | None:
+    def child(self) -> Note:
         """
         Getter/setter for branch's child note.
         """
+        if not self._child:
+            raise ValueError(f"Branch {self} has no child note")
         return self._child
 
     @child.setter
@@ -268,7 +269,7 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
 
     @property
     def _str_short(self):
-        return f"Branch(child={self.child}, prefix='{self.prefix}')"
+        return f"Branch(parent={self._parent}, child={self._child}, prefix='{self.prefix}')"
 
     @property
     def _str_safe(self):
@@ -278,14 +279,12 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
-        assert self.child
-
         deps: set[BaseEntity] = set()
 
         # branch depends on both parent and child
         deps |= {self.child}
 
-        if self.parent is None:
+        if self._parent is None:
             assert self.child.note_id == "root"
         else:
             deps |= {self.parent}
@@ -303,11 +302,7 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
                 if index != 0:
                     for i in range(index):
                         branch = self.parent.branches.children[i]
-                        assert branch.child
-
-                        deps.add(branch)
-                        # corresponding child note
-                        deps.add(branch.child)
+                        deps |= {branch, branch.child}
 
         return deps
 
@@ -360,13 +355,10 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         self.child = Note(note_id=model.note_id, session=self._session)
 
     def _flush_check(self):
-        assert self.parent
-        assert self.child
-
-        _assert_validate(self.child is not None, "No child set")
+        _assert_validate(self._child is not None, "No child set")
 
         if self.child.note_id != "root":
-            _assert_validate(self.parent is not None, "No parent set")
+            _assert_validate(self._parent is not None, "No parent set")
 
         if self.state is not State.DELETE:
             # make sure this branch was added to parents of child
@@ -386,7 +378,6 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         pass
 
     def _delete(self):
-        assert self.parent
         super()._delete()
 
         if self in self.parent.branches.children:

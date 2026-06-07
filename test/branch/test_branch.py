@@ -54,10 +54,10 @@ def test_update(session: Session, branch: Branch):
     assert branch.position == 20
 
     # ensure can't update parent/child
-    with raises(AssertionError):
+    with raises(ValueError):
         branch.parent = None
 
-    with raises(AssertionError):
+    with raises(ValueError):
         branch.child = None
 
 

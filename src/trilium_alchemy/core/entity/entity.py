@@ -453,7 +453,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         """
         Check if this object is in a valid state to be committed to database.
 
-        Upon invalid state, should raise AssertionError with useful description of
+        Upon invalid state, should raise _ValidationError with useful description of
         problem.
         """
         ...

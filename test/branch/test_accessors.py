@@ -1,3 +1,5 @@
+from pytest import raises
+
 from trilium_alchemy import *
 
 
@@ -144,7 +146,11 @@ def test_child_add_prefix(session: Session, note: Note, note1: Note, note2: Note
 def test_child_add_branch(session: Session, note1: Note, note2: Note):
     branch = Branch(child=note2, prefix="my_prefix", expanded=True, session=session)
 
-    assert branch.parent is None
+    assert branch._parent is None
+
+    with raises(ValueError):
+        _ = branch.parent
+
     assert branch.child is note2
 
     note1 += branch

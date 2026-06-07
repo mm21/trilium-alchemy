@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from collections.abc import MutableSequence, MutableSet
 from typing import TYPE_CHECKING, Iterable, Iterator, overload
 
@@ -49,7 +50,6 @@ class BranchLookupMixin:
         for branch in self:
             if note in {branch.parent, branch.child}:
                 return branch
-
         return None
 
 
@@ -67,7 +67,6 @@ class NoteLookupMixin:
         for note in self:
             if note.title == title:
                 return note
-
         return None
 
 
@@ -87,11 +86,12 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
         from .note import Note
 
         assert isinstance(val, (Branch, Note))
+        assert self._entity_set is not None
 
         if isinstance(val, Branch):
             return val in self._entity_set
         else:
-            return val in {branch.parent for branch in self._entity_set}
+            return val in (branch.parent for branch in self._entity_set)
 
     @overload
     def __getitem__(self, i: int) -> Branch: ...
@@ -246,7 +246,7 @@ class Branches(NoteExtension, BranchLookupMixin):
         self._children = ChildBranches(note)
 
     def __iter__(self) -> Iterator[Branch]:
-        return iter(list(self.parents) + list(self.children))
+        return iter(itertools.chain(self.parents, self.children))
 
     @overload
     def __getitem__(self, i: int) -> Branch: ...
@@ -316,7 +316,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
         return val in self._note.branches.parents
 
     def __iter__(self) -> Iterator[Note]:
-        return iter([b.parent for b in self._note.branches.parents if b.parent])
+        return iter(b._parent for b in self._note.branches.parents if b._parent)
 
     def __len__(self):
         return len(self._note.branches.parents)
@@ -370,7 +370,7 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         return self
 
     def __iter__(self) -> Iterator[Note]:
-        return iter([b.child for b in self._note.branches.children if b.child])
+        return iter([b._child for b in self._note.branches.children if b._child])
 
     def __contains__(self, val: Note) -> bool:
         """

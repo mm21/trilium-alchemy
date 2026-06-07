@@ -194,8 +194,6 @@ class Cache:
         for entity in dirty_set:
             if isinstance(entity, Branch):
                 if entity._model.is_field_changed("note_position"):
-                    assert entity.parent
-
                     if not entity.parent._is_delete:
                         notes.add(entity.parent)
 

@@ -387,7 +387,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
                 assert isinstance(ent, Branch), f"Unknown type for +=: {type(ent)}"
                 branch = ent
 
-                if branch.parent in {None, self}:
+                if branch._parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
                     # note += Branch(parent=note, child=child)
@@ -873,8 +873,8 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         return Note(note_id=model.note_id, session=session, _model_backing=model)
 
     @property
-    def _dependencies(self):
-        deps = set()
+    def _dependencies(self) -> set[BaseEntity]:
+        deps: set[BaseEntity] = set()
 
         if self.note_id != "root":
             # parent notes

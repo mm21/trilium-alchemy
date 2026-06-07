@@ -622,14 +622,15 @@ class WriteOnceDescriptor[T]:
         return getattr(obj, self._attr)
 
     def __set__(self, obj: BaseEntity, value: T):
-        assert value is not None
+        if value is None:
+            raise ValueError(f"Cannot set {self._attr} with value None on {obj}")
 
-        value_current = getattr(obj, self._attr)
+        cur_value = getattr(obj, self._attr)
 
-        if value_current is None:
+        if cur_value is None:
             setattr(obj, self._attr, value)
-        else:
-            assert value_current == value
+        elif value != cur_value:
+            raise ValueError(f"New value {value} must equal current value {cur_value}")
 
         if validator := self._validator:
             getattr(obj, validator)()
