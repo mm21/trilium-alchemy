@@ -86,6 +86,11 @@ class BaseDeclarativeMixin(
     to maintain the template itself declaratively.
     """
 
+    _decorator_doc: list[str]
+    """
+    List of additional lines to add to docstring, initialized by DeclarativeMeta.
+    """
+
     def init(
         self,
         attributes: list[BaseAttribute],

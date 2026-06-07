@@ -9,7 +9,6 @@ from typing import Literal
 
 from ..attribute import BaseAttribute
 from ..branch.branch import Branch
-from ..note.note import Note
 from .base import BaseDeclarativeMixin, BaseDeclarativeNote
 
 __all__ = [
@@ -288,7 +287,9 @@ def children(
     return _patch_init_decl(init)
 
 
-def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
+def child(
+    child: type[BaseDeclarativeNote], prefix: str = "", expanded: bool | None = None
+):
     """
     Instantiate provided class and add as child, creating a {obj}`Branch` and setting
     provided kwargs.
@@ -304,7 +305,7 @@ def child(child: type[Note], prefix: str = "", expanded: bool | None = None):
         pass
     ```
 
-    :param child: Subclass of {obj}`Note`
+    :param child: Subclass of {obj}`BaseDeclarativeNote`
     :param prefix: Branch specific title prefix for child note
     :param expanded: `True`{l=python} if child note (as a folder) appears expanded in UI; `None{l=python}` to preserve existing value
     """
