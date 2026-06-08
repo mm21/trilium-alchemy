@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Generator, Self, Sequence, cast, overload
+from typing import Any, Generator, Self, Sequence, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
@@ -17,9 +17,6 @@ from .model import (
     WriteThroughDescriptor,
 )
 from .types import State
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = [
     "BaseEntity",
@@ -517,14 +514,5 @@ class EntityIdDescriptor:
 def normalize_entities[T: BaseEntity](entities: T | Iterable[T]) -> list[T]:
     """
     Take an entity or iterable of entities and return an iterable.
-
-    Also supports tuples, e.g. (child, "prefix")
     """
-    from ..note.note import Note
-
-    if isinstance(entities, tuple) and len(entities) == 2:
-        note, prefix = entities
-        if isinstance(note, Note) and isinstance(prefix, str):
-            return [(note, prefix)]
-
     return [entities] if isinstance(entities, BaseEntity) else list(entities)

@@ -24,7 +24,13 @@ from ..utils import base_n_hash
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
-from .branches import Branches, ChildNotes, ParentNotes
+from .branches import (
+    Branches,
+    ChildNotes,
+    ParentNotes,
+    normalize_child_branch,
+    normalize_parent_branch,
+)
 from .content import Content
 from .note_model import NoteModel
 
@@ -344,10 +350,14 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             self.attributes.owned = new_attributes
 
         if new_parents is not None:
-            self.branches.parents = new_parents
+            self.branches.parents = {
+                normalize_parent_branch(self, p) for p in new_parents
+            }
 
         if new_children is not None:
-            self.branches.children = new_children
+            self.branches.children = [
+                normalize_child_branch(self, c) for c in new_children
+            ]
 
     def __iadd__(
         self,
@@ -372,6 +382,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         or iterable of any combination.
         """
+        # MTODO: use _normalize_entities
         entities = normalize_entities(entity)
         for ent in entities:
             if isinstance(ent, BaseAttribute):
@@ -1057,6 +1068,25 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     def _cleanup_positions(self):
         self._attributes.owned._set_positions(cleanup=True)
         self._branches.children._set_positions(cleanup=True)
+
+    def _normalize_entities(
+        self,
+        entities: (
+            Branch
+            | Note
+            | tuple[Note, str]
+            | Iterable[Branch | Note | tuple[Note, str]]
+        ),
+    ) -> Iterable[Branch | Note | tuple[Note, str]]:
+        """
+        
+        """
+        if isinstance(entities, tuple) and len(entities) == 2:
+            note, prefix = entities
+            if isinstance(note, Note) and isinstance(prefix, str):
+                return [(note, prefix)]
+        entities_ = cast(Branch | Note | Iterable[Branch | Note], entities)
+        return entities_ if isinstance(entities_, Iterable) else [entities_]
 
 
 @dataclass
