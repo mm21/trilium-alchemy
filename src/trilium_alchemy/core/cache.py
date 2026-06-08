@@ -51,6 +51,7 @@ class Cache:
         entities not provided.
         """
         from .branch import Branch
+        from .entity.entity import BaseEntity
         from .entity.types import State
 
         entities_ = entities if entities is not None else self.dirty_set
@@ -111,16 +112,17 @@ class Cache:
 
         # flush entities in order provided by sorter
         while sorter.is_active():
-            ready: list[BaseEntity] = list(sorter.get_ready())
+            ready = sorter.get_ready()
 
             for entity in ready:
+                assert isinstance(entity, BaseEntity)
                 if entity._is_dirty:
                     do_cleanup = entity._is_delete
                     entity._flush(sorter)
 
                     # remove entity and associated entities from map
                     if do_cleanup:
-                        for e in [entity] + entity._associated_entities:
+                        for e in (entity, *entity._associated_entities):
                             if e._entity_id in self.entity_map:
                                 del self.entity_map[e._entity_id]
 

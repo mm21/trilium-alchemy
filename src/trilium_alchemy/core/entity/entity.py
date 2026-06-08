@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Any, Generator, Self, cast, overload
+from typing import TYPE_CHECKING, Any, Generator, Self, Sequence, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
@@ -17,6 +17,9 @@ from .model import (
     WriteThroughDescriptor,
 )
 from .types import State
+
+if TYPE_CHECKING:
+    pass
 
 __all__ = [
     "BaseEntity",
@@ -228,7 +231,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
 
         Upon next access, data will be fetched from Trilium.
         """
-        for entity in [self] + self._associated_entities:
+        for entity in [self] + list(self._associated_entities):
             entity._model.teardown()
             if entity._is_dirty:
                 entity._set_clean()
@@ -428,7 +431,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
 
     @property
     @abstractmethod
-    def _associated_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         """
         Return entities to be refreshed/cleaned up along with this one.
         """
@@ -511,22 +514,17 @@ class EntityIdDescriptor:
         raise ReadOnlyError("_entity_id", obj)
 
 
-def normalize_entities[CollectionT: list | set](
-    entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
-    collection_cls: type[CollectionT] = list,
-) -> CollectionT:
+def normalize_entities[T: BaseEntity](entities: T | Iterable[T]) -> list[T]:
     """
     Take an entity or iterable of entities and return an iterable.
 
     Also supports tuples, e.g. (child, "prefix")
     """
-    if (
-        isinstance(entities, Iterable)
-        and not isinstance(entities, tuple)
-        and not isinstance(entities, BaseEntity)
-    ):
-        # have iterable
-        return collection_cls(entities)
+    from ..note.note import Note
 
-    # have single entity
-    return collection_cls([entities])
+    if isinstance(entities, tuple) and len(entities) == 2:
+        note, prefix = entities
+        if isinstance(note, Note) and isinstance(prefix, str):
+            return [(note, prefix)]
+
+    return [entities] if isinstance(entities, BaseEntity) else list(entities)

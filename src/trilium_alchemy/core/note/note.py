@@ -8,7 +8,7 @@ from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Generator, Literal, Self, Sequence, cast
+from typing import IO, AbstractSet, Generator, Literal, Self, Sequence, cast
 
 import requests
 from trilium_client.exceptions import NotFoundException
@@ -290,68 +290,64 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             if note_type is None:
                 return None
             elif note_type in NOTE_TYPES_MIME_NA:
-                mime_norm = ""
+                mime_ = ""
             elif note_type in NOTE_TYPES_MIME_FIXED:
-                mime_norm = NOTE_TYPES_MIME_FIXED[note_type]
+                mime_ = NOTE_TYPES_MIME_FIXED[note_type]
             elif mime is not None:
-                mime_norm = mime
+                mime_ = mime
             else:
-                mime_norm = "text/html" if note_type == "text" else None
+                mime_ = "text/html" if note_type == "text" else None
 
             # if passed by user, validate
             if mime is not None:
                 assert (
-                    mime == mime_norm
-                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_norm}'"
+                    mime == mime_
+                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_}'"
 
-            return mime_norm
+            return mime_
 
         # aggregate fields to set
-        title_set = title or init_container.title
-        note_type_set = note_type or init_container.note_type
-        mime_set = normalize_mime(title_set, note_type_set, mime or init_container.mime)
-        content_set = content or init_container.content
-        attributes_set = combine_iterables(attributes, init_container.attributes)
-        parents_set: Iterable[Note | Branch] | None = (
-            None
-            if parents is None
-            else cast(Iterable[Note | Branch], normalize_entities(parents))
-        )
-        children_set = combine_iterables(children, init_container.children)
+        new_title = title or init_container.title
+        new_note_type = note_type or init_container.note_type
+        new_mime = normalize_mime(new_title, new_note_type, mime or init_container.mime)
+        new_content = content or init_container.content
+        new_attributes = combine_iterables(attributes, init_container.attributes)
+        new_parents = None if parents is None else set(normalize_entities(parents))
+        new_children = combine_iterables(children, init_container.children)
 
         if template is not None:
             # create and append new relation
             template_relation = _normalize_template(template, session)
 
-            if attributes_set is None:
-                attributes_set = [template_relation]
+            if new_attributes is None:
+                new_attributes = [template_relation]
             else:
-                attributes_set.append(template_relation)
+                new_attributes.append(template_relation)
 
         # set fields
 
-        if title_set is not None:
-            self.title = title_set
+        if new_title is not None:
+            self.title = new_title
 
-        if note_type_set is not None:
-            self.note_type = note_type_set
+        if new_note_type is not None:
+            self.note_type = new_note_type
 
-        if mime_set is not None:
-            self.mime = mime_set
+        if new_mime is not None:
+            self.mime = new_mime
 
         # set content after type/mime to determine expected content type
         # (text or binary)
-        if content_set is not None:
-            self.content = content_set
+        if new_content is not None:
+            self.content = new_content
 
-        if attributes_set is not None:
-            self.attributes.owned = attributes_set
+        if new_attributes is not None:
+            self.attributes.owned = new_attributes
 
-        if parents_set is not None:
-            self.parents = parents_set
+        if new_parents is not None:
+            self.branches.parents = new_parents
 
-        if children_set is not None:
-            self.children = children_set
+        if new_children is not None:
+            self.branches.children = new_children
 
     def __iadd__(
         self,
@@ -366,35 +362,33 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         Implement entity bind operator:
 
+        ```
         note += child_note
         note += (child_note, "prefix")
         note += Branch(parent=parent_note)
         note += Branch(child=child_note)
         note += Label(...)/Relation(...)
+        ```
 
         or iterable of any combination.
         """
         entities = normalize_entities(entity)
-
         for ent in entities:
             if isinstance(ent, BaseAttribute):
                 self.attributes.owned.append(ent)
-            elif isinstance(ent, Note) or type(ent) is tuple:
+            elif isinstance(ent, Note) or isinstance(ent, tuple):
                 # add child note
-                self.branches.children.append(ent)
+                self.children.append(ent)
             else:
                 assert isinstance(ent, Branch), f"Unknown type for +=: {type(ent)}"
-                branch = ent
-
-                if branch._parent in {None, self}:
+                if ent._parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
                     # note += Branch(parent=note, child=child)
-                    self.branches.children.append(branch)
+                    self.branches.children.append(ent)
                 else:
                     # note += Branch(parent=parent)
-                    self.branches.parents.add(branch)
-
+                    self.branches.parents.add(ent)
         return self
 
     def __ixor__(
@@ -577,7 +571,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         return self._parents
 
     @parents.setter
-    def parents(self, val: set[Note]):
+    def parents(self, val: AbstractSet[Note]):
         self._model.setup_check()
         self._parents._setattr(val)
 
@@ -592,7 +586,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         return self._children
 
     @children.setter
-    def children(self, val: list[Note]):
+    def children(self, val: Sequence[Note]):
         self._model.setup_check()
         self._children._setattr(val)
 
@@ -887,7 +881,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         return deps
 
     @property
-    def _associated_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         return list(self.branches) + list(self.attributes.owned)
 
     @property

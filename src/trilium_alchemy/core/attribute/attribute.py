@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, Sequence
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -321,7 +321,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         return deps
 
     @property
-    def _associated_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         return []
 
     def _init(self):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, Sequence
 
 from trilium_client.exceptions import NotFoundException, ServiceException
 from trilium_client.models.branch import Branch as EtapiBranchModel
@@ -307,7 +307,7 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         return deps
 
     @property
-    def _associated_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         return []
 
     @classmethod

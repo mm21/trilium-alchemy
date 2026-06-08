@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import MutableSequence, MutableSet, Sequence
-from typing import TYPE_CHECKING, AbstractSet, Iterable, Iterator, overload
+from typing import TYPE_CHECKING, AbstractSet, Any, Iterable, Iterator, overload
 
 from trilium_client.models.note import Note as EtapiNoteModel
 
@@ -155,7 +155,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
 
         return branch_obj
 
-    def _setattr(self, obj: AbstractSet[Branch | Note]):
+    def _setattr(self, obj: AbstractSet[Branch | Note | tuple[Note, str]]):
         if self is obj:
             return
         normalized_set = {self._invoke_normalize(e) for e in obj}
@@ -253,7 +253,7 @@ class ChildBranches(BaseEntityList[Branch], BranchLookupMixin):
 
         return branch_obj
 
-    def _setattr(self, obj: Sequence[Branch | Note]):
+    def _setattr(self, obj: Sequence[Branch | Note | tuple[Note, str]]):
         if self is obj:
             return
         normalized_list = [self._invoke_normalize(e) for e in obj]
@@ -297,7 +297,7 @@ class Branches(NoteExtension, BranchLookupMixin):
         return self._parents
 
     @parents.setter
-    def parents(self, val: AbstractSet[Branch | Note]):
+    def parents(self, val: AbstractSet[Branch | Note | tuple[Note, str]]):
         self._parents._setattr(val)
 
     @property
@@ -309,10 +309,10 @@ class Branches(NoteExtension, BranchLookupMixin):
         return self._children
 
     @children.setter
-    def children(self, val: Sequence[Branch | Note]):
+    def children(self, val: Sequence[Branch | Note | tuple[Note, str]]):
         self._children._setattr(val)
 
-    def _setattr(self, obj: list[Branch]):
+    def _setattr(self, obj: Any):
         _ = obj
         raise AttributeError(
             "Ambiguous assignment: must specify branches.parents or branches.children"
@@ -336,7 +336,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
 
         note.parents += branch_spec
         """
-        self._note.branches.parents |= normalize_entities(parent, set)
+        self._note.branches.parents |= set(normalize_entities(parent))
         return self
 
     def __contains__(self, obj: object) -> bool:
@@ -377,7 +377,7 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
     def discard(self, value: Note):
         self._note.branches.parents.discard(value)
 
-    def _setattr(self, obj: set[Note]):
+    def _setattr(self, obj: AbstractSet[Note]):
         self._note.branches.parents = obj
 
 
@@ -449,5 +449,5 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     def insert(self, index: int, value: Note):
         self._note.branches.children.insert(index, value)
 
-    def _setattr(self, obj: list[Note]):
+    def _setattr(self, obj: Sequence[Note]):
         self._note.branches.children = obj

@@ -171,7 +171,7 @@ class Attributes(
         return self._owned
 
     @owned.setter
-    def owned(self, val: list[BaseAttribute]):
+    def owned(self, val: Sequence[BaseAttribute]):
         self._owned._setattr(val)
 
     @property
@@ -187,6 +187,10 @@ class Attributes(
     @property
     def _attr_list(self) -> list[BaseAttribute]:
         return list(self._owned) + list(self._inherited)
+
+    @property
+    def _note_getter(self) -> Note:
+        return self._note
 
     def _setattr(self, obj: list[BaseAttribute]):
         _ = obj

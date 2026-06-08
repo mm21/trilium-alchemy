@@ -38,7 +38,9 @@ class BaseDriver[ModelT: BaseModel](ABC):
         ...
 
     @abstractmethod
-    def flush_create(self, sorter: TopologicalSorter) -> ModelT:
+    def flush_create(
+        self, sorter: TopologicalSorter
+    ) -> ModelT | Generator[ModelT, None, None]:
         """
         Create entity.
         """

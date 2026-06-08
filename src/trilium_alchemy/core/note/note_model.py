@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Generator
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.create_note_def import CreateNoteDef
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..entity.model import BaseDriver, BaseEntityModel
 
@@ -23,13 +22,12 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
         return self.entity
 
     def fetch(self) -> EtapiNoteModel | None:
-        model: EtapiNoteModel | None
-
+        assert self.note.note_id
+        model: EtapiNoteModel | None = None
         try:
             model = self.session.api.get_note_by_id(self.note.note_id)
         except NotFoundException:
-            model = None
-
+            pass
         return model
 
     def flush_create(
@@ -41,6 +39,7 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
 
         # ensure parent note exists (should be taken care by sorter)
         assert parent_branch.parent._model.exists
+        assert self.note._model.working_data
 
         # get note fields
         model_dict = self.note._model.working_data.copy()
@@ -62,7 +61,10 @@ class NoteDriver(BaseDriver[EtapiNoteModel]):
         model = CreateNoteDef(**model_dict)
 
         # invoke api
-        response: NoteWithBranch = self.session.api.create_note(model)
+        response = self.session.api.create_note(model)
+        assert response.note
+        assert response.branch
+        assert response.branch.branch_id
 
         # add parent branch to cache before note is loaded
         # (branches will be instantiated)
