@@ -1077,7 +1077,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             | tuple[Note, str]
             | Iterable[Branch | Note | tuple[Note, str]]
         ),
-    ) -> Iterable[Branch | Note | tuple[Note, str]]:
+    ) -> Iterable[Branch | tuple[Note, str | None]]:
         """
         
         """
@@ -1085,8 +1085,11 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             note, prefix = entities
             if isinstance(note, Note) and isinstance(prefix, str):
                 return [(note, prefix)]
-        entities_ = cast(Branch | Note | Iterable[Branch | Note], entities)
-        return entities_ if isinstance(entities_, Iterable) else [entities_]
+        entities_: list[Branch | tuple[Note, str | None]] = []
+        return entities_
+
+        # for ent in cast(Branch | Note | Iterable[Branch | Note], entities):
+        # return entities_ if isinstance(entities_, Iterable) else [entities_]
 
 
 @dataclass
