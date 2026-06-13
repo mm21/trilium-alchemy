@@ -8,7 +8,7 @@ from . import core, lib
 from .core import *  # noqa
 from .lib import *  # noqa
 
-__all__ = rollup(core, lib)
+__all__ = rollup(core, lib)  # type: ignore
 
 __canonical_children__ = [
     "core",

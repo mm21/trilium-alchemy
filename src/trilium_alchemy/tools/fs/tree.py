@@ -90,7 +90,7 @@ def dump_tree(
     assert dest_dir.is_dir()
 
     logger = logger or logging.getLogger()
-    dumped_note_dirs: list[Note] = []
+    dumped_note_dirs: list[Path] = []
     aggregated_notes = recurse_notes(notes) if recurse else notes
     stats = DumpStats(note_count=len(aggregated_notes))
 
@@ -325,7 +325,7 @@ def _map_note_dir(note: Note) -> Path:
     # trim to get suffix
     suffix = norm_note_id[TREE_DEPTH * PREFIX_SIZE :]
 
-    return "/".join(prefixes + [suffix])
+    return Path(*prefixes, suffix)
 
 
 def _prune_dirs(

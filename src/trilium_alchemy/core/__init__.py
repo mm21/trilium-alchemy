@@ -23,7 +23,7 @@ __all__ = rollup(
     declarative,
     entity,
     exceptions,
-)
+)  # type: ignore
 
 __canonical_children__ = [
     "session",

@@ -4,7 +4,7 @@ from . import base, decorators
 from .base import *  # noqa
 from .decorators import *  # noqa
 
-__all__ = rollup(base, decorators)
+__all__ = rollup(base, decorators)  # type: ignore
 
 __canonical_children__ = [
     "base",
