@@ -5,6 +5,7 @@ Test basic CRUD capability of notes.
 import datetime
 import zipfile
 from pathlib import Path
+from typing import Literal
 
 from pytest import mark
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -89,6 +90,7 @@ def test_update(session: Session, note: Note):
     assert note._is_clean
 
     date_modified_before = note.date_modified
+    assert date_modified_before
 
     # get current title
     title = note.title
@@ -143,6 +145,7 @@ def test_update(session: Session, note: Note):
     assert note.mime == "text/plain"
 
     date_modified_after = note.date_modified
+    assert date_modified_after
 
     assert date_modified_after > date_modified_before
 
@@ -150,6 +153,7 @@ def test_update(session: Session, note: Note):
 # inform note fixture to skip cleaning up note, will delete in test case
 @mark.skip_teardown
 def test_delete(session: Session, note: Note):
+    assert note.note_id
     assert note._is_clean
 
     note.delete()
@@ -179,14 +183,18 @@ def test_flush(session: Session, note1: Note, note2: Note, branch: Branch):
 
     # flush note1 and its label1
     note1.flush()
-
     assert session.dirty_count == 2
-    assert note2.attributes.get("label1")._is_dirty
+
+    label1 = note2.attributes.get("label1")
+    assert label1
+    assert label1._is_dirty
 
     note2.flush()
-
     assert session.dirty_count == 1
-    assert note2.attributes.get("label1")._is_clean
+
+    label1 = note2.attributes.get("label1")
+    assert label1
+    assert label1._is_clean
 
     parent_branch.flush()
     assert session.dirty_count == 0
@@ -208,7 +216,9 @@ def test_flush_dependency(session: Session, note: Note):
     note += Relation("relation1", note4, session=session)
 
     # should trigger flush of whole tree as relation depends on target
-    note.attributes.get("relation1").flush()
+    relation1 = note.attributes.get("relation1")
+    assert relation1
+    relation1.flush()
 
     assert note._is_clean
     assert note2._is_clean
@@ -265,9 +275,11 @@ def test_lazy(session: Session, note1: Note, note2: Note, branch: Branch):
 @mark.attribute("label1", "value1")
 def test_refresh(session: Session, note: Note):
     branch = note.branches.parents[0]
-    label1 = note.labels.owned[0]
-
+    assert branch.branch_id
     assert branch.prefix == ""
+
+    label1 = note.labels.owned[0]
+    assert label1.attribute_id
     assert label1.value == "value1"
 
     # modify branch/label using ETAPI directly
@@ -417,9 +429,10 @@ def test_export_import(note: Note, tmp_path: Path):
     def check_note(note: Note):
         assert note.title == "Test note"
         assert note["label1"] == ""
+        assert isinstance(note.content, str)
         assert CONTENT in note.content
 
-    def export_import(export_format: str, child_count: int):
+    def export_import(export_format: Literal["html", "markdown"], child_count: int):
         export_tmp_path = tmp_path / export_format
         export_tmp_path.mkdir(parents=True, exist_ok=True)
 
@@ -452,7 +465,7 @@ def test_export_import(note: Note, tmp_path: Path):
 
         check_note(child)
 
-    formats = [
+    formats: list[Literal["html", "markdown"]] = [
         "html",
         "markdown",
     ]

@@ -192,6 +192,7 @@ def test_default():
         note = Note(title="My note", parents={session.root})
         assert note._is_create
 
+    assert note.note_id
     assert note._is_clean
 
     # creating another default session should work as previous was
