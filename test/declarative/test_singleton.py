@@ -149,6 +149,7 @@ def check_template(branch: Branch, state: State):
         assert branch.expanded is False
 
     note = branch.child
+    assert isinstance(note, BaseDeclarativeNote)
 
     assert note.note_id_seed_final == "TemplateTest"
     assert note.note_id == id_hash("TemplateTest")
@@ -172,6 +173,7 @@ def check_child3(branch: Branch, state: State):
     assert branch.expanded is True
 
     note = branch.child
+    assert isinstance(note, BaseDeclarativeNote)
 
     name = type(note).__name__
 
@@ -203,6 +205,7 @@ def check_subclass(branch: Branch, state: State):
         assert branch.expanded is False
 
     note = branch.child
+    assert isinstance(note, BaseDeclarativeNote)
 
     assert note.note_id_seed_final == "TemplateSubclass"
     assert note.note_id == id_hash("TemplateSubclass")
@@ -213,6 +216,7 @@ def check_subclass(branch: Branch, state: State):
     assert len(note.attributes.owned) == 4
 
     label3 = note.attributes.owned[0]
+    assert isinstance(label3, Label)
     assert label3.name == "label3"
     assert label3.value == ""
 
@@ -247,6 +251,9 @@ def check_inherited_attributes(note: Note):
             hco = label2
             mt = label1
 
+        assert isinstance(hco, Label)
+        assert isinstance(mt, Label)
+
         assert hco.name == "hideChildrenOverview"
         assert hco.value == ""
 
@@ -277,6 +284,9 @@ def check_root(root: SingletonRoot, state: State):
     assert len(root.attributes.owned) == 3
 
     hco, map_type, css_class = root.attributes.owned
+    assert isinstance(hco, Label)
+    assert isinstance(map_type, Label)
+    assert isinstance(css_class, Label)
 
     assert hco.name == "hideChildrenOverview"
     assert hco.value == ""

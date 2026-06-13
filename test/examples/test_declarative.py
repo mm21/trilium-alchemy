@@ -22,7 +22,10 @@ def test_relation(session: Session):
 
     task.refresh()
 
-    assert task.relations.get("template").target is template
+    template_relation = task.relations.get("template")
+    assert template_relation
+
+    assert template_relation.target is template
     assert task.labels.inherited.get_value("iconClass") == "bx bx-task"
 
     task.delete()
