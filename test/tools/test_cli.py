@@ -365,6 +365,7 @@ def test_tree_export_import(
 def test_tree_push(
     request: FixtureRequest, session: Session, note: Note, tmp_path: Path
 ):
+    assert note.note_id
     sys.path.append(f"{os.getcwd()}/examples/event-tracker")
 
     # push declarative tree
@@ -578,12 +579,17 @@ def test_note_sync_template(request: FixtureRequest, session: Session, note: Not
 
     # create templates
     template1 = Note("Test template", session=session)
+    assert template1.note_id is None
     template1["template"] = ""
     template1["template1"] = ""
+
     template2 = Note("Test workspace template", session=session)
+    assert template2.note_id is None
     template2["workspaceTemplate"] = ""
     template2["template2"] = ""
+
     template3 = Note("Test template 3", session=session)
+    assert template3.note_id is None
     template3["template"] = ""
 
     note += [template1, template2, template3]
@@ -595,6 +601,7 @@ def test_note_sync_template(request: FixtureRequest, session: Session, note: Not
     # create template instances
     inst1 = Note("Instance 1", template=template1, session=session)
     inst1["inst1"] = ""
+
     inst2 = Note("Instance 2", template=template2, session=session)
     inst2["inst2"] = ""
 
@@ -638,6 +645,8 @@ def test_note_sync_template(request: FixtureRequest, session: Session, note: Not
     check_instances()
 
     # attempt to sync inst1 with template2
+    assert inst1.note_id
+    assert template2.note_id
     _run(
         request,
         [
@@ -652,12 +661,14 @@ def test_note_sync_template(request: FixtureRequest, session: Session, note: Not
     )
 
     # sync note which does not have any template
+    assert note.note_id
     _run(
         request,
         ["note", "--note-id", note.note_id, "sync-template", "-y"],
     )
 
     # sync template without any instances
+    assert template3.note_id
     _run(
         request,
         [
