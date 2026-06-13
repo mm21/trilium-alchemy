@@ -1,4 +1,4 @@
-from typing import Iterable, cast
+from typing import Sequence, cast
 
 from pytest import fixture, mark, raises
 
@@ -105,10 +105,10 @@ def check_child2(branch: Branch, state: State):
     assert note.mime == ""
 
     assert len(note.attributes.owned) == 2
-    assert note.attributes.owned[0].name == "child1"
-    assert note.attributes.owned[0].target.note_id == id_hash(
-        f"{__name__}.TemplateChild1"
-    )
+    child1 = note.attributes.owned[0]
+    assert isinstance(child1, Relation)
+    assert child1.name == "child1"
+    assert child1.target.note_id == id_hash(f"{__name__}.TemplateChild1")
     assert note.attributes.owned[1].name == "triliumAlchemyDeclarativeLeaf"
 
     assert len(note.branches.children) == 0
@@ -122,16 +122,19 @@ class TemplateTest(BaseTemplateNote):
     pass
 
 
-def check_template_attributes(attributes: Iterable[BaseAttribute]):
+def check_template_attributes(attributes: Sequence[BaseAttribute]):
     assert len(attributes) == 3
 
-    label1, relation1, template = attributes
+    label1, promoted_relation1, template = attributes
+    assert isinstance(label1, Label)
+    assert isinstance(promoted_relation1, Label)
+    assert isinstance(template, Label)
 
     assert label1.name == "label:label1"
     assert label1.value == "promoted,single,text"
 
-    assert relation1.name == "relation:relation1"
-    assert relation1.value == "promoted,multi,inverse=relation1inverse"
+    assert promoted_relation1.name == "relation:relation1"
+    assert promoted_relation1.value == "promoted,multi,inverse=relation1inverse"
 
     assert template.name == "template"
     assert template.value == ""
