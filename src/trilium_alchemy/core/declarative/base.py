@@ -91,11 +91,7 @@ class BaseDeclarativeMixin(
     List of additional lines to add to docstring, initialized by DeclarativeMeta.
     """
 
-    def init(
-        self,
-        attributes: list[BaseAttribute],
-        children: list[Branch],
-    ):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch], /):
         """
         Can be overridden to add attributes and/or children during
         instantiation. Use the following to create attribute/child with
@@ -116,6 +112,7 @@ class BaseDeclarativeMixin(
         :param attributes: List of attributes to which user can append using {obj}`BaseDeclarativeMixin.create_declarative_label` or {obj}`BaseDeclarativeMixin.create_declarative_relation`
         :param children: List of children to which user can append using {obj}`BaseDeclarativeMixin.create_declarative_child`
         """
+        _ = children
         if self.icon and all(a.name != "iconClass" for a in attributes):
             attributes.append(self.create_declarative_label("iconClass", self.icon))
 

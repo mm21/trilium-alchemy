@@ -5,7 +5,7 @@ Decorators to add attributes and children declaratively.
 from __future__ import annotations
 
 from functools import wraps
-from typing import Literal
+from typing import Callable, Literal
 
 from ..attribute import BaseAttribute
 from ..branch.branch import Branch
@@ -322,7 +322,10 @@ def child(
     return _patch_init_decl(init)
 
 
-def _patch_init_decl(init, doc: str | None = None):
+def _patch_init_decl(
+    init: Callable[[BaseDeclarativeNote, list[BaseAttribute], list[Branch]]],
+    doc: str | None = None,
+):
     """
     Insert provided init function in class's declarative init sequence.
     """
