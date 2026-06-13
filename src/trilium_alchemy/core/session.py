@@ -12,7 +12,9 @@ from logging import Logger
 from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
 
 import requests
-from trilium_client import ApiClient, Configuration, DefaultApi
+from trilium_client.api.default_api import DefaultApi
+from trilium_client.api_client import ApiClient
+from trilium_client.configuration import Configuration
 from trilium_client.exceptions import ApiException
 from trilium_client.models.app_info import AppInfo
 from trilium_client.models.login201_response import Login201Response
@@ -181,12 +183,14 @@ class Session:
             self._logger.debug(
                 f"Connected to Trilium host '{host}', version {app_info.app_version}"
             )
+            assert isinstance(app_info.app_version, str)
 
             # remove non-numeric characters in case of "-beta" suffix, etc
             def parse_digit(val: str) -> int:
                 return int("".join([c for c in val if c.isdigit()]))
 
             version_split = app_info.app_version.split(".")
+            assert len(version_split) == 3
 
             self._trilium_version = app_info.app_version
             self._trilium_version_tuple = (
@@ -390,6 +394,7 @@ class Session:
         from .note.note import Note
 
         assert isinstance(note, Note)
+        assert note.note_id
         self.api.post_refresh_note_ordering(note.note_id)
 
     @classmethod
