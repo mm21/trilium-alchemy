@@ -246,20 +246,20 @@ def test_flush_orphan(session: Session):
 
 
 def test_lazy(session: Session, note1: Note, note2: Note, branch: Branch):
-    assert not note1._model._setup_done
-    assert not note2._model._setup_done
-    assert not branch._model._setup_done
+    assert not note1._model.setup_done
+    assert not note2._model.setup_done
+    assert not branch._model.setup_done
 
     # read title to fetch model
     note1.title
-    assert note1._model._setup_done
-    assert branch._model._setup_done
+    assert note1._model.setup_done
+    assert branch._model.setup_done
 
     # shouldn't have fetched note2 since it wasn't accessed
-    assert not note2._model._setup_done
+    assert not note2._model.setup_done
 
     branch.child.title
-    assert note2._model._setup_done
+    assert note2._model.setup_done
 
 
 @mark.attribute("label1", "value1")

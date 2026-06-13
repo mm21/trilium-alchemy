@@ -11,7 +11,7 @@ from ..entity.entity import normalize_entities
 from .extension import BaseEntityList, BaseEntitySet, NoteExtension
 
 if TYPE_CHECKING:
-    from ..note import Note
+    from .note import Note
 
 __all__ = [
     "Branches",
@@ -393,6 +393,8 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
     def __setitem__(self, i: slice, value: Iterable[Note]): ...
 
     def __setitem__(self, i: int | slice, value: Note | Iterable[Note]):
+        from .note import Note
+
         if isinstance(i, int):
             assert isinstance(value, Note)
             self._note.branches.children[i] = self._normalize_branch(value)

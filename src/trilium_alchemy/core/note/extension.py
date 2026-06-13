@@ -14,6 +14,7 @@ from typing import (
 )
 
 from trilium_client.models.note import Note as EtapiNoteModel
+from typecraft import validate
 
 from ..entity.entity import BaseEntity, OrderedEntity
 from ..entity.model import Extension, StatefulExtension
@@ -175,13 +176,12 @@ class BaseEntityList[EntityT: OrderedEntity](
         v: Iterable[EntityT]
 
         if isinstance(i, int):
-            assert isinstance(value, self._child_cls)
             s = slice(i, i + 1)
-            v = [value]
+            v = [validate(value, self._child_cls)]
         else:
             assert isinstance(value, Iterable)
             s = i
-            v = value
+            v = [validate(v, self._child_cls) for v in value]
 
         # get previous entities at slice and set new ones
         prev_entity_list = self._norm_entity_list[s]
@@ -211,6 +211,7 @@ class BaseEntityList[EntityT: OrderedEntity](
         return iter(self._norm_entity_list)
 
     def insert(self, index: int, value: EntityT):
+        _ = validate(value, self._child_cls)
         self._norm_entity_list.insert(index, value)
         self._bind_entity(value)
         self._set_positions(index)
@@ -327,6 +328,7 @@ class BaseEntitySet[EntityT: BaseEntity](
         return len(self._norm_entity_set)
 
     def add(self, value: EntityT):
+        _ = validate(value, self._child_cls)
         self._norm_entity_set.add(value)
         self._bind_entity(value)
 

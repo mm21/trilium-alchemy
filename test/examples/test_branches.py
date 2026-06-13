@@ -4,7 +4,9 @@ from trilium_alchemy import *
 
 
 @mark.default_session
-def test_iteration(session: Session, note: Note):
+def test_iteration(session: Session, note1: Note):
+    note = Note(parents=note1)
+
     # add root as parent of note
     note ^= session.root
 
@@ -15,6 +17,9 @@ def test_iteration(session: Session, note: Note):
     for branch in note.branches:
         print(branch)
 
+    session.flush()
+
+    note.delete()
     session.flush()
 
 

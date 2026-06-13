@@ -81,7 +81,7 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
     working_data: dict[str, Any] | None = None
 
     # whether model setup was completed, populating model from server
-    _setup_done: bool = False
+    setup_done: bool = False
 
     # whether object exists in backing store, or None if unknown
     _exists: bool | None = None
@@ -147,7 +147,7 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
         """
         Whether the model for certain does not exist (setup is additionally done).
         """
-        return self._exists is False and self._setup_done
+        return self._exists is False and self.setup_done
 
     @property
     @abstractmethod
@@ -270,7 +270,7 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
     def teardown(self):
         self.backing_data = None
         self.working_data = None
-        self._setup_done = False
+        self.setup_done = False
 
         for ext in self._extensions:
             ext._teardown()
@@ -279,7 +279,7 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
         """
         Setup model if not already done, prior to get/set access.
         """
-        if self._setup_done is False:
+        if self.setup_done is False:
             self.setup()
 
     def setup_check_init(self, model: EtapiModelT, create: bool | None = None):
@@ -347,7 +347,7 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
 
         # set setup_done before extensions are setup; they may refer to state
         # from model (e.g. is_string requires note's type and mime fields)
-        self._setup_done = True
+        self.setup_done = True
 
         if self._extensions is not None:
             # invoke setup callback for extensions

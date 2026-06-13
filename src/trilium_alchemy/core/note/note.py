@@ -14,6 +14,8 @@ import requests
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
+from typecraft import is_instance
+from typecraft.validating import TypeValidator, normalize_to_list
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
@@ -361,12 +363,12 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
     def __iadd__(
         self,
-        entity: (
+        entity_or_entities: (
             Note
-            | tuple[Note, str]
+            | tuple[Note, str | None]
             | Branch
             | BaseAttribute
-            | Iterable[Note | tuple[Note, str] | Branch | BaseAttribute]
+            | Iterable[Note | tuple[Note, str | None] | Branch | BaseAttribute]
         ),
     ) -> Note:
         """
@@ -382,16 +384,23 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         or iterable of any combination.
         """
-        # MTODO: use _normalize_entities
-        entities = normalize_entities(entity)
+        entity_or_entities_ = (
+            [entity_or_entities]
+            if is_instance(entity_or_entities, tuple[Note, str | None])
+            else entity_or_entities
+        )
+        entities = normalize_to_list(
+            entity_or_entities_,
+            tuple[Note, str | None] | Branch | BaseAttribute,
+            *_ENTITY_VALIDATORS,
+        )
         for ent in entities:
-            if isinstance(ent, BaseAttribute):
-                self.attributes.owned.append(ent)
-            elif isinstance(ent, Note) or isinstance(ent, tuple):
-                # add child note
-                self.children.append(ent)
-            else:
-                assert isinstance(ent, Branch), f"Unknown type for +=: {type(ent)}"
+            if isinstance(ent, tuple):
+                child, prefix = ent
+                self.branches.children.append(
+                    Branch(self, child, prefix=prefix or "", session=self.session)
+                )
+            elif isinstance(ent, Branch):
                 if ent._parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
@@ -400,11 +409,13 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
                 else:
                     # note += Branch(parent=parent)
                     self.branches.parents.add(ent)
+            else:
+                self.attributes.owned.append(ent)
         return self
 
     def __ixor__(
         self,
-        parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
+        parent_or_parents: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
     ) -> Note:
         """
         Implement clone operator:
@@ -413,10 +424,19 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-        # iterate and add as parent
-        for p in normalize_entities(parent):
-            self.branches.parents.add(p)
-
+        parent_or_parents_ = (
+            [parent_or_parents]
+            if is_instance(parent_or_parents, tuple[Note, str | None])
+            else parent_or_parents
+        )
+        entities = normalize_to_list(
+            parent_or_parents_, tuple[Note, str | None], *_ENTITY_VALIDATORS
+        )
+        for ent in entities:
+            parent, prefix = ent
+            self.branches.parents.add(
+                Branch(parent, self, prefix=prefix or "", session=self.session)
+            )
         return self
 
     def __getitem__(self, name: str) -> str:
@@ -1069,28 +1089,6 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         self._attributes.owned._set_positions(cleanup=True)
         self._branches.children._set_positions(cleanup=True)
 
-    def _normalize_entities(
-        self,
-        entities: (
-            Branch
-            | Note
-            | tuple[Note, str]
-            | Iterable[Branch | Note | tuple[Note, str]]
-        ),
-    ) -> Iterable[Branch | tuple[Note, str | None]]:
-        """
-        
-        """
-        if isinstance(entities, tuple) and len(entities) == 2:
-            note, prefix = entities
-            if isinstance(note, Note) and isinstance(prefix, str):
-                return [(note, prefix)]
-        entities_: list[Branch | tuple[Note, str | None]] = []
-        return entities_
-
-        # for ent in cast(Branch | Note | Iterable[Branch | Note], entities):
-        # return entities_ if isinstance(entities_, Iterable) else [entities_]
-
 
 @dataclass
 class InitContainer:
@@ -1227,3 +1225,8 @@ def _normalize_template(
         target,
         session=session,
     )
+
+
+_ENTITY_VALIDATORS = (
+    TypeValidator(Note, tuple[Note, str | None], func=lambda x: (x, None)),
+)

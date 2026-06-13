@@ -115,8 +115,7 @@ def test_child_add(session: Session, note: Note, note1: Note, note2: Note):
 
 
 def test_child_add_prefix(session: Session, note: Note, note1: Note, note2: Note):
-    note += (note1, "My prefix 1")
-    note.children += (note2, "My prefix 2")
+    note += ((note1, "My prefix 1"), (note2, "My prefix 2"))
 
     assert len(note.children) == 2
     assert len(note.branches.children) == 2

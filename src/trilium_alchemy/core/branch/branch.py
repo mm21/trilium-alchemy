@@ -269,13 +269,18 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
 
     @property
     def _str_short(self):
-        return f"Branch(parent={self._parent}, child={self._child}, prefix='{self.prefix}')"
+        return "Branch(parent={}, child={}, prefix='{}')".format(
+            self._parent, self._child, self.prefix
+        )
 
     @property
     def _str_safe(self):
-        str_parent = self._parent_obj._str_safe if self._parent_obj else None
-        str_child = self._child_obj._str_safe if self._child_obj else None
-        return f"Branch(parent={str_parent}, child={str_child}, branch_id={self._entity_id}, id={id(self)})"
+        parent = self._parent_obj._str_safe if self._parent_obj else None
+        child = self._child_obj._str_safe if self._child_obj else None
+        prefix = self.prefix if self._model.setup_done else "?"
+        return "Branch(parent={}, child={}, branch_id={}, prefix='{}', id={})".format(
+            parent, child, self._entity_id, prefix, id(self)
+        )
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
