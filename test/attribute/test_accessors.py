@@ -63,7 +63,9 @@ def test_labels(session: Session, note: Note):
     note.attributes.owned[0] = Label("label2", "value1", session=session)
 
     assert note.attributes.owned[0].name == "label2"
-    assert note.labels.get("label2").value == "value1"
+    label2 = note.labels.get("label2")
+    assert label2
+    assert label2.value == "value1"
     assert note.labels.get_value("label2") == "value1"
 
     session.flush()
@@ -137,7 +139,9 @@ def test_relations(session: Session, note: Note):
     note.attributes.owned[0] = Relation("relation2", session.root, session=session)
 
     assert note.attributes.owned[0].name == "relation2"
-    assert note.relations.get("relation2").target is session.root
+    relation2 = note.relations.get("relation2")
+    assert relation2
+    assert relation2.target is session.root
     assert note.relations.get_target("relation2") is session.root
 
     session.flush()
@@ -319,6 +323,7 @@ def test_slice(session: Session, note: Note):
 @mark.label("label1", "value1")
 def test_from_id(session: Session, label: Label):
     label.invalidate()
+    assert label.attribute_id
     label_new = BaseAttribute._from_id(label.attribute_id, session=session)
 
     assert label is label_new

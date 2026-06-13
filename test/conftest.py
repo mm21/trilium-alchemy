@@ -8,7 +8,7 @@ from typing import Generator
 import dotenv
 import pytest
 from pytest import Config, FixtureRequest, Item, Parser, fixture, raises
-from trilium_client import DefaultApi
+from trilium_client.api.default_api import DefaultApi
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.models.branch import Branch as EtapiBranchModel
