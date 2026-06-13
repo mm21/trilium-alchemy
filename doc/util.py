@@ -24,7 +24,9 @@ from types import ModuleType
 from typing import Any
 
 import docutils
+import docutils.nodes
 import sphinx
+import sphinx.addnodes
 from autodoc2.db import Database
 from autodoc2.utils import ItemData
 
@@ -87,6 +89,7 @@ class Symbol:
         is_canonical = f"\n  is_canonical: {self.is_canonical}"
 
         if self.is_canonical:
+            assert self.aliases
             canonical = ""
             aliases_ = ", ".join([sym.virt_path for sym in self.aliases])
             aliases = f"\n  aliases: {aliases_}"
@@ -137,6 +140,7 @@ class Symbol:
             if self.py_obj in self.symbol_map.obj_map:
                 # there's a canonical symbol for this object
                 self.canonical_symbol = self.symbol_map.obj_map[self.py_obj]
+                assert self.canonical_symbol.aliases is not None
                 self.canonical_symbol.aliases.append(self)
 
     def _get_attr_impl(self, cls, attr):
@@ -175,9 +179,10 @@ class Symbol:
 
     def get_ancestor(self, attr):
         val = self._get_attr_impl(self.py_obj, attr)
+        assert val
         assert len(val) == 2
 
-        cls = self._get_attr_impl(self.py_obj, attr)[1]
+        cls = val[1]
         return f"{cls.__module__}.{cls.__name__}"
 
     def get_attr_value(self, attr: str):
@@ -190,9 +195,9 @@ class Symbol:
         # add markup to value based on its type
 
         # try to lookup symbol
+        descriptor = False
         if value in self.symbol_map.obj_map:
             py_obj = value
-            descriptor = False
         elif type(value) in self.symbol_map.obj_map:
             # descriptor
             py_obj = type(value)
@@ -237,7 +242,7 @@ class Symbol:
         return not self.is_phys_canonical
 
     @property
-    def db_item(self) -> ItemData:
+    def db_item(self) -> ItemData | None:
         if self.is_canonical or self.canonical_symbol is None:
             return self.symbol_map.db.get_item(self.virt_path)
         else:
@@ -481,7 +486,7 @@ class Env:
         Set reference to Symbol object in autodoc2's item so we can access it later as
         needed.
         """
-        for full_name, item in self.db._items.items():
+        for full_name, item in self.db._items.items():  # type: ignore[attr-defined]
             if symbol := self.symbol_map.sym_map.get(full_name, None):
                 item["symbol_obj"] = symbol
 
@@ -491,7 +496,7 @@ class Env:
 
         Required since dynamic __all__ can't be captured by static analysis.
         """
-        for full_name, item in self.db._items.items():
+        for full_name, item in self.db._items.items():  # type: ignore[attr-defined]
             symbol = item.get("symbol_obj", None)
 
             # set all for package or module
@@ -526,21 +531,23 @@ class Env:
 
             # rename this item
             item["full_name"] = path_to
-            assert path_to not in db._items
-            assert path_from in db._items
-            db._items[path_to] = db._items[path_from]
-            del db._items[path_from]
+            assert path_to not in db._items  # type: ignore[attr-defined]
+            assert path_from in db._items  # type: ignore[attr-defined]
+            db._items[path_to] = db._items[path_from]  # type: ignore[attr-defined]
+            del db._items[path_from]  # type: ignore[attr-defined]
 
         # traverse all canonical symbols
         for py_obj, symbol in self.symbol_map.obj_map.copy().items():
             if (
-                symbol.phys_path in self.db._items
+                symbol.phys_path in self.db._items  # type: ignore[attr-defined]
                 and symbol.phys_path != symbol.virt_path
             ):
                 # found a symbol which needs to be mapped to its virtual path
+                item = self.db.get_item(symbol.phys_path)
+                assert item
                 recurse(
                     self.db,
-                    self.db.get_item(symbol.phys_path),
+                    item,
                     symbol.phys_path,
                     symbol.virt_path,
                 )
@@ -549,7 +556,7 @@ class Env:
         """
         Append decorator descriptions to docstring.
         """
-        for full_name, item in self.db._items.items():
+        for full_name, item in self.db._items.items():  # type: ignore[attr-defined]
             if "symbol_obj" in item:
                 symbol = item["symbol_obj"]
 
@@ -575,14 +582,13 @@ class Env:
         self,
         node: docutils.nodes.Node,
         new_text: str,
-        parent: docutils.nodes.Node = None,
     ):
         text = node.next_node(condition=docutils.nodes.Text)
         assert text is not None
 
         text.parent.replace(text, docutils.nodes.Text(new_text))
 
-    def _resolve_item(self, name: str) -> tuple[ItemData | None, Symbol | None]:
+    def _resolve_item(self, name: str) -> tuple[ItemData | None, Symbol] | None:
         """
         Try to get item given its name, which may not include a modpath.
 
@@ -595,14 +601,14 @@ class Env:
 
         if symbol is None:
             if "." not in name:
-                return
+                return None
 
             # try as Class.member
             cls_name, member_name = name.rsplit(".", maxsplit=1)
 
             symbol = self.symbol_map.lookup(cls_name)
             if symbol is None:
-                return
+                return None
 
             full_name = f"{symbol.canonical.virt_path}.{member_name}"
         else:
@@ -650,10 +656,12 @@ class Env:
         self,
         parameterlist: sphinx.addnodes.desc_parameterlist,
         name: sphinx.addnodes.literal_strong,
-    ) -> sphinx.addnodes.desc_parameter:
+    ) -> sphinx.addnodes.desc_parameter | None:
         for parameter in parameterlist.children:
             if parameter.children[0].astext() == name.astext():
+                assert isinstance(parameter, sphinx.addnodes.desc_parameter)
                 return parameter
+        return None
 
     def _insert_xref(self, inline: docutils.nodes.inline):
         """
@@ -749,7 +757,8 @@ class Env:
 
                     # copy defaults
                     if len(parameter.children) > 7:
-                        default: docutils.nodes.inline = parameter.children[7]
+                        default = parameter.children[7]
+                        assert isinstance(default, docutils.nodes.inline)
 
                         literal = sphinx.addnodes.literal_strong()
                         literal += docutils.nodes.Text(" = ")
@@ -763,6 +772,7 @@ class Env:
                 # - arg description
                 assert len(paragraph.children) == 3
                 name, dash, desc = paragraph.children
+                assert isinstance(name, sphinx.addnodes.literal_strong)
 
                 desc_p = docutils.nodes.paragraph()
                 desc_p += desc
@@ -847,7 +857,7 @@ class Env:
         def process_field_list(
             field_list: docutils.nodes.field_list,
             parameterlist: sphinx.addnodes.desc_parameterlist,
-            returns: sphinx.addnodes.desc_returns,
+            returns: sphinx.addnodes.desc_returns | None,
         ):
             """
             field_list can have both parameters and returns.
@@ -865,6 +875,7 @@ class Env:
                 if name == "Parameters":
                     process_parameterlist(field_body, parameterlist)
                 elif name == "Returns":
+                    assert returns
                     process_returns(field_body, returns)
                 # TODO: handle "Raises"?
 
