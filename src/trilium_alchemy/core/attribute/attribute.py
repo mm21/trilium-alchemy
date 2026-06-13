@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Self, Sequence
+from typing import TYPE_CHECKING, Literal, Self, Sequence
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -128,7 +128,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
     ```
     """
 
-    _attribute_type: str
+    _attribute_type: Literal["label", "relation"]
     _model_cls = AttributeModel
 
     # name of attribute, ensuring only one name is assigned

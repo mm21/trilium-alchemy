@@ -110,6 +110,7 @@ def sync_template(
             raise Exit(1)
 
     # select notes if provided
+    assert ctx.parent
     if note_context.note_id or note_context.search:
         notes = get_notes(
             ctx.parent,
@@ -189,10 +190,11 @@ def _sync_template(
             selected_template = template
         else:
             # select first ~template relation
-            selected_template = note.relations.get_target("template")
-            if not selected_template:
+            target = note.relations.get_target("template")
+            if not target:
                 logger.warning(f"Note {note._str_short} does not have a ~template")
                 continue
+            selected_template = target
 
         # sync this note with this template
         note.sync_template(selected_template)

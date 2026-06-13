@@ -107,30 +107,8 @@ def load_note(src_dir: Path, session: Session) -> Note:
     meta_path = src_dir / META_FILENAME
     assert meta_path.is_file()
 
-    # get metadata from file
     meta = NoteMeta.load_yaml(meta_path)
-
-    note = Note(note_id=meta.note_id, session=session)
-    note.title = meta.title
-    note.note_type = meta.note_type
-    note.mime = meta.mime
-
-    # update content if out of date
-    if note.blob_id != meta.blob_id:
-        content_file = src_dir / f"content.{'txt' if note.is_string else 'bin'}"
-        assert content_file.is_file()
-
-        note.content = (
-            content_file.read_text() if note.is_string else content_file.read_bytes()
-        )
-
-    # set attributes
-    note.attributes.owned = _load_attributes(note, meta)
-
-    # set children
-    note.branches.children = _load_child_branches(note, meta)
-
-    return note
+    return meta.to_note(src_dir, session)
 
 
 def _load_attributes(note: Note, meta: NoteMeta) -> list[BaseAttribute]:

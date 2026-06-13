@@ -26,7 +26,7 @@ class Relation(BaseAttribute):
     {ref}`working-with-attributes` for details.
     """
 
-    _attribute_type: str = "relation"
+    _attribute_type = "relation"
 
     _target = WriteThroughDescriptor["Note"]("_target_obj", "note_id", "value")
     _target_obj: Note | None = None

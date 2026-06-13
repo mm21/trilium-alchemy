@@ -16,7 +16,7 @@ class Label(BaseAttribute):
     with-attributes` for details.
     """
 
-    _attribute_type: str = "label"
+    _attribute_type = "label"
 
     def __init__(
         self,
