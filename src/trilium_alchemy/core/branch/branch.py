@@ -115,7 +115,8 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
     Implicitly created by operations documented in {obj}`Note` and {obj}`Branches`. Can
     also be explicitly created and added to a note using its `+=`{l=python} operator:
 
-    ``` # add child note with prefix note += Branch(child=Note(title="Child note"),
+    ```\n\
+    # add child note with prefix note += Branch(child=Note(title="Child note"),
     prefix="Child branch prefix")
 
     # add parent note (cloning the note) with prefix note += Branch(parent=session.root,

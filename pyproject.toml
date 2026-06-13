@@ -59,7 +59,7 @@ dev = [
   "sphinx-autodoc2 @ git+https://github.com/mm21/sphinx-autodoc2.git",
   "sphinx-copybutton>=0.5.2,<0.6.0",
   "sphinxcontrib-plantuml>=0.25,<0.26",
-  "sphinxcontrib-typer>=0.5.1,<0.6.0",
+  "sphinxcontrib-typer>=0.9.0,<0.10.0",
   "toml-sort>=0.23.1,<0.24.0",
   "types-requests>=2.31.0.8,<3"
 ]
