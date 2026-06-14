@@ -23,7 +23,7 @@ dependencies = [
   "typecraft>=0.4.0",
   "typer>=0.26.7"
 ]
-description = "Python SDK and CLI toolkit for TriliumNext Notes, compatible with Trilium Notes"
+description = "Python SDK and CLI toolkit for Trilium Notes"
 license = "AGPL-3.0-only"
 name = "trilium-alchemy"
 readme = "README.pypi.md"

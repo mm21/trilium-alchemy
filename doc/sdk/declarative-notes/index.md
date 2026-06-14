@@ -82,7 +82,7 @@ class MyTask(BaseDeclarativeNote):
 
 ### Promoted attributes
 
-A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators {obj}`label_def` and {obj}`relation_def` are provided for convenience.
+A special type of label is one which defines a [promoted attribute](https://docs.triliumnotes.org/user-guide/advanced-usage/attributes/promoted-attributes). Decorators {obj}`label_def` and {obj}`relation_def` are provided for convenience.
 
 The following creates a workspace template with an icon and a few promoted attributes:
 

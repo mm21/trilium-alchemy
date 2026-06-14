@@ -4,7 +4,7 @@
 </p>
 
 # TriliumAlchemy
-Python SDK and CLI toolkit for [TriliumNext Notes](https://github.com/TriliumNext/Notes), compatible with [Trilium Notes](https://github.com/zadam/trilium)
+Python SDK and CLI toolkit for [Trilium Notes](https://github.com/TriliumNext/Trilium)
 
 [![Python versions](https://img.shields.io/pypi/pyversions/trilium-alchemy.svg)](https://pypi.org/project/trilium-alchemy)
 [![PyPI](https://img.shields.io/pypi/v/trilium-alchemy?color=%2334D058&label=pypi%20package)](https://pypi.org/project/trilium-alchemy)
@@ -41,7 +41,7 @@ Read the full documentation here: <https://mm21.github.io/trilium-alchemy/>
 
 ## Getting started
 
-This guide assumes you have some familiarity with Trilium itself; namely the basic concepts of [notes](https://github.com/zadam/trilium/wiki/Note), [attributes](https://github.com/zadam/trilium/wiki/Attributes), and [branches](https://github.com/zadam/trilium/wiki/Tree-concepts).
+This guide assumes you have some familiarity with Trilium itself; namely the basic concepts of [notes](https://docs.triliumnotes.org/user-guide/concepts/notes), [attributes](https://docs.triliumnotes.org/user-guide/advanced-usage/attributes), and [branches](https://docs.triliumnotes.org/user-guide/concepts/navigation/tree-concepts#branch).
 
 Install from PyPI:
 
@@ -102,7 +102,7 @@ There are 3 kinds of objects in Trilium, represented in TriliumAlchemy as the fo
 
 Once you have a `Session`, you can begin to interact with Trilium. The first `Session` created is registered as the default for any subsequent Trilium objects created.
 
-The following shows an example of creating a new note under today's [day note](https://github.com/zadam/trilium/wiki/Day-notes):
+The following shows an example of creating a new note under today's [day note](https://docs.triliumnotes.org/user-guide/advanced-usage/advanced-showcases/day-notes):
 
 ```python
 with Session(HOST, token=TOKEN) as session:
@@ -320,7 +320,7 @@ class MyTask(BaseDeclarativeNote):
 
 #### Promoted attributes
 
-A special type of label is one which defines a [promoted attribute](https://github.com/zadam/trilium/wiki/Promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
+A special type of label is one which defines a [promoted attribute](https://docs.triliumnotes.org/user-guide/advanced-usage/attributes/promoted-attributes). Decorators `label_def` and `relation_def` are provided for convenience.
 
 The following creates a workspace template with an icon and a few promoted attributes:
 

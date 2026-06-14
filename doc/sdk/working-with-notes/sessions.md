@@ -50,7 +50,7 @@ You can then interact with Trilium in various ways as documented in the {ref}`AP
 todo_list = session.search("#todo")
 ```
 
-Then [clone](https://github.com/zadam/trilium/wiki/Cloning-notes) them to today's [Day note](https://github.com/zadam/trilium/wiki/Day-notes) using {obj}`Session.get_today_note`:
+Then [clone](https://docs.triliumnotes.org/user-guide/concepts/notes/cloning) them to today's [Day note](https://docs.triliumnotes.org/user-guide/advanced-usage/advanced-showcases/day-notes) using {obj}`Session.get_today_note`:
 
 ```python
 today = session.get_today_note()

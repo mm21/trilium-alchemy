@@ -265,7 +265,7 @@ class Session:
     ) -> list[Note]:
         """
         Perform note search using query string as described at:
-        <https://github.com/zadam/trilium/wiki/Search>
+        <https://docs.triliumnotes.org/user-guide/concepts/navigation/search>
 
         :param query: Query string
         :param order_by: Name of the property/label to order search results by

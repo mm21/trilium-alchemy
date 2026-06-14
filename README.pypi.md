@@ -1,5 +1,5 @@
 # TriliumAlchemy
-Python SDK and CLI toolkit for [TriliumNext Notes](https://github.com/TriliumNext/Notes), compatible with [Trilium Notes](https://github.com/zadam/trilium)
+Python SDK and CLI toolkit for [Trilium Notes](https://github.com/TriliumNext/Trilium)
 
 GitHub: <https://github.com/mm21/trilium-alchemy/>
 

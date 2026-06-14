@@ -38,7 +38,7 @@ instances:
 
 The CLI represents Trilium notes on the filesystem using a prefix tree structure designed for efficient storage and retrieval of large note collections. As Trilium is intended to scale to 100,000+ notes, this format is designed to scale accordingly.
 
-For more background on Trilium's scaling capability, see the documentation on [Scalability](https://github.com/TriliumNext/trilium/wiki/Patterns-of-personal-knowledge-base#scalability):
+For more background on Trilium's scaling capability, see the documentation on [Scalability](https://docs.triliumnotes.org/user-guide/misc/patterns-of-personal-knowledge#scalability):
 
 >My rule of thumb for estimation of size of personal knowledge base is that you can reasonably produce around 10 notes a day, which is 3650 in a year. I plan to use my knowledge base long term (with or without Trilium Notes), probably decades so you can easily get to number 100 000 or even more. Right now, my personal knowledge base has around 10 000 notes.
 >

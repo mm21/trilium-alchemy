@@ -2,7 +2,7 @@
 
 ## ETAPI
 
-To use TriliumAlchemy, you need to connect to Trilium through its ETAPI interface. See Trilium's documentation for details: <https://github.com/zadam/trilium/wiki/ETAPI>
+To use TriliumAlchemy, you need to connect to Trilium through its ETAPI interface. See Trilium's documentation for details: <https://docs.triliumnotes.org/user-guide/advanced-usage/etapi>
 
 ```{note}
 For SDK use, once you've selected a method, create a {obj}`Session` and pass the appropriate argument: either `token` or `password`. See {ref}`sessions` for details.
