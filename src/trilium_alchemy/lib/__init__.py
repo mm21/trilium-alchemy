@@ -14,7 +14,7 @@ __all__ = rollup(
     note_types,
     extension_types,
     system_types,
-)
+)  # type: ignore
 
 __canonical_children__ = [
     "note_types",

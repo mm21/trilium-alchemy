@@ -51,14 +51,13 @@ class Cache:
         entities not provided.
         """
         from .branch import Branch
+        from .entity.entity import BaseEntity
         from .entity.types import State
 
-        entities_iter: Iterable[BaseEntity]
-
-        entities_iter = self.dirty_set if entities is None else entities
+        entities_ = entities if entities is not None else self.dirty_set
 
         # filter by dirty state
-        dirty_set = {entity for entity in entities_iter if entity._is_dirty}
+        dirty_set = {entity for entity in entities_ if entity._is_dirty}
 
         # first pass validation of entities provided by user
         self._validate(dirty_set)
@@ -113,16 +112,17 @@ class Cache:
 
         # flush entities in order provided by sorter
         while sorter.is_active():
-            ready: list[BaseEntity] = list(sorter.get_ready())
+            ready = sorter.get_ready()
 
             for entity in ready:
+                assert isinstance(entity, BaseEntity)
                 if entity._is_dirty:
                     do_cleanup = entity._is_delete
                     entity._flush(sorter)
 
                     # remove entity and associated entities from map
                     if do_cleanup:
-                        for e in [entity] + entity._associated_entities:
+                        for e in (entity, *entity._associated_entities):
                             if e._entity_id in self.entity_map:
                                 del self.entity_map[e._entity_id]
 
@@ -144,6 +144,8 @@ class Cache:
 
         Should be invoked as soon as entity_id is set.
         """
+        assert entity._entity_id
+
         if entity._entity_id in self.entity_map:
             assert entity is self.entity_map[entity._entity_id]
         else:
@@ -194,8 +196,6 @@ class Cache:
         for entity in dirty_set:
             if isinstance(entity, Branch):
                 if entity._model.is_field_changed("note_position"):
-                    assert entity.parent
-
                     if not entity.parent._is_delete:
                         notes.add(entity.parent)
 
@@ -253,16 +253,11 @@ class Cache:
             Branch: state_map(),
         }
 
-        def get_cls(entity: BaseEntity) -> type[BaseEntity]:
-            classes = [
-                Note,
-                BaseAttribute,
-                Branch,
-            ]
-
-            for cls in classes:
+        def get_cls(entity: BaseEntity) -> type[BaseEntity] | None:
+            for cls in (Note, BaseAttribute, Branch):
                 if isinstance(entity, cls):
                     return cls
+            return None
 
         for entity in entities:
             cls = get_cls(entity)

@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Generator
 
 import dotenv
-from pytest import Config, FixtureRequest, Parser, fixture, raises
-from trilium_client import DefaultApi
+import pytest
+from pytest import Config, FixtureRequest, Item, Parser, fixture, raises
+from trilium_client.api.default_api import DefaultApi
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.models.branch import Branch as EtapiBranchModel
@@ -57,12 +58,21 @@ MARKERS = [
     "skip_cleanup",
     "setup",
     "temp_file",
+    "slow",
 ]
 
 
-def pytest_configure(config: Config) -> None:
+def pytest_configure(config: Config):
     for marker in MARKERS:
         config.addinivalue_line("markers", marker)
+
+
+def pytest_collection_modifyitems(config: Config, items: list[Item]):
+    if config.getoption("--fast"):
+        skip = pytest.mark.skip(reason="Skipped by --fast")
+        for item in items:
+            if item.get_closest_marker("slow"):
+                item.add_marker(skip)
 
 
 def pytest_addoption(parser: Parser):
@@ -80,6 +90,11 @@ def pytest_addoption(parser: Parser):
         "--cli-stdout",
         action="store_true",
         help="Print stdout of CLI commands",
+    )
+    parser.addoption(
+        "--fast",
+        action="store_true",
+        help="Skip slow tests",
     )
 
 
@@ -109,6 +124,7 @@ def cleanup_tree(request: FixtureRequest):
     delete_children(session.api, root)
 
     # delete root attributes
+    assert root.attributes is not None
     for attribute in root.attributes:
         assert attribute.attribute_id
         delete_attribute(session.api, attribute.attribute_id)
@@ -193,6 +209,7 @@ def note(request: FixtureRequest, session: Session) -> Generator[Note, None, Non
     Use @mark.label, @mark.relation only when using label/relation fixtures.
     """
     note = create_note_fixture(request, session, "note")
+    assert note.note_id
     yield note
     teardown_note(request, session, note.note_id)
 
@@ -200,6 +217,7 @@ def note(request: FixtureRequest, session: Session) -> Generator[Note, None, Non
 @fixture
 def note1(request: FixtureRequest, session: Session) -> Generator[Note, None, None]:
     note = create_note_fixture(request, session, "note1")
+    assert note.note_id
     yield note
     teardown_note(request, session, note.note_id)
 
@@ -216,10 +234,9 @@ def note2(
     This allows use of note1 and note2 as parent and child, respectively.
     """
     note = create_note_fixture(request, session, "note2")
+    assert note.note_id
     yield note
     teardown_note(request, session, note.note_id)
-
-    # TODO: lookup note, ensure parent is in parent branches
 
 
 @fixture
@@ -229,6 +246,7 @@ def label(request: FixtureRequest, session: Session, note: Note):
     """
     # get label config
     marker = request.node.get_closest_marker("label")
+    assert marker
 
     name = marker.args[0]
 
@@ -249,6 +267,7 @@ def relation(request: FixtureRequest, session: Session, note: Note):
     """
     # get relation config
     marker = request.node.get_closest_marker("relation")
+    assert marker
 
     name = marker.args[0]
 
@@ -270,6 +289,7 @@ def branch(request: FixtureRequest, session: Session, note1: Note, note2: Note):
         prefix="",
         is_expanded=False,
     )
+    assert model.branch_id
 
     # re-fetches model from server, but there's no use case for loading
     # branch with prefetched model besides this, so no need to support it yet
@@ -452,12 +472,14 @@ def create_note_fixture(request: FixtureRequest, session: Session, fixture_name:
 def create_note(api: DefaultApi, **kwargs) -> str:
     create_note_def = CreateNoteDef(**kwargs)
     response = api.create_note(create_note_def)
+    assert response.note
     note_id = response.note.note_id
+    assert note_id
 
     return note_id
 
 
-def teardown_note(request: FixtureRequest, session: Session, note_id: str) -> None:
+def teardown_note(request: FixtureRequest, session: Session, note_id: str):
     if not request.node.get_closest_marker(
         "skip_teardown"
     ) and not request.config.getoption("--skip-teardown"):
@@ -473,8 +495,10 @@ def delete_children(api: DefaultApi, note: EtapiNoteModel):
         delete_branch(api, branch)
 
 
-def clean_note(api: DefaultApi, note_id: str) -> None:
+def clean_note(api: DefaultApi, note_id: str):
     note = get_note(api, note_id)
+    assert note
+    assert note.attributes is not None
 
     # reset title/type/mime
     if note_id == "root":
@@ -487,6 +511,7 @@ def clean_note(api: DefaultApi, note_id: str) -> None:
 
     # clean attributes
     for attr in note.attributes:
+        assert attr.attribute_id
         delete_attribute(api, attr.attribute_id)
 
     # clean child branches
@@ -496,11 +521,14 @@ def clean_note(api: DefaultApi, note_id: str) -> None:
     api.put_note_content_by_id(note_id, "")
 
 
-def change_note(api: DefaultApi, note_id: str) -> None:
+def change_note(api: DefaultApi, note_id: str):
     if note_id.startswith("_"):
         return
 
     note = get_note(api, note_id)
+    assert note
+    assert note.attributes is not None
+    assert note.child_branch_ids is not None
 
     # change title/type/mime
     model = EtapiNoteModel(
@@ -527,7 +555,6 @@ def get_note(api: DefaultApi, note_id: str) -> EtapiNoteModel | None:
         model = api.get_note_by_id(note_id)
     except NotFoundException:
         model = None
-
     return model
 
 
@@ -553,6 +580,7 @@ def note_cleanup(note: Note):
 
 def change_attribute(api: DefaultApi, attribute: EtapiAttributeModel, position: int):
     assert attribute.type in {"label", "relation"}
+    assert attribute.attribute_id
 
     model = EtapiAttributeModel(
         value=f"{attribute.value}_new" if attribute.type == "label" else None,
@@ -565,14 +593,17 @@ def change_attribute(api: DefaultApi, attribute: EtapiAttributeModel, position: 
 
 def change_branch(api: DefaultApi, branch_id: str):
     branch = get_branch(api, branch_id)
+    assert branch
+    assert branch.note_id
+    assert branch.note_position
 
     if branch.note_id.startswith("_"):
         return
 
     model = EtapiBranchModel(
         prefix=f"{branch.prefix}_new",
-        note_position=branch.note_position + 10,
-        is_expanded=not branch.is_expanded,
+        notePosition=branch.note_position + 10,
+        isExpanded=not branch.is_expanded,
     )
 
     api.patch_branch_by_id(branch_id, model)
@@ -613,22 +644,19 @@ def create_attribute(api: DefaultApi, **kwargs) -> EtapiAttributeModel:
     model = EtapiAttributeModel(**kwargs)
 
     # invoke api
-    model_new = api.post_attribute(model)
-    assert model_new is not None
-
-    return model_new
+    new_model = api.post_attribute(model)
+    return new_model
 
 
-def get_attribute(api: DefaultApi, attribute_id: str) -> EtapiAttributeModel:
+def get_attribute(api: DefaultApi, attribute_id: str) -> EtapiAttributeModel | None:
     try:
         model = api.get_attribute_by_id(attribute_id)
     except NotFoundException:
         model = None
-
     return model
 
 
-def delete_attribute(api: DefaultApi, attribute_id: str) -> None:
+def delete_attribute(api: DefaultApi, attribute_id: str):
     api.delete_attribute_by_id(attribute_id)
 
 
@@ -641,13 +669,12 @@ def create_branch(api: DefaultApi, **kwargs) -> EtapiBranchModel:
     model = EtapiBranchModel(**kwargs)
 
     # invoke api
-    model_new = api.post_branch(model)
-    assert model_new is not None
-
-    return model_new
+    new_model = api.post_branch(model)
+    return new_model
 
 
-def delete_branch(api: DefaultApi, branch: EtapiBranchModel) -> None:
+def delete_branch(api: DefaultApi, branch: EtapiBranchModel):
+    assert branch.branch_id
     api.delete_branch_by_id(branch.branch_id)
 
 
@@ -656,7 +683,6 @@ def get_branch(api: DefaultApi, branch_id: str) -> EtapiBranchModel | None:
         model = api.get_branch_by_id(branch_id)
     except NotFoundException:
         model = None
-
     return model
 
 
@@ -664,14 +690,13 @@ def get_branches(api: DefaultApi, note: EtapiNoteModel) -> list[EtapiBranchModel
     """
     Get branch models which are not hidden.
     """
+    assert note.child_branch_ids is not None
     branches: list[EtapiBranchModel] = []
 
-    assert note.child_branch_ids is not None
     for branch_id in note.child_branch_ids:
         branch = get_branch(api, branch_id)
         assert branch
         assert branch.note_id
-
         if not branch.note_id.startswith("_"):
             branches.append(branch)
 

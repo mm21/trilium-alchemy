@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Generator
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.create_note_def import CreateNoteDef
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.note_with_branch import NoteWithBranch
 
 from ..entity.model import BaseDriver, BaseEntityModel
 
@@ -14,21 +13,21 @@ if TYPE_CHECKING:
     from .note import Note
 
 
-class NoteDriver(BaseDriver):
+class NoteDriver(BaseDriver[EtapiNoteModel]):
     @property
     def note(self) -> Note:
+        from .note import Note
+
+        assert isinstance(self.entity, Note)
         return self.entity
 
-
-class EtapiDriver(NoteDriver):
     def fetch(self) -> EtapiNoteModel | None:
-        model: EtapiNoteModel | None
-
+        assert self.note.note_id
+        model: EtapiNoteModel | None = None
         try:
             model = self.session.api.get_note_by_id(self.note.note_id)
         except NotFoundException:
-            model = None
-
+            pass
         return model
 
     def flush_create(
@@ -40,9 +39,10 @@ class EtapiDriver(NoteDriver):
 
         # ensure parent note exists (should be taken care by sorter)
         assert parent_branch.parent._model.exists
+        assert self.note._model.working_data
 
         # get note fields
-        model_dict = self.note._model._working.copy()
+        model_dict = self.note._model.working_data.copy()
 
         model_dict["parent_note_id"] = parent_branch.parent.note_id
 
@@ -55,13 +55,16 @@ class EtapiDriver(NoteDriver):
             model_dict["note_id"] = self.note.note_id
 
         # assign writeable fields from branch
-        for field in parent_branch._model.fields_update:
-            model_dict[field] = parent_branch._model.get_field(field)
+        for field in parent_branch._model.update_fields:
+            model_dict[field] = parent_branch._model.get_field(field, object)
 
         model = CreateNoteDef(**model_dict)
 
         # invoke api
-        response: NoteWithBranch = self.session.api.create_note(model)
+        response = self.session.api.create_note(model)
+        assert response.note
+        assert response.branch
+        assert response.branch.branch_id
 
         # add parent branch to cache before note is loaded
         # (branches will be instantiated)
@@ -88,18 +91,19 @@ class EtapiDriver(NoteDriver):
         parent_branch._model.setup(response.branch)
 
     def flush_update(self, sorter: TopologicalSorter) -> EtapiNoteModel:
+        _ = sorter
+        assert self.note.note_id
+
         # assemble note model based on needed fields
-        model = EtapiNoteModel(**self.note._model.get_fields_changed())
+        model = EtapiNoteModel(**self.note._model.get_changed_fields())
 
         # invoke api and return new model
-        model_new: EtapiNoteModel = self.session.api.patch_note_by_id(
-            self.note.note_id, model
-        )
-        assert model_new is not None
-
-        return model_new
+        new_model = self.session.api.patch_note_by_id(self.note.note_id, model)
+        return new_model
 
     def flush_delete(self, sorter: TopologicalSorter):
+        assert self.note.note_id
+
         self.session.api.delete_note_by_id(self.note.note_id)
 
         # mark attributes as clean
@@ -115,29 +119,25 @@ class EtapiDriver(NoteDriver):
                 sorter.done(branch)
 
 
-class FileDriver(NoteDriver):
-    pass
-
-
 class NoteModel(BaseEntityModel):
-    etapi_model = EtapiNoteModel
+    @property
+    def etapi_model(self) -> type[EtapiNoteModel]:
+        return EtapiNoteModel
 
-    etapi_driver_cls = EtapiDriver
+    @property
+    def driver_cls(self) -> type[NoteDriver]:
+        return NoteDriver
 
-    file_driver_cls = FileDriver
+    @property
+    def entity_id_field(self) -> str:
+        return "note_id"
 
-    field_entity_id = "note_id"
+    @property
+    def update_fields(self) -> list[str]:
+        return ["title", "type", "mime"]
 
-    fields_update = [
-        "title",
-        "type",
-        "mime",
-    ]
-
-    # this is where the actual defaults come from; defaults in
-    # Note.__init__ are only for documentation
-    fields_default = {
-        "title": "new note",
-        "type": "text",
-        "mime": "text/html",
-    }
+    @property
+    def default_fields(self) -> dict:
+        # this is where the actual defaults come from; defaults in
+        # Note.__init__ are only for documentation
+        return {"title": "new note", "type": "text", "mime": "text/html"}

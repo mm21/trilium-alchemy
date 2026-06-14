@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Literal, Self, Sequence
 
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
@@ -11,7 +11,6 @@ from ..entity.entity import BaseEntity, OrderedEntity, State
 from ..entity.model import (
     BaseDriver,
     BaseEntityModel,
-    FieldDescriptor,
     WriteOnceDescriptor,
 )
 from ..exceptions import _assert_validate
@@ -19,52 +18,52 @@ from ..session import Session, normalize_session
 
 if TYPE_CHECKING:
     from ..note.note import Note
-    from .label import Label
-    from .relation import Relation
 
 __all__ = [
     "BaseAttribute",
 ]
 
 
-class AttributeDriver(BaseDriver):
+class AttributeDriver(BaseDriver[EtapiAttributeModel]):
     @property
     def attribute(self) -> BaseAttribute:
+        assert isinstance(self.entity, BaseAttribute)
         return self.entity
 
-
-class EtapiDriver(AttributeDriver):
     def fetch(self) -> EtapiAttributeModel | None:
-        model: EtapiAttributeModel | None
+        assert self.attribute.attribute_id
+        model: EtapiAttributeModel | None = None
 
         try:
             model = self.session.api.get_attribute_by_id(self.attribute.attribute_id)
         except NotFoundException:
-            model = None
+            pass
 
         return model
 
-    def flush_create(self, sorter: TopologicalSorter):
-        assert self.attribute._note is not None
-        assert self.attribute._note.note_id is not None
+    def flush_create(self, sorter: TopologicalSorter) -> EtapiAttributeModel:
+        _ = sorter
+        assert self.attribute._note
+        assert self.attribute._note.note_id
+        assert self.attribute._model.working_data
 
         model = EtapiAttributeModel(
-            note_id=self.attribute._note.note_id,
+            noteId=self.attribute._note.note_id,
             type=self.attribute._attribute_type,
             name=self.attribute.name,
-            **self.attribute._model._working,
+            **self.attribute._model.working_data,
         )
 
         if self.attribute.attribute_id is not None:
             model.attribute_id = self.attribute.attribute_id
 
-        model_new = self.session.api.post_attribute(model)
-        assert model_new is not None
+        new_model = self.session.api.post_attribute(model)
+        return new_model
 
-        return model_new
+    def flush_update(self, sorter: TopologicalSorter) -> EtapiAttributeModel:
+        assert self.attribute.attribute_id
 
-    def flush_update(self, sorter: TopologicalSorter):
-        # check if relation and target changed
+        # check if is relation and target changed
         relation_update = (
             self.attribute._attribute_type == "relation"
             and self.attribute._model.is_field_changed("value")
@@ -77,42 +76,41 @@ class EtapiDriver(AttributeDriver):
             return self.flush_create(sorter)
         else:
             # can just use patch
-            model = EtapiAttributeModel(**self.attribute._model.get_fields_changed())
-            model_new = self.session.api.patch_attribute_by_id(
+            model = EtapiAttributeModel(**self.attribute._model.get_changed_fields())
+            new_model = self.session.api.patch_attribute_by_id(
                 self.attribute.attribute_id, model
             )
-            assert model_new is not None
-
-            return model_new
+            return new_model
 
     def flush_delete(self, sorter: TopologicalSorter):
+        _ = sorter
+        assert self.attribute.attribute_id
         self.session.api.delete_attribute_by_id(self.attribute.attribute_id)
 
 
-class FileDriver(AttributeDriver):
-    pass
-
-
 class AttributeModel(BaseEntityModel):
-    etapi_model = EtapiAttributeModel
-    etapi_driver_cls = EtapiDriver
-    file_driver_cls = FileDriver
-    field_entity_id = "attribute_id"
+    @property
+    def etapi_model(self) -> type[EtapiAttributeModel]:
+        return EtapiAttributeModel
 
-    fields_update = [
-        "value",
-        "is_inheritable",
-        "position",
-    ]
+    @property
+    def driver_cls(self) -> type[AttributeDriver]:
+        return AttributeDriver
 
-    fields_default = {
-        "value": "",
-        "is_inheritable": False,
-        "position": 10,
-    }
+    @property
+    def entity_id_field(self) -> str:
+        return "attribute_id"
+
+    @property
+    def update_fields(self) -> list[str]:
+        return ["value", "is_inheritable", "position"]
+
+    @property
+    def default_fields(self) -> dict:
+        return {"value": "", "is_inheritable": False, "position": 10}
 
 
-class BaseAttribute(OrderedEntity[AttributeModel], ABC):
+class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
 
@@ -130,17 +128,16 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
     ```
     """
 
-    _attribute_type: str
+    _attribute_type: Literal["label", "relation"]
     _model_cls = AttributeModel
-    _position: int = FieldDescriptor("position")
 
     # name of attribute, ensuring only one name is assigned
-    _name: str = WriteOnceDescriptor("_name_obj")
+    _name = WriteOnceDescriptor[str]("_name_obj")
     _name_obj: str | None = None
 
     # note which owns this attribute, ensuring only one note is assigned
     # - or None if not yet assigned to a note
-    _note: Note | None = WriteOnceDescriptor("_note_obj")
+    _note = WriteOnceDescriptor["Note | None"]("_note_obj")
     _note_obj: Note | None = None
 
     def __new__(cls, *_, **kwargs) -> Self:
@@ -148,7 +145,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             cls,
             session=kwargs.get("session"),
             entity_id=kwargs.get("_attribute_id"),
-            model_backing=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_model_backing"),
         )
 
     @abstractmethod
@@ -164,7 +161,7 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         super().__init__(
             entity_id=_attribute_id,
             session=session,
-            model_backing=_model_backing,
+            backing_model=_model_backing,
         )
 
         assert type(name) is str
@@ -199,25 +196,28 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         Getter/setter for whether this attribute is inherited to children and by
         `template`/`inherit` relations.
         """
-        return self._model.get_field("is_inheritable")
+        return self._model.get_field("is_inheritable", bool)
 
     @inheritable.setter
     def inheritable(self, val: bool):
         self._model.set_field("is_inheritable", val)
 
     @property
-    def utc_date_modified(self) -> str:
+    def utc_date_modified(self) -> str | None:
         """
         UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_modified")
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
 
     @property
-    def note(self) -> Note | None:
+    def note(self) -> Note:
         """
-        Getter for note which owns this attribute, or `None` if it hasn't been bound to
-        a note yet.
+        Getter for note which owns this attribute.
+
+        :raises ValueError: If note has not been set
         """
+        if not self._note:
+            raise ValueError(f"Attribute {self} has not been assigned to a note")
         return self._note
 
     @property
@@ -230,30 +230,34 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         """
         return self._position
 
+    @property
+    def _position(self) -> int:
+        return self._model.get_field("position", int)
+
+    @_position.setter
+    def _position(self, val: int):
+        self._model.set_field("position", val)
+
     @classmethod
-    def _from_id(
-        cls, attribute_id: str, session: Session | None = None
-    ) -> Label | Relation:
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
         """
         Get instance of appropriate concrete class given an `attributeId`.
         """
-        # need to know type in order to create appropriate subclass,
-        # so get model from id first
-
+        # need to know type in order to create appropriate subclass, so get model
+        # from id first
         session = normalize_session(session)
-
-        model: EtapiAttributeModel = session.api.get_attribute_by_id(attribute_id)
-        assert model is not None
-
+        model = session.api.get_attribute_by_id(entity_id)
         return cls._from_model(model, session=session)
 
     @classmethod
     def _from_model(
         cls,
         model: EtapiAttributeModel,
-        session: Session = None,
-        owning_note: Note = None,
-    ) -> BaseAttribute:
+        session: Session | None = None,
+        owning_note: Note | None = None,
+    ) -> Self:
+        assert model.name
+
         # localize import so as to not introduce circular dependency.
         # this is a rare case of an abstract class knowing about its
         # concrete classes
@@ -285,34 +289,16 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
         else:
             raise Exception(f"Unexpected attribute type: {model.type}")
 
+        assert isinstance(attr, cls)
         return attr
-
-    def _setup(self, model: EtapiAttributeModel):
-        assert model.note_id
-
-        from ..note.note import Note
-
-        if self._note_obj is None:
-            self._note = Note(note_id=model.note_id, session=self._session)
-        else:
-            assert self._note_obj.note_id == model.note_id
-
-    def _delete(self):
-        super()._delete()
-
-        if self._note is not None:
-            if self in self._note.attributes.owned:
-                self._note.attributes.owned.remove(self)
-
-    def _flush_check(self):
-        _assert_validate(self._note is not None, "Attribute not assigned to note")
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
         """
         Attribute depends on note which owns it.
         """
-        deps = {self._note}
+        assert self._note
+        deps: set[BaseEntity] = {self._note}
 
         if self._state is not State.DELETE:
             # get index of this attribute
@@ -333,3 +319,33 @@ class BaseAttribute(OrderedEntity[AttributeModel], ABC):
             deps.add(branch)
 
         return deps
+
+    @property
+    def _associated_entities(self) -> Sequence[BaseEntity]:
+        return []
+
+    def _init(self):
+        pass
+
+    def _setup(self, model: EtapiAttributeModel):
+        assert model.note_id
+
+        from ..note.note import Note
+
+        if self._note_obj is None:
+            self._note = Note(note_id=model.note_id, session=self._session)
+        else:
+            assert self._note_obj.note_id == model.note_id
+
+    def _flush_check(self):
+        _assert_validate(self._note is not None, "Attribute not assigned to note")
+
+    def _flush_prep(self):
+        pass
+
+    def _delete(self):
+        super()._delete()
+
+        if self._note is not None:
+            if self in self._note.attributes.owned:
+                self._note.attributes.owned.remove(self)

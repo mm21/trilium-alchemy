@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import itertools
 from abc import abstractmethod
 from collections.abc import MutableSequence, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
+    Iterable,
     Iterator,
-    TypeVar,
-    get_args,
-    get_origin,
     overload,
 )
+
+from typecraft.inspecting.generics import extract_arg
 
 from ...attribute.attribute import BaseAttribute
 
@@ -19,15 +20,20 @@ if TYPE_CHECKING:
 
 
 class AttributeListMixin[AttributeT: BaseAttribute]:
+    """
+    Mixin to enable filtering of attributes.
+    """
+
     _value_name: str
     """
     Name of attribute containing the value, i.e. "value" or "target".
     """
 
-    def __contains__(self, obj: Any) -> bool:
+    def __contains__(self, obj: object) -> bool:
         if isinstance(obj, str):
             return self.get(obj) is not None
-        return super().__contains__(obj)
+        # provided by cooperating class via MRO
+        return super().__contains__(obj)  # type: ignore
 
     def get(self, name: str) -> AttributeT | None:
         """
@@ -115,13 +121,17 @@ class AttributeListMixin[AttributeT: BaseAttribute]:
         """
         ...
 
-    @abstractmethod
     def _create_attr(self, name: str) -> AttributeT:
         """
         Overridden by subclass to create an attribute of the respective type, already
         bound to this note.
+
+        :raises NotImplementedError: If this subclass is a read-only interface
         """
-        ...
+        _ = name
+        raise NotImplementedError(
+            f"{type(self).__name__} is read-only and does not support _create_attr"
+        )
 
 
 class BaseFilteredAttributes[AttributeT: BaseAttribute](AttributeListMixin[AttributeT]):
@@ -132,36 +142,9 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](AttributeListMixin[Attri
 
     _filter_cls: type[AttributeT]
 
-    def __init_subclass__(cls: type[BaseFilteredAttributes]):
-        """
-        Set _filter_cls based on the type parameter.
-        """
-
-        def get_filter_cls() -> type[AttributeT] | None:
-            for base in cls.__orig_bases__:
-                origin = get_origin(base)
-
-                if origin is None:
-                    continue
-
-                assert issubclass(origin, BaseFilteredAttributes)
-
-                args = get_args(base)
-                assert len(args) > 0
-
-                for arg in args:
-                    if isinstance(arg, TypeVar):
-                        # have a TypeVar, look up its bound
-                        if issubclass(arg.__bound__, BaseAttribute):
-                            return arg.__bound__
-
-                    elif issubclass(arg, BaseAttribute):
-                        return arg
-
-        filter_cls = get_filter_cls()
-        assert filter_cls is not None
-
-        cls._filter_cls = filter_cls
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_cls = extract_arg(type(self), AttributeListMixin, "AttributeT")
 
     def __iter__(self) -> Iterator[AttributeT]:
         return iter(self._attr_list)
@@ -178,21 +161,22 @@ class BaseFilteredAttributes[AttributeT: BaseAttribute](AttributeListMixin[Attri
     def __getitem__(self, i: int | slice) -> AttributeT | list[AttributeT]:
         return self._attr_list[i]
 
-    def _filter_list(self, attrs: list[BaseAttribute]) -> list[AttributeT]:
+    def _filter_list(self, attrs: Iterable[BaseAttribute]) -> list[AttributeT]:
         return [a for a in attrs if isinstance(a, self._filter_cls)]
 
 
 class BaseDerivedFilteredAttributes[AttributeT: BaseAttribute](
     BaseFilteredAttributes[AttributeT]
 ):
-    _note_obj: Note
+    _note: Note
 
     def __init__(self, note: Note):
-        self._note_obj = note
+        super().__init__()
+        self._note = note
 
     @property
     def _note_getter(self) -> Note:
-        return self._note_obj
+        return self._note
 
 
 class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
@@ -201,16 +185,26 @@ class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
 ):
     @property
     def _attr_list(self) -> list[AttributeT]:
-        return self._filter_list(list(self._note_getter.attributes.owned))
+        return self._filter_list(self._note_getter.attributes.owned)
 
-    def __setitem__(self, i: int, val: AttributeT):
-        self._note_getter.attributes.owned[i] = val
+    @overload
+    def __setitem__(self, index: int, value: AttributeT) -> None: ...
+    @overload
+    def __setitem__(self, index: slice, value: Iterable[AttributeT]) -> None: ...
+    def __setitem__(
+        self, index: int | slice, value: AttributeT | Iterable[AttributeT]
+    ) -> None:
+        self._note_getter.attributes.owned[index] = value  # type: ignore[index]
 
-    def __delitem__(self, i: int):
-        del self._note_getter.attributes.owned[i]
+    @overload
+    def __delitem__(self, index: int) -> None: ...
+    @overload
+    def __delitem__(self, index: slice) -> None: ...
+    def __delitem__(self, index: int | slice) -> None:
+        del self._note_getter.attributes.owned[index]
 
-    def insert(self, i: int, val: AttributeT):
-        self._note_getter.attributes.owned.insert(i, val)
+    def insert(self, index: int, value: AttributeT) -> None:
+        self._note_getter.attributes.owned.insert(index, value)
 
 
 class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
@@ -219,7 +213,7 @@ class BaseInheritedFilteredAttributes[AttributeT: BaseAttribute](
 ):
     @property
     def _attr_list(self) -> list[AttributeT]:
-        return self._filter_list(list(self._note_getter.attributes.inherited))
+        return self._filter_list(self._note_getter.attributes.inherited)
 
 
 class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
@@ -228,10 +222,12 @@ class BaseCombinedFilteredAttributes[AttributeT: BaseAttribute](
     @property
     def _attr_list(self) -> list[AttributeT]:
         return self._filter_list(
-            list(self._note_getter.attributes.owned)
-            + list(self._note_getter.attributes.inherited)
+            itertools.chain(
+                self._note_getter.attributes.owned,
+                self._note_getter.attributes.inherited,
+            )
         )
 
     @property
     def _writeable_attr_list(self) -> list[AttributeT]:
-        return self._filter_list(list(self._note_getter.attributes.owned))
+        return self._filter_list(self._note_getter.attributes.owned)

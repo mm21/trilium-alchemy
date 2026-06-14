@@ -53,7 +53,7 @@ def test_relation_update(session: Session, note: Note, relation: Relation):
     assert relation._is_clean
 
     assert relation.target is not None
-    assert relation._model.get_field("value") == "root"
+    assert relation._model.get_field("value", str) == "root"
 
     # change target to note which owns this relation
     relation.target = note
@@ -104,7 +104,7 @@ def test_relation_update_target_new(session: Session, relation: Relation):
     assert relation._is_dirty
 
     # value (target note id) should be None as target has no note_id
-    assert not relation._model.get_field("value")
+    assert relation._model.get_field("value", str, allow_none=True) is None
 
     relation.target = root
     assert relation._is_clean
@@ -120,7 +120,7 @@ def test_relation_update_target_new(session: Session, relation: Relation):
 
     assert relation.target is note_new
     assert note_new.note_id is not None
-    assert relation._model.get_field("value") == note_new.note_id
+    assert relation._model.get_field("value", str) == note_new.note_id
 
     # cleanup
     note_new.delete()
@@ -139,8 +139,9 @@ def test_label_delete(session: Session, label: Label):
 
     label.flush()
     assert label._is_clean
+    assert label.attribute_id
 
-    assert attribute_exists(session.api, label.attribute_id) is False
+    assert not attribute_exists(session.api, label.attribute_id)
 
 
 @mark.relation("relation1", "root")
@@ -155,6 +156,7 @@ def test_relation_delete(session: Session, relation: Relation):
 
     relation.flush()
     assert relation._is_clean
+    assert relation.attribute_id
 
     assert attribute_exists(session.api, relation.attribute_id) is False
 
@@ -255,31 +257,39 @@ def test_list_update(session: Session, note: Note):
     """
     assert len(note.attributes.owned) == 2
 
-    label = note.attributes.owned[0]
-    assert label._is_clean
+    label1 = note.attributes.owned[0]
+    assert isinstance(label1, Label)
+    assert label1._is_clean
 
-    relation = note.attributes.owned[1]
-    assert relation._is_clean
+    relation1 = note.attributes.owned[1]
+    assert isinstance(relation1, Relation)
+    assert relation1._is_clean
 
-    label_modified_before = label.utc_date_modified
-    relation_modified_before = relation.utc_date_modified
+    label_modified_before = label1.utc_date_modified
+    assert label_modified_before
 
-    label.value = "value2"
-    assert label._is_update
+    relation_modified_before = relation1.utc_date_modified
+    assert relation_modified_before
 
-    relation.target = note
-    assert relation._is_update
+    label1.value = "value2"
+    assert label1._is_update
+
+    relation1.target = note
+    assert relation1._is_update
 
     session.flush()
 
-    assert label._is_clean
-    assert relation._is_clean
+    assert label1._is_clean
+    assert relation1._is_clean
 
-    assert label.value == "value2"
-    assert relation.target is note
+    assert label1.value == "value2"
+    assert relation1.target is note
 
-    label_modified_after = label.utc_date_modified
-    relation_modified_after = relation.utc_date_modified
+    label_modified_after = label1.utc_date_modified
+    assert label_modified_after
+
+    relation_modified_after = relation1.utc_date_modified
+    assert relation_modified_after
 
     assert label_modified_after > label_modified_before
     assert relation_modified_after > relation_modified_before

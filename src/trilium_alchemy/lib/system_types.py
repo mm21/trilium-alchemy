@@ -177,7 +177,7 @@ class BaseSystemNote(BaseDeclarativeNote):
                 if is_inherited(cls, attr):
                     continue
 
-                attr_list = cast(list[Note] | None, getattr(cls, attr))
+                attr_list = cast(list[type[Note]] | None, getattr(cls, attr))
 
                 if attr_list is not None:
                     # validate

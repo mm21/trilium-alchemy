@@ -26,9 +26,9 @@ class Relation(BaseAttribute):
     {ref}`working-with-attributes` for details.
     """
 
-    _attribute_type: str = "relation"
+    _attribute_type = "relation"
 
-    _target = WriteThroughDescriptor("_target_obj", "note_id", "value")
+    _target = WriteThroughDescriptor["Note"]("_target_obj", "note_id", "value")
     _target_obj: Note | None = None
 
     def __init__(
@@ -46,7 +46,7 @@ class Relation(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-        model_backing = kwargs.get("_model_backing")
+        backing_model = kwargs.get("_model_backing")
 
         super().__init__(
             name,
@@ -56,7 +56,7 @@ class Relation(BaseAttribute):
         )
 
         # set target if provided and not getting from database
-        if model_backing is None and target is not None:
+        if backing_model is None and target is not None:
             self.target = target
 
     @property
@@ -101,6 +101,8 @@ class Relation(BaseAttribute):
     def _flush_check(self):
         from ..note.note import Note
 
+        super()._flush_check()
+
         _assert_validate(
             self._target_obj is not None, f"Relation {self} has no target note"
         )
@@ -119,10 +121,11 @@ class Relation(BaseAttribute):
         target_note_id = self._target_obj.note_id
         assert target_note_id is not None
 
-        if not self._model.get_field("value"):
+        value = self._model.get_field("value", str, allow_none=True)
+        if not value:
             self._model.set_field("value", target_note_id)
         else:
-            assert self._model.get_field("value") == target_note_id
+            assert value == target_note_id
 
     @property
     def _dependencies(self) -> set[BaseEntity]:

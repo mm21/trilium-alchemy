@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from graphlib import TopologicalSorter
-from typing import Any, Generator, Self, cast, overload
+from typing import Any, Generator, Self, Sequence, cast, overload
 
 from pydantic import BaseModel
 from trilium_client.exceptions import ApiException, NotFoundException
@@ -12,7 +12,6 @@ from ..exceptions import *
 from ..session import Session, SessionContainer, normalize_session
 from .model import (
     BaseEntityModel,
-    FieldDescriptor,
     ModelContainer,
     WriteOnceDescriptor,
     WriteThroughDescriptor,
@@ -23,7 +22,6 @@ __all__ = [
     "BaseEntity",
     "State",
     "EntityIdDescriptor",
-    "FieldDescriptor",
     "WriteThroughDescriptor",
     "WriteOnceDescriptor",
 ]
@@ -34,7 +32,9 @@ __rollup__ = [
 ]
 
 
-class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer):
+class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
+    ABC, SessionContainer, ModelContainer
+):
     """
     Base class for Trilium entities.
 
@@ -51,8 +51,10 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
     _state: State
 
     # type used to create _model
+    # MTODO: abstract property
     _model_cls: type[ModelT]
 
+    # MTODO: abstract property
     _force_position_cleanup: bool = False
 
     def __new__(
@@ -62,7 +64,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         # session, or None to use default session
         session: Session | None = None,
         # backing model, if already loaded
-        model_backing: ModelT | None = None,
+        backing_model: ModelT | None = None,
         # whether entity is being created (otherwise inferred from whether
         # entity_id provided)
         create: bool | None = None,
@@ -85,7 +87,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
                 entity.__class__ = cls
 
             # return cached object
-            return entity
+            return cast(Self, entity)
         # proceed with creation of new object
         return super().__new__(cls)
 
@@ -94,7 +96,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         *,
         entity_id: str | None = None,
         session: Session | None = None,
-        model_backing: ModelT | None = None,
+        backing_model: ModelT | None = None,
         create: bool | None = None,
     ):
         session = normalize_session(session)
@@ -106,7 +108,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
                 self._session is session
             ), f"Attempt to associate new session {session} with entity having existing session {self._session}"
 
-            self._model.setup_check_init(model_backing)
+            self._model.setup_check_init(backing_model)
             return
 
         # set early since if this is a declarative note, it may create children
@@ -128,25 +130,13 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         self._init()
 
         # setup model if needed
-        self._model.setup_check_init(model_backing, create)
+        self._model.setup_check_init(backing_model, create)
 
     def __str__(self):
         return self.str_short
 
     def __repr__(self):
         return str(self)
-
-    @classmethod
-    @abstractmethod
-    def _from_id(self, entity_id: str, session: Session = None):
-        """
-        Instantiate this entity from an id.
-        """
-        ...
-
-    @classmethod
-    @abstractmethod
-    def _from_model(self, model: BaseModel): ...
 
     @property
     def state(self) -> State:
@@ -199,22 +189,6 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         return []
 
     @property
-    @abstractmethod
-    def _str_short(self):
-        """
-        Implementation of str_short so as to keep it next to str_summary in docs.
-        """
-        ...
-
-    @property
-    @abstractmethod
-    def _str_safe(self):
-        """
-        Return string for debugging and don't invoke model setup.
-        """
-        ...
-
-    @property
     def _is_clean(self) -> bool:
         return self._state is State.CLEAN
 
@@ -236,7 +210,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
 
     @property
     def _is_abandoned(self) -> bool:
-        return self._state in {State.CLEAN, State.DELETE} and self._model._nexists
+        return self._state in {State.CLEAN, State.DELETE} and self._model.nexists
 
     @property
     def _is_orphan(self) -> bool:
@@ -254,7 +228,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
 
         Upon next access, data will be fetched from Trilium.
         """
-        for entity in [self] + self._associated_entities:
+        for entity in [self] + list(self._associated_entities):
             entity._model.teardown()
             if entity._is_dirty:
                 entity._set_clean()
@@ -280,7 +254,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         self._model.setup_check()
         self._set_dirty(State.DELETE)
 
-    def _set_attrs(self, **kwargs):
+    def _set_attrs(self, **kwargs: Any):
         for attr, val in kwargs.items():
             if val is not None:
                 # set attribute on self
@@ -298,12 +272,12 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         else:
             assert self._entity_id == entity_id
 
-    def _refresh_model(self, model: BaseModel):
+    def _refresh_model(self, model: EtapiModelT):
         """
         Discard current model and update with new one.
         """
         self.invalidate()
-        self._model.setup(model_backing=model, create=False)
+        self._model.setup(model=model, create=False)
 
     def _flush(self, sorter: TopologicalSorter):
         """
@@ -311,7 +285,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         """
         self.session._logger.debug(f"Flushing: {self.str_summary}")
 
-        model_new: BaseModel | None = None
+        new_model: EtapiModelT | None = None
         gen: Generator | None = None
 
         assert self._is_dirty
@@ -332,7 +306,7 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
                     self._state in {State.CREATE, State.DELETE}
                     or self._model.fields_changed
                 ):
-                    model_new, gen = self._model.flush(sorter)
+                    new_model, gen = self._model.flush(sorter)
             except (NotFoundException, ApiException) as e:
                 self.session._logger.warning(
                     f"Flush failed, likely implicitly deleted by another operation: {self.str_summary} ({type(e).__name__})"
@@ -340,14 +314,14 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
             else:
                 if self._state is not State.DELETE:
                     # get latest model from extensions if applicable
-                    model_new = self._model.flush_extensions() or model_new
+                    new_model = self._model.flush_extensions() or new_model
 
         # mark as clean
         self._set_clean()
 
         # perform setup if we got a new model
-        if model_new is not None:
-            self._model.setup(model_new)
+        if new_model is not None:
+            self._model.setup(new_model)
 
         # continue flush sequence, if needed by subclass
         if gen is not None:
@@ -416,37 +390,33 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
 
             self._state = state
 
-    # --------------------------------------------------------------------------
-    # To be implemented by subclass
-    # --------------------------------------------------------------------------
-
-    def _init(self):
-        """
-        Register model extensions or any other init needed before model setup.
-        """
-        ...
-
-    def _setup(self, model: ModelT | None):
-        """
-        Populate fields based on model retrieved from database.
-        """
-        ...
-
+    @property
     @abstractmethod
-    def _flush_check(self):
+    def _str_short(self) -> str:
         """
-        Check if this object is in a valid state to be committed to database.
-
-        Upon invalid state, should raise AssertionError with useful description of
-        problem.
+        Implementation of str_short so as to keep it next to str_summary in docs.
         """
         ...
 
-    def _flush_prep(self):
+    @property
+    @abstractmethod
+    def _str_safe(self) -> str:
         """
-        Propagate any values to fields if needed before flush.
+        Return string for debugging and don't invoke model setup.
         """
         ...
+
+    @classmethod
+    @abstractmethod
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
+        """
+        Instantiate this entity from an id.
+        """
+        ...
+
+    @classmethod
+    @abstractmethod
+    def _from_model(cls, model: EtapiModelT) -> Self: ...
 
     @property
     @abstractmethod
@@ -457,25 +427,65 @@ class BaseEntity[ModelT: BaseEntityModel](ABC, SessionContainer, ModelContainer)
         ...
 
     @property
-    def _associated_entities(self) -> list[BaseEntity]:
+    @abstractmethod
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         """
         Return entities to be refreshed/cleaned up along with this one.
         """
-        return []
+        ...
+
+    @abstractmethod
+    def _init(self):
+        """
+        Register model extensions or any other init needed before model setup.
+        """
+        ...
+
+    @abstractmethod
+    def _setup(self, model: EtapiModelT):
+        """
+        Populate fields based on model retrieved from database.
+        """
+        ...
+
+    @abstractmethod
+    def _flush_check(self):
+        """
+        Check if this object is in a valid state to be committed to database.
+
+        Upon invalid state, should raise _ValidationError with useful description of
+        problem.
+        """
+        ...
+
+    @abstractmethod
+    def _flush_prep(self):
+        """
+        Propagate any values to fields if needed before flush.
+        """
+        ...
 
 
-class PositionMixin:
+class PositionMixin(ABC):
     """
     Mixin to indicate that an Entity subclass has a position field.
     """
 
-    _position: int
+    @property
+    @abstractmethod
+    def _position(self) -> int: ...
+
+    @_position.setter
+    @abstractmethod
+    def _position(self, val: int): ...
 
 
-# TODO: this is better suited as an intersection type, not yet supported
+# NOTE: this is better suited as an intersection type, not yet supported
 # - https://github.com/python/typing/issues/213
 # - https://github.com/CarliJoy/intersection_examples/issues/8
-class OrderedEntity[ModelT: BaseEntityModel](BaseEntity[ModelT], PositionMixin):
+class OrderedEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
+    BaseEntity[ModelT, EtapiModelT], PositionMixin
+):
     pass
 
 
@@ -487,40 +497,22 @@ class EntityIdDescriptor:
     """
 
     @overload
-    def __get__(self, ent: None, objtype: None) -> EntityIdDescriptor: ...
-
+    def __get__(self, obj: None, objtype: type) -> Self: ...
     @overload
-    def __get__(self, ent: BaseEntity, objtype: type[BaseEntity]) -> str: ...
-
-    def __get__(
-        self,
-        ent: BaseEntity | None,
-        objtype: type[BaseEntity] | None = None,
-    ) -> EntityIdDescriptor | str:
-        if ent is None:
+    def __get__(self, obj: BaseEntity, objtype: type) -> str: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | str:
+        _ = objtype
+        if obj is None:
             return self
-        return cast(str, ent._entity_id)
+        return cast(str, obj._entity_id)
 
-    def __set__(self, ent: BaseEntity, val: Any):
-        raise ReadOnlyError("_entity_id", ent)
+    def __set__(self, obj: BaseEntity, val: Any):
+        _ = val
+        raise ReadOnlyError("_entity_id", obj)
 
 
-def normalize_entities[CollectionT: Iterable](
-    entities: BaseEntity | tuple | Iterable[BaseEntity | tuple],
-    collection_cls: type[CollectionT] = list,
-) -> CollectionT:
+def normalize_entities[T: BaseEntity](entities: T | Iterable[T]) -> list[T]:
     """
     Take an entity or iterable of entities and return an iterable.
-
-    Also supports tuples, e.g. (child, "prefix")
     """
-    if (
-        isinstance(entities, Iterable)
-        and not isinstance(entities, tuple)
-        and not isinstance(entities, BaseEntity)
-    ):
-        # have iterable
-        return collection_cls(entities)
-
-    # have single entity
-    return collection_cls([entities])
+    return [entities] if isinstance(entities, BaseEntity) else list(entities)

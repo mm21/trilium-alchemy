@@ -44,6 +44,8 @@ if not "TRILIUM_TOKEN" in os.environ and not "TRILIUM_PASSWORD" in os.environ:
     )
 
 host = os.environ.get("TRILIUM_HOST")
+assert host
+
 token = os.environ.get("TRILIUM_TOKEN", None)
 password = os.environ.get("TRILIUM_PASSWORD", None)
 

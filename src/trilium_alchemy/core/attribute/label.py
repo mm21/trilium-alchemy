@@ -16,7 +16,7 @@ class Label(BaseAttribute):
     with-attributes` for details.
     """
 
-    _attribute_type: str = "label"
+    _attribute_type = "label"
 
     def __init__(
         self,
@@ -33,7 +33,7 @@ class Label(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-        model_backing = kwargs.get("_model_backing")
+        backing_model = kwargs.get("_model_backing")
 
         super().__init__(
             name,
@@ -43,7 +43,7 @@ class Label(BaseAttribute):
         )
 
         # set value if not getting from database
-        if model_backing is None:
+        if backing_model is None:
             self.value = value
 
     @property
@@ -51,9 +51,7 @@ class Label(BaseAttribute):
         """
         Getter/setter for label value, which may be an empty string.
         """
-        value = self._model.get_field("value")
-        assert isinstance(value, str)
-        return value
+        return self._model.get_field("value", str, allow_none=True) or ""
 
     @value.setter
     def value(self, val: str):

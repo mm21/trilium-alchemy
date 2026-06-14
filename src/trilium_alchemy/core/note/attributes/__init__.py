@@ -5,5 +5,5 @@ from .attributes import *  # noqa
 from .labels import *  # noqa
 from .relations import *  # noqa
 
-__all__ = rollup(attributes, labels, relations)
+__all__ = rollup(attributes, labels, relations)  # type: ignore
 __canonical_syms__ = __all__

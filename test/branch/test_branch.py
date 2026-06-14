@@ -9,7 +9,7 @@ Test basic CRUD capability of branches.
 """
 
 
-def test_update(session: Session, branch: Branch):
+def test_update(session: Session, branch: Branch, note: Note):
     assert branch._is_clean
 
     branch.prefix = "prefix1"
@@ -54,15 +54,16 @@ def test_update(session: Session, branch: Branch):
     assert branch.position == 20
 
     # ensure can't update parent/child
-    with raises(AssertionError):
-        branch.parent = None
+    with raises(ValueError):
+        branch.parent = note
 
-    with raises(AssertionError):
-        branch.child = None
+    with raises(ValueError):
+        branch.parent = note
 
 
 def test_delete(session: Session, branch: Branch):
     assert branch._is_clean
+    assert branch.branch_id
 
     branch.delete()
     assert branch._is_delete
@@ -70,7 +71,7 @@ def test_delete(session: Session, branch: Branch):
     branch.flush()
     assert branch._is_clean
 
-    assert branch_exists(session.api, branch.branch_id) is False
+    assert not branch_exists(session.api, branch.branch_id)
 
 
 # Create branch and add to note.branches.parents

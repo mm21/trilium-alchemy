@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
 
 from click import BadParameter, Choice, ClickException, MissingParameter
 from typer import Argument, Context, Option
@@ -106,7 +106,9 @@ def export(
     tree_context = _get_tree_context(ctx)
 
     tree_context.target_note.export_zip(
-        dest, export_format=export_format, overwrite=overwrite
+        dest,
+        export_format=cast(Literal["markdown", "html"], export_format),
+        overwrite=overwrite,
     )
 
     logger.info(

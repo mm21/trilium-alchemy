@@ -33,13 +33,14 @@ class MystRenderer(RendererBase):
             if item is None:
                 raise ValueError(f"Root item {package} does not exist")
 
-            symbol = item["symbol_obj"]
+            symbol = item["symbol_obj"]  # type: ignore[typeddict-item]
             self._symbol_map = symbol.symbol_map
 
         return self._symbol_map
 
     def render_item(self, full_name: str, **kwargs) -> t.Iterable[str]:
         item = self.get_item(full_name)
+        assert item
 
         if full_name in self.symbol_map.sym_map:
             symbol = self.symbol_map.sym_map[full_name]
@@ -70,7 +71,7 @@ class MystRenderer(RendererBase):
 
         yield from type_map[type_](item, symbol, **kwargs)
 
-    def generate_summary(
+    def generate_summary(  # type: ignore[override]
         self,
         symbols: list[Symbol],
         name_map: dict[str, str] | None = None,
@@ -83,6 +84,8 @@ class MystRenderer(RendererBase):
         yield ":align: left"
         yield ""
         for symbol in symbols:
+            assert symbol.db_item
+
             # TODO get signature (for functions, etc), plus sphinx also runs rst.escape
 
             full_name = symbol.canonical.virt_path
@@ -161,7 +164,7 @@ class MystRenderer(RendererBase):
                 index_symbols = [
                     symbol
                     for symbol in module.symbols
-                    if symbol.db_item["type"] in types
+                    if symbol.db_item and symbol.db_item["type"] in types
                 ]
 
                 if index_symbols:
@@ -224,8 +227,9 @@ class MystRenderer(RendererBase):
         """
         short_name = item["full_name"].split(".")[-1]
         show_annotations = self.show_annotations(item)
+        assert "args" in item
         sig = f"{short_name}({self.format_args(item['args'], show_annotations)})"
-        if show_annotations and item.get("return_annotation"):
+        if show_annotations and "return_annotation" in item:
             sig += f" -> {self.format_annotation(item['return_annotation'])}"
 
         yield f"````{{py:function}} {sig}"
@@ -263,9 +267,9 @@ class MystRenderer(RendererBase):
         else:
             subclasses = []
             for base in bases:
-                item = self.get_item(base)
-                if item:
-                    subclasses.append(item)
+                base_item = self.get_item(base)
+                if base_item:
+                    subclasses.append(base_item)
             return any(
                 self._check_subclass(subclass, cls_name) for subclass in subclasses
             )
@@ -384,7 +388,7 @@ class MystRenderer(RendererBase):
         for prop in ("abstractmethod", "classmethod"):
             if prop in item.get("properties", []):
                 yield f":{prop}:"
-        if item.get("return_annotation"):
+        if "return_annotation" in item:
             yield f":type: {self.format_annotation(item['return_annotation'])}"
         yield ""
 
@@ -394,15 +398,16 @@ class MystRenderer(RendererBase):
         yield ""
 
     def render_method(
-        self, item: ItemData, symbol: Symbol | None, **kwargs
+        self, item: ItemData, symbol: Symbol, **kwargs
     ) -> t.Iterable[str]:
         """
         Create the content for a method.
         """
+        assert "args" in item
         short_name = item["full_name"].split(".")[-1]
         show_annotations = self.show_annotations(item)
         sig = f"{short_name}({self.format_args(item['args'], show_annotations, ignore_self='self')})"
-        if show_annotations and item.get("return_annotation"):
+        if show_annotations and "return_annotation" in item:
             sig += f" -> {self.format_annotation(item['return_annotation'])}"
 
         yield f"````{{py:method}} {sig}"
@@ -447,7 +452,7 @@ class MystRenderer(RendererBase):
         for prop in ("abstractmethod", "classmethod"):
             if prop in item.get("properties", []):
                 yield f":{prop}:"
-        if item.get("annotation"):
+        if "annotation" in item:
             yield f":type: {self.format_annotation(item['annotation'])}"
 
         # only get value if symbol has a parent (e.g. TypeVar does not)
@@ -462,14 +467,13 @@ class MystRenderer(RendererBase):
         yield "````"
         yield ""
 
-    def render_inherited(self, item: ItemData, parent: Symbol = None, **kwargs):
+    def render_inherited(self, item: ItemData, parent: Symbol | None = None, **kwargs):
         lines = []
 
         # astroid shows collections.abc as _collections_abc, so get
         # "inherited from" manually from the class itself
-        if item.get("inherited", None):
+        if item.get("inherited", None) and parent:
             short_name = item["full_name"].split(".")[-1]
-
             ancestor = parent.get_ancestor(short_name)
 
             if symbol := self.symbol_map.lookup(ancestor):
@@ -561,7 +565,7 @@ class MystRenderer(RendererBase):
 
         return lines
 
-    def render_info(self, item: ItemData = None, symbol: Symbol = None, **kwargs):
+    def render_info(self, item: ItemData, symbol: Symbol, **kwargs):
         lines = []
         lines += self.render_aliases(symbol)
         lines += self.render_inherited(item, **kwargs)
@@ -570,7 +574,7 @@ class MystRenderer(RendererBase):
 
     def render_aliases(self, symbol: Symbol):
         lines = []
-        if symbol and len(symbol.aliases):
+        if symbol and symbol.aliases:
             lines += [
                 "```{rubric} Aliases:",
                 "```",

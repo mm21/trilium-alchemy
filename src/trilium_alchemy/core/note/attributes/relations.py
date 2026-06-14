@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ...attribute import relation
+from ...attribute.relation import Relation
 from ._filters import (
     AttributeListMixin,
     BaseCombinedFilteredAttributes,
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class BaseReadableRelationMixin(AttributeListMixin[relation.Relation]):
+class BaseReadableRelationMixin(AttributeListMixin[Relation]):
     def get_target(self, name: str) -> Note | None:
         """
         Get target of first relation with provided name.
@@ -57,22 +57,20 @@ class BaseWriteableRelationMixin(BaseReadableRelationMixin):
         """
         self._append_value(name, val, inheritable)
 
-    def _create_attr(self, name: str) -> relation.Relation:
-        attr = relation.Relation(name, session=self._note_getter.session)
+    def _create_attr(self, name: str) -> Relation:
+        attr = Relation(name, session=self._note_getter.session)
         self._note_getter.attributes.owned.append(attr)
         return attr
 
 
-class OwnedRelations(
-    BaseOwnedFilteredAttributes[relation.Relation], BaseWriteableRelationMixin
-):
+class OwnedRelations(BaseOwnedFilteredAttributes[Relation], BaseWriteableRelationMixin):
     """
     Accessor for owned relations.
     """
 
 
 class InheritedRelations(
-    BaseInheritedFilteredAttributes[relation.Relation],
+    BaseInheritedFilteredAttributes[Relation],
     BaseReadableRelationMixin,
 ):
     """
@@ -81,7 +79,7 @@ class InheritedRelations(
 
 
 class Relations(
-    BaseCombinedFilteredAttributes[relation.Relation],
+    BaseCombinedFilteredAttributes[Relation],
     BaseWriteableRelationMixin,
 ):
     """
@@ -93,7 +91,6 @@ class Relations(
 
     def __init__(self, note: Note):
         super().__init__(note)
-
         self._owned = OwnedRelations(note)
         self._inherited = InheritedRelations(note)
 

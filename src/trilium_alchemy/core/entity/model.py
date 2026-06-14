@@ -2,23 +2,22 @@ from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from functools import wraps
 from graphlib import TopologicalSorter
-from typing import TYPE_CHECKING, Any, Callable, Generator
+from typing import TYPE_CHECKING, Any, Generator, Literal, Self, overload
 
 from pydantic import BaseModel
+from trilium_client.models.attribute import Attribute as EtapiAttributeModel
+from trilium_client.models.branch import Branch as EtapiBranchModel
+from trilium_client.models.note import Note as EtapiNoteModel
 
-from ..session import Session, SessionType
+from ..session import Session
 from .types import State
 
 if TYPE_CHECKING:
     from .entity import BaseEntity
 
-# TODO: parameterize BaseDriver and BaseEntityModel with BaseModel subclass
-# for this entity
 
-
-class BaseDriver(ABC):
+class BaseDriver[ModelT: BaseModel](ABC):
     """
     Implements interface to backing store for note, either to Trilium itself (through
     ETAPI) or another mechanism like a filesystem.
@@ -32,21 +31,23 @@ class BaseDriver(ABC):
         self.session = entity.session
 
     @abstractmethod
-    def fetch(self) -> BaseModel | None:
+    def fetch(self) -> ModelT | None:
         """
         Retrieve model from backing store, or None if it doesn't exist.
         """
         ...
 
     @abstractmethod
-    def flush_create(self, sorter: TopologicalSorter):
+    def flush_create(
+        self, sorter: TopologicalSorter
+    ) -> ModelT | Generator[ModelT, None, None]:
         """
         Create entity.
         """
         ...
 
     @abstractmethod
-    def flush_update(self, sorter: TopologicalSorter):
+    def flush_update(self, sorter: TopologicalSorter) -> ModelT:
         """
         Update entity.
         """
@@ -60,65 +61,41 @@ class BaseDriver(ABC):
         ...
 
 
-class BaseEntityModel(ABC):
+class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
     """
     Abstraction of data model which is stored as a record in Trilium's database,
     encapsulating both locally modified data and data as received from Trilium.
     """
 
-    # pydantic model used in etapi
-    etapi_model: type[BaseModel]
-
-    # class to interface with ETAPI
-    etapi_driver_cls: type[BaseDriver]
-
-    # class to interface with filesystem
-    file_driver_cls: type[BaseDriver]
-
-    # fields allowed for user update
-    fields_update: list[str]
-
-    # default values of fields
-    fields_default: dict[str, str]
-
     # entity owning this object
     entity: BaseEntity
 
+    # driver to interface with backing store
+    driver: DriverT
+
     # cached data fetched from backing store, or None if not fetched
-    _backing: dict[str, str | int | bool] | None = None
+    backing_data: dict[str, Any] | None = None
 
     # locally modified or created data not yet committed to backing store,
     # or None if not fetched
-    _working: dict[str, str | int | bool] | None = None
+    working_data: dict[str, Any] | None = None
 
     # whether model setup was completed, populating model from server
-    _setup_done: bool = False
+    setup_done: bool = False
 
     # whether object exists in backing store, or None if unknown
     _exists: bool | None = None
 
     # list of stateful extensions registered by subclass
-    _extensions: list[StatefulExtension]
-
-    # driver to interface with backing store
-    _driver: BaseDriver
+    _extensions: list[StatefulExtension[EtapiModelT]]
 
     def __init__(self, entity: BaseEntity):
         self.entity = entity
-        self._extensions = list()
-
-        # select driver based on session type and instantiate
-        driver_map = {
-            SessionType.ETAPI: self.etapi_driver_cls,
-            SessionType.FILE: self.file_driver_cls,
-            # SessionType.VIRTUAL: None (set self._driver as None)
-        }
-        assert entity.session._type in driver_map
-
-        self._driver = driver_map[entity.session._type](entity)
+        self.driver = self.driver_cls(entity)
+        self._extensions = []
 
     def __str__(self):
-        fields = list()
+        fields = []
 
         def get_field_str(value: str | int | bool) -> str:
             return (
@@ -127,21 +104,21 @@ class BaseEntityModel(ABC):
                 else str(value)
             )
 
-        for field in self.fields_update:
-            if self._backing is None:
+        for field in self.update_fields:
+            if self.backing_data is None:
                 if self.entity._is_create:
                     backing = ""
                 else:
                     backing = "?"
             else:
-                backing = f"{get_field_str(self._backing[field])}"
+                backing = f"{get_field_str(self.backing_data[field])}"
 
-            if self._working is None or not self.is_changed:
+            if self.working_data is None or not self.is_changed:
                 working = ""
             else:
                 if (
-                    self._backing is not None
-                    and self._backing[field] == self._working[field]
+                    self.backing_data is not None
+                    and self.backing_data[field] == self.working_data[field]
                 ):
                     working = ""
                 else:
@@ -150,7 +127,7 @@ class BaseEntityModel(ABC):
                     else:
                         arrow = "->"
 
-                    working = f"{arrow}{get_field_str(self._working[field])}"
+                    working = f"{arrow}{get_field_str(self.working_data[field])}"
 
             fields.append(f"{field}={backing}{working}")
 
@@ -160,15 +137,61 @@ class BaseEntityModel(ABC):
 
     @property
     def exists(self) -> bool:
+        """
+        Whether the model for certain exists.
+        """
         return bool(self._exists)
 
     @property
-    def _nexists(self) -> bool:
-        return self._exists is False and self._setup_done
+    def nexists(self) -> bool:
+        """
+        Whether the model for certain does not exist (setup is additionally done).
+        """
+        return self._exists is False and self.setup_done
+
+    @property
+    @abstractmethod
+    def etapi_model(self) -> type[EtapiModelT]:
+        """
+        Pydantic model used in etapi.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def driver_cls(self) -> type[DriverT]:
+        """
+        Class to interface with ETAPI.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def entity_id_field(self) -> str:
+        """
+        Field used to store entity id.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def update_fields(self) -> list[str]:
+        """
+        Fields allowed for user update.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def default_fields(self) -> dict[str, Any]:
+        """
+        Default values of fields.
+        """
+        ...
 
     def flush(
         self, sorter: TopologicalSorter
-    ) -> tuple[BaseModel | None, Generator | None]:
+    ) -> tuple[EtapiModelT | None, Generator | None]:
         """
         Flush model if any fields are changed.
         """
@@ -178,43 +201,43 @@ class BaseEntityModel(ABC):
 
         # get flush method based on state
         func = {
-            State.CREATE: self._driver.flush_create,
-            State.UPDATE: self._driver.flush_update,
-            State.DELETE: self._driver.flush_delete,
+            State.CREATE: self.driver.flush_create,
+            State.UPDATE: self.driver.flush_update,
+            State.DELETE: self.driver.flush_delete,
         }[self.entity._state]
 
         # invoke flush method
-        model_new: BaseModel | None
+        new_model: EtapiModelT | None
         if inspect.isgeneratorfunction(func):
             # generator function: yields model, then performs extra processing
             gen = func(sorter)
-            model_new = next(gen)
+            new_model = next(gen)
         else:
             # not generator function: just returns model
             gen = None
-            model_new = func(sorter)
+            new_model = func(sorter)
 
         # ensure we got the updated model
         if self.entity._state in [State.CREATE, State.UPDATE]:
-            assert model_new is not None
+            assert new_model is not None
         else:
-            assert model_new is None
+            assert new_model is None
 
         if self.entity._state is State.CREATE:
             # set entity id if needed
             if self.entity._entity_id is None:
-                entity_id = getattr(model_new, self.field_entity_id)
+                entity_id = getattr(new_model, self.entity_id_field)
                 self.entity._set_entity_id(entity_id)
 
-        return (model_new, gen)
+        return (new_model, gen)
 
     @property
     def fields_changed(self) -> bool:
-        if self._working is None or self._backing is None:
+        if self.working_data is None or self.backing_data is None:
             return False
         else:
-            backing = {k: self._backing[k] for k in self.fields_update}
-            return backing != self._working
+            backing = {k: self.backing_data[k] for k in self.update_fields}
+            return backing != self.working_data
 
     @property
     def extension_changed(self) -> bool:
@@ -225,27 +248,29 @@ class BaseEntityModel(ABC):
         return self.entity._is_create or self.fields_changed or self.extension_changed
 
     def is_field_changed(self, field) -> bool:
-        if self._working is None or self._backing is None:
+        if self.working_data is None or self.backing_data is None:
             return False
 
-        return self._backing[field] != self._working[field]
+        return self.backing_data[field] != self.working_data[field]
 
-    def get_fields_changed(self) -> dict[str, Any]:
+    def get_changed_fields(self) -> dict[str, Any]:
         """
         Return a dict of all fields which are changed.
         """
+        assert self.backing_data
+        assert self.working_data
         fields = dict()
 
-        for field in self.fields_update:
-            if self._backing[field] != self._working[field]:
-                fields[field] = self._working[field]
+        for field in self.update_fields:
+            if self.backing_data[field] != self.working_data[field]:
+                fields[field] = self.working_data[field]
 
         return fields
 
     def teardown(self):
-        self._backing = None
-        self._working = None
-        self._setup_done = False
+        self.backing_data = None
+        self.working_data = None
+        self.setup_done = False
 
         for ext in self._extensions:
             ext._teardown()
@@ -254,32 +279,28 @@ class BaseEntityModel(ABC):
         """
         Setup model if not already done, prior to get/set access.
         """
-        if self._setup_done is False:
+        if self.setup_done is False:
             self.setup()
 
-    def setup_check_init(self, model: BaseModel, create: bool | None = None):
+    def setup_check_init(self, model: EtapiModelT, create: bool | None = None):
         """
         Setup model if necessary and backing model provided during init (entity already
         retrieved from database).
         """
-        setup = False
+        if create or (model is not None and self.check_newer(model)):
+            self.setup(model=model, create=create)
 
-        if create:
-            setup = True
-        elif model is not None and self.check_newer(model):
-            # no existing model or provided model is newer
-            setup = True
-
-        if setup:
-            self.setup(model_backing=model, create=create)
-
-    def check_newer(self, model: BaseModel) -> bool:
+    def check_newer(self, model: EtapiModelT) -> bool:
+        assert isinstance(
+            model, (EtapiNoteModel, EtapiAttributeModel, EtapiBranchModel)
+        )
+        assert model.utc_date_modified
         return (
-            self._backing is None
-            or model.utc_date_modified > self._backing["utc_date_modified"]
+            self.backing_data is None
+            or model.utc_date_modified > self.backing_data["utc_date_modified"]
         )
 
-    def setup(self, model_backing: BaseModel | None = None, create: bool | None = None):
+    def setup(self, model: EtapiModelT | None = None, create: bool | None = None):
         """
         Populate state from database for this object.
 
@@ -290,96 +311,116 @@ class BaseEntityModel(ABC):
             self._exists = False
 
             # there can't be a backing model if it doesn't exist in db
-            assert model_backing is None
+            assert model is None
         else:
             # attempt to fetch from database if not provided
-            if model_backing is None:
-                model_backing = self._driver.fetch()
+            if model is None:
+                model = self.driver.fetch()
 
-            if model_backing is None:
-                self._backing = None
+            if model is None:
+                self.backing_data = None
 
                 # create is False means expected to exist
                 assert create is None
             else:
-                self._backing = dict(model_backing)
+                self.backing_data = dict(model)
 
             # set exists flag
-            self._exists = self._backing is not None
+            self._exists = self.backing_data is not None
 
         # populate working fields
         if self._exists:
             # reset fields if any; will create on demand if needed
-            self._working = None
+            self.working_data = None
         else:
             # populate new working fields
-            self._working = {f: self._get_default_field(f) for f in self.fields_update}
+            self.working_data = {
+                f: self._get_default_field(f) for f in self.update_fields
+            }
 
             # move to create state
             self.entity._set_dirty(State.CREATE)
 
-        if model_backing is not None:
+        if model is not None:
             # invoke setup callback for entity
-            self.entity._setup(model_backing)
+            self.entity._setup(model)
 
         # set setup_done before extensions are setup; they may refer to state
         # from model (e.g. is_string requires note's type and mime fields)
-        self._setup_done = True
+        self.setup_done = True
 
         if self._extensions is not None:
             # invoke setup callback for extensions
             for ext in self._extensions:
-                ext._setup(model_backing)
+                ext._setup(model)
 
-    # TODO: param check_type: check and return given type
-    def get_field(self, field: str) -> str | int | bool | None:
+    @overload
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: Literal[False] = False
+    ) -> T: ...
+
+    @overload
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: Literal[True]
+    ) -> T | None: ...
+
+    def get_field[T](
+        self, field: str, check_type: type[T], *, allow_none: bool = False
+    ) -> T | None:
         """
         Get field from model, with working state taking precedence over database state.
         """
-        assert field in self._etapi_fields
+        assert field in self.etapi_model.model_fields
+
+        def get_value(data: dict[str, Any]) -> T | None:
+            assert field in data
+            val = data[field]
+            if val is not None or not allow_none:
+                assert isinstance(val, check_type)
+            return val
 
         # perform model setup if not done
         self.setup_check()
 
-        # attempt to get from working model
-        if self._working is not None and field in self._working:
-            # get field from working model
-            return self._working[field]
+        # attempt to get value from working model
+        if self.working_data and field in self.working_data:
+            return get_value(self.working_data)
 
         if not self.entity._is_create:
             # backing model should be populated at this point
-            assert self._backing is not None
+            assert self.backing_data
 
-        # get field from backing model
-        if self._backing is not None:
-            return self._backing[field]
+        # attempt to get value from backing model
+        if self.backing_data:
+            return get_value(self.backing_data)
 
         # return None in case data is not available yet (e.g. accessing
         # date created when not created yet)
+        assert allow_none
         return None
 
-    def set_field(self, field: str, value: Any, bypass_validate: bool = False):
+    def set_field(self, field: str, value: Any, *, bypass_validate: bool = False):
         """
         Set field in working model.
         """
         # ensure field is writeable
-        assert field in self.fields_update
+        assert field in self.update_fields
 
         # perform model setup if not done
         self.setup_check()
 
         # check if working model is initialized
-        if self._working is None:
+        if self.working_data is None:
             # backing model should exist: working model populated for create
-            assert self._backing is not None
+            assert self.backing_data is not None
 
             # populate working model with copy of backing model, filtered by
             # fields used for update
-            self._working = {k: self._backing[k] for k in self.fields_update}
+            self.working_data = {k: self.backing_data[k] for k in self.update_fields}
 
         if not bypass_validate:
             # validate fields for setting
-            assert field in self.fields_update
+            assert field in self.update_fields
 
         # handle deleted state
         if self.entity._state is State.DELETE:
@@ -388,12 +429,12 @@ class BaseEntityModel(ABC):
             )
 
         # set field in working model
-        self._working[field] = value
+        self.working_data[field] = value
 
         # set as dirty/clean if needed
         self.entity._check_state()
 
-    def register_extension(self, extension: StatefulExtension):
+    def register_extension(self, extension: StatefulExtension[EtapiModelT]):
         """
         Register extension to receive model updates and handle teardown().
 
@@ -401,31 +442,24 @@ class BaseEntityModel(ABC):
         """
         self._extensions.append(extension)
 
-    def flush_extensions(self) -> BaseModel | None:
+    def flush_extensions(self) -> EtapiModelT | None:
         """
         Flush extensions and return the latest model, if applicable.
         """
-        model_new: BaseModel | None = None
+        new_model: EtapiModelT | None = None
 
         for ext in self._extensions:
             if ext._is_changed:
-                model_new = ext._flush() or model_new
+                new_model = ext._flush() or new_model
 
-        return model_new
+        return new_model
 
     def _get_default_field(self, field: str) -> str:
         """
         Get default field for initializing working model.
         """
-        assert field in self.fields_default, f"{field} not in defaults"
-        return self.fields_default[field]
-
-    @property
-    def _etapi_fields(self) -> set[str]:
-        """
-        Return all fields in pydantic model.
-        """
-        return {k for k in self.etapi_model.model_fields.keys()}
+        assert field in self.default_fields
+        return self.default_fields[field]
 
 
 class ModelContainer:
@@ -433,8 +467,7 @@ class ModelContainer:
     Indicates that subclasses contain a model instance.
     """
 
-    # instance of Model
-    _model: BaseEntityModel = None
+    _model: BaseEntityModel
 
     def __init__(self, model: BaseEntityModel):
         self._model = model
@@ -448,32 +481,30 @@ class Extension(ABC, ModelContainer):
     _entity: BaseEntity
 
     def __init__(self, entity: BaseEntity):
-        ModelContainer.__init__(self, entity._model)
+        super().__init__(entity._model)
         self._entity = entity
 
     @abstractmethod
-    def _setattr(self, val: Any):
+    def _setattr(self, obj: Any):
         """
         Invoked to set data.
         """
         ...
 
 
-class StatefulExtension(Extension):
+class StatefulExtension[EtapiModelT: BaseModel](Extension):
     """
     Extension which has state derived by model.
 
     This state is populated during setup() and cleared during teardown().
     """
 
-    # TODO: driver to handle fetch, flush
-
     def __init__(self, entity: BaseEntity):
         super().__init__(entity)
         entity._model.register_extension(self)
 
     @abstractmethod
-    def _setup(self, model: BaseModel | None):
+    def _setup(self, model: EtapiModelT | None):
         """
         Invoked after model is initially setup, or if a model is refreshed.
         """
@@ -496,91 +527,51 @@ class StatefulExtension(Extension):
         """
         return False
 
-    def _flush(self) -> BaseModel | None:
+    def _flush(self) -> EtapiModelT | None:
         """
         Commit changes to database, returning the latest model if applicable.
         """
         ...
 
 
-def require_setup(func):
-    @wraps(func)
-    def wrapper(self, ent: BaseEntity, objtype=None):
-        ent._model.setup_check()
-        return func(self, ent, objtype)
-
-    return wrapper
-
-
-def require_setup_prop(func):
-    if isinstance(func, property):
-        # if decorating a property, wrap its getter and return a new property
-        getter = require_setup_prop(func.fget)
-        setter = require_setup_prop(func.fset) if func.fset is not None else None
-        return property(getter, setter, func.fdel, func.__doc__)
-
-    @wraps(func)
-    def wrapper(self: BaseEntity, *args, **kwargs):
-        self._model.setup_check()
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
-class FieldDescriptor:
-    """
-    Accessor for a model field, e.g. a {obj}`Note`'s `title` field.
-
-    When written, updates the working state which will be committed to Trilium upon
-    flush. When read, returns the working state if set by user, or the state from
-    Trilium if not.
-    """
-
-    _field: str
-
-    def __init__(self, field: str):
-        self._field = field
-
-    def __get__(self, ent: BaseEntity, objtype=None):
-        return ent._model.get_field(self._field)
-
-    def __set__(self, ent: BaseEntity, val: Any):
-        ent._model.set_field(self._field, val)
-
-
-class WriteThroughDescriptor:
+class WriteThroughDescriptor[T]:
     """
     Accessor for class attribute which immediately populates the underlying model field
     when updated.
     """
 
-    # attribute which holds value
+    # attribute which holds value for reading
     _attr: str
 
-    # attribute of attribute containing value set in model
-    _attr_attr: str
+    # attribute of object which holds value for writing
+    _obj_attr: str
 
     # name of model field to be set
     _field: str
 
-    def __init__(self, attr: str, attr_attr: str, field: str):
+    def __init__(self, attr: str, obj_attr: str, field: str):
         self._attr = attr
-        self._attr_attr = attr_attr
+        self._obj_attr = obj_attr
         self._field = field
 
-    @require_setup
-    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
-        return getattr(ent, self._attr)
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self: ...
+    @overload
+    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
+        _ = objtype
+        if obj is None:
+            return self
+        obj._model.setup_check()
+        return getattr(obj, self._attr)
 
-    def __set__(self, ent: BaseEntity, value: Any):
+    def __set__(self, obj: BaseEntity, value: T):
         assert value is not None
-        # set attr of entity
-        setattr(ent, self._attr, value)
-        # write through to model
-        ent._model.set_field(self._field, getattr(value, self._attr_attr))
+        setattr(obj, self._attr, value)
+        obj._model.set_field(self._field, getattr(value, self._obj_attr))
 
 
-class WriteOnceDescriptor:
+class WriteOnceDescriptor[T]:
     """
     Accessor for field which is only allowed a single value.
 
@@ -592,28 +583,34 @@ class WriteOnceDescriptor:
     # attribute which holds value
     _attr: str
 
-    # callback to invoke after setting value
-    _validator: Callable
+    # name of method to invoke after setting value
+    _validator: str | None
 
-    def __init__(self, attr: str, validator: Callable = None):
+    def __init__(self, attr, *, validator: str | None = None):
         self._attr = attr
         self._validator = validator
 
-    @require_setup
-    def __get__(self, ent: BaseEntity, objtype=None) -> Any:
-        return getattr(ent, self._attr)
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self: ...
+    @overload
+    def __get__(self, obj: BaseEntity, objtype: type) -> T: ...
+    def __get__(self, obj: BaseEntity | None, objtype: type) -> Self | T:
+        _ = objtype
+        if obj is None:
+            return self
+        obj._model.setup_check()
+        return getattr(obj, self._attr)
 
-    def __set__(self, ent: BaseEntity, value: Any):
-        assert value is not None
+    def __set__(self, obj: BaseEntity, value: T):
+        if value is None:
+            raise ValueError(f"Cannot set {self._attr} with value None on {obj}")
 
-        value_current = getattr(ent, self._attr)
+        cur_value = getattr(obj, self._attr)
 
-        if value_current is None:
-            setattr(ent, self._attr, value)
-        else:
-            # make sure value isn't being changed, would be internal error
-            assert value_current == value
+        if cur_value is None:
+            setattr(obj, self._attr, value)
+        elif value != cur_value:
+            raise ValueError(f"New value {value} must equal current value {cur_value}")
 
-        # invoke validator
-        if self._validator:
-            getattr(ent, self._validator)()
+        if validator := self._validator:
+            getattr(obj, validator)()

@@ -8,26 +8,33 @@ from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Generator, Literal, Self, cast
+from typing import IO, AbstractSet, Generator, Literal, Self, Sequence, cast
 
 import requests
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
+from typecraft import is_instance
+from typecraft.validating import TypeValidator, normalize_to_list
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
 from ..entity.entity import BaseEntity, normalize_entities
-from ..entity.model import require_setup_prop
 from ..exceptions import _assert_validate
 from ..session import Session
 from ..utils import base_n_hash
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
-from .branches import Branches, ChildNotes, ParentNotes
+from .branches import (
+    Branches,
+    ChildNotes,
+    ParentNotes,
+    normalize_child_branch,
+    normalize_parent_branch,
+)
 from .content import Content
-from .model import NoteModel
+from .note_model import NoteModel
 
 __all__ = [
     "Note",
@@ -169,7 +176,7 @@ def get_cls(ent: Note | type[Note]) -> type[Note]:
     return cast(type[Note], type(ent))
 
 
-class Note(BaseEntity[NoteModel]):
+class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     """
     Encapsulates a note.
 
@@ -196,7 +203,7 @@ class Note(BaseEntity[NoteModel]):
             cls,
             session=kwargs.get("session"),
             entity_id=note_id,
-            model_backing=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_model_backing"),
         )
 
     # TODO: add:
@@ -234,7 +241,7 @@ class Note(BaseEntity[NoteModel]):
         note_id_seed_final = (
             kwargs.pop("_note_id_seed_final", None) or note_id_seed_final
         )
-        model_backing = kwargs.pop("_model_backing", None)
+        backing_model = kwargs.pop("_model_backing", None)
         force_leaf = kwargs.pop("_force_leaf", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
@@ -245,7 +252,7 @@ class Note(BaseEntity[NoteModel]):
         super().__init__(
             entity_id=note_id,
             session=session,
-            model_backing=model_backing,
+            backing_model=backing_model,
         )
 
         if init_done:
@@ -270,7 +277,7 @@ class Note(BaseEntity[NoteModel]):
 
             return
 
-        def combine_lists[T](*lists: list[T] | None) -> list[T] | None:
+        def combine_iterables[T](*lists: Iterable[T] | None) -> list[T] | None:
             result: list[T] | None = None
             for lst in lists:
                 if lst is not None:
@@ -291,116 +298,124 @@ class Note(BaseEntity[NoteModel]):
             if note_type is None:
                 return None
             elif note_type in NOTE_TYPES_MIME_NA:
-                mime_norm = ""
+                mime_ = ""
             elif note_type in NOTE_TYPES_MIME_FIXED:
-                mime_norm = NOTE_TYPES_MIME_FIXED[note_type]
+                mime_ = NOTE_TYPES_MIME_FIXED[note_type]
             elif mime is not None:
-                mime_norm = mime
+                mime_ = mime
             else:
-                mime_norm = "text/html" if note_type == "text" else None
+                mime_ = "text/html" if note_type == "text" else None
 
             # if passed by user, validate
             if mime is not None:
                 assert (
-                    mime == mime_norm
-                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_norm}'"
+                    mime == mime_
+                ), f"Got invalid mime '{mime}' from user for note '{title}' of type '{note_type}', expected '{mime_}'"
 
-            return mime_norm
+            return mime_
 
         # aggregate fields to set
-        title_set = title or init_container.title
-        note_type_set = note_type or init_container.note_type
-        mime_set = normalize_mime(title_set, note_type_set, mime or init_container.mime)
-        content_set = content or init_container.content
-        attributes_set = combine_lists(attributes, init_container.attributes)
-        parents_set: Iterable[Note | Branch] | None = (
-            None
-            if parents is None
-            else cast(Iterable[Note | Branch], normalize_entities(parents))
-        )
-        children_set = combine_lists(children, init_container.children)
+        new_title = title or init_container.title
+        new_note_type = note_type or init_container.note_type
+        new_mime = normalize_mime(new_title, new_note_type, mime or init_container.mime)
+        new_content = content or init_container.content
+        new_attributes = combine_iterables(attributes, init_container.attributes)
+        new_parents = None if parents is None else set(normalize_entities(parents))
+        new_children = combine_iterables(children, init_container.children)
 
         if template is not None:
             # create and append new relation
             template_relation = _normalize_template(template, session)
 
-            if attributes_set is None:
-                attributes_set = [template_relation]
+            if new_attributes is None:
+                new_attributes = [template_relation]
             else:
-                attributes_set.append(template_relation)
+                new_attributes.append(template_relation)
 
         # set fields
 
-        if title_set is not None:
-            self.title = title_set
+        if new_title is not None:
+            self.title = new_title
 
-        if note_type_set is not None:
-            self.note_type = note_type_set
+        if new_note_type is not None:
+            self.note_type = new_note_type
 
-        if mime_set is not None:
-            self.mime = mime_set
+        if new_mime is not None:
+            self.mime = new_mime
 
         # set content after type/mime to determine expected content type
         # (text or binary)
-        if content_set is not None:
-            self.content = content_set
+        if new_content is not None:
+            self.content = new_content
 
-        if attributes_set is not None:
-            self.attributes.owned = attributes_set
+        if new_attributes is not None:
+            self.attributes.owned = new_attributes
 
-        if parents_set is not None:
-            self.parents = parents_set
+        if new_parents is not None:
+            self.branches.parents = {
+                normalize_parent_branch(self, p) for p in new_parents
+            }
 
-        if children_set is not None:
-            self.children = children_set
+        if new_children is not None:
+            self.branches.children = [
+                normalize_child_branch(self, c) for c in new_children
+            ]
 
     def __iadd__(
         self,
-        entity: (
+        entity_or_entities: (
             Note
-            | tuple[Note, str]
+            | tuple[Note, str | None]
             | Branch
             | BaseAttribute
-            | Iterable[Note | tuple[Note, str] | Branch | BaseAttribute]
+            | Iterable[Note | tuple[Note, str | None] | Branch | BaseAttribute]
         ),
     ) -> Note:
         """
         Implement entity bind operator:
 
+        ```
         note += child_note
         note += (child_note, "prefix")
         note += Branch(parent=parent_note)
         note += Branch(child=child_note)
         note += Label(...)/Relation(...)
+        ```
 
         or iterable of any combination.
         """
-        entities = normalize_entities(entity)
-
+        entity_or_entities_ = (
+            [entity_or_entities]
+            if is_instance(entity_or_entities, tuple[Note, str | None])
+            else entity_or_entities
+        )
+        entities = normalize_to_list(
+            entity_or_entities_,
+            tuple[Note, str | None] | Branch | BaseAttribute,
+            *_ENTITY_VALIDATORS,
+        )
         for ent in entities:
-            if isinstance(ent, BaseAttribute):
-                self.attributes.owned.append(ent)
-            elif isinstance(ent, Note) or type(ent) is tuple:
-                # add child note
-                self.branches.children.append(ent)
-            else:
-                assert isinstance(ent, Branch), f"Unknown type for +=: {type(ent)}"
-                branch = ent
-
-                if branch.parent in {None, self}:
+            if isinstance(ent, tuple):
+                child, prefix = ent
+                self.branches.children.append(
+                    Branch(self, child, prefix=prefix or "", session=self.session)
+                )
+            elif isinstance(ent, Branch):
+                if ent._parent in {None, self}:
                     # note += Branch()
                     # note += Branch(child=child)
                     # note += Branch(parent=note, child=child)
-                    self.branches.children.append(branch)
+                    self.branches.children.append(ent)
                 else:
                     # note += Branch(parent=parent)
-                    self.branches.parents.add(branch)
-
+                    self.branches.parents.add(ent)
+            else:
+                self.attributes.owned.append(ent)
         return self
 
     def __ixor__(
         self,
-        parent: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
+        parent_or_parents: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
     ) -> Note:
         """
         Implement clone operator:
@@ -409,10 +424,19 @@ class Note(BaseEntity[NoteModel]):
         child ^= (parent_note, "prefix")
         child ^= [parent1, parent2]
         """
-        # iterate and add as parent
-        for p in normalize_entities(parent):
-            self.branches.parents.add(p)
-
+        parent_or_parents_ = (
+            [parent_or_parents]
+            if is_instance(parent_or_parents, tuple[Note, str | None])
+            else parent_or_parents
+        )
+        entities = normalize_to_list(
+            parent_or_parents_, tuple[Note, str | None], *_ENTITY_VALIDATORS
+        )
+        for ent in entities:
+            parent, prefix = ent
+            self.branches.parents.add(
+                Branch(parent, self, prefix=prefix or "", session=self.session)
+            )
         return self
 
     def __getitem__(self, name: str) -> str:
@@ -468,7 +492,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for note title.
         """
-        return self._model.get_field("title")
+        return self._model.get_field("title", str)
 
     @title.setter
     def title(self, val: str):
@@ -479,7 +503,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for note title.
         """
-        return self._model.get_field("type")
+        return self._model.get_field("type", str)
 
     @note_type.setter
     def note_type(self, val: str):
@@ -492,7 +516,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter/setter for MIME type.
         """
-        return self._model.get_field("mime")
+        return self._model.get_field("mime", str)
 
     @mime.setter
     def mime(self, val: str):
@@ -503,37 +527,36 @@ class Note(BaseEntity[NoteModel]):
         """
         Protected state, can only be changed in Trilium UI.
         """
-        return self._model.get_field("is_protected")
+        return self._model.get_field("is_protected", bool)
 
     @property
-    def date_created(self) -> str:
+    def date_created(self) -> str | None:
         """
         Local created datetime, e.g. `2021-12-31 20:18:11.939+0100`.
         """
-        return self._model.get_field("date_created")
+        return self._model.get_field("date_created", str, allow_none=True)
 
     @property
-    def date_modified(self) -> str:
+    def date_modified(self) -> str | None:
         """
         Local modified datetime, e.g. `2021-12-31 20:18:11.939+0100`.
         """
-        return self._model.get_field("date_modified")
+        return self._model.get_field("date_modified", str, allow_none=True)
 
     @property
-    def utc_date_created(self) -> str:
+    def utc_date_created(self) -> str | None:
         """
         UTC created datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_created")
+        return self._model.get_field("utc_date_created", str, allow_none=True)
 
     @property
-    def utc_date_modified(self) -> str:
+    def utc_date_modified(self) -> str | None:
         """
         UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
         """
-        return self._model.get_field("utc_date_modified")
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
 
-    @require_setup_prop
     @property
     def attributes(self) -> Attributes:
         """
@@ -541,6 +564,7 @@ class Note(BaseEntity[NoteModel]):
 
         :setter: Sets list of owned attributes, replacing the existing list
         """
+        self._model.setup_check()
         return self._attributes
 
     @property
@@ -548,6 +572,7 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
+        self._model.setup_check()
         return self._labels
 
     @property
@@ -555,17 +580,17 @@ class Note(BaseEntity[NoteModel]):
         """
         Getter for labels, accessed as combined list or filtered by owned vs inherited.
         """
+        self._model.setup_check()
         return self._relations
 
-    @require_setup_prop
     @property
     def branches(self) -> Branches:
         """
         Getter for branches, both parents (`.parents`) and children (`.children`).
         """
+        self._model.setup_check()
         return self._branches
 
-    @require_setup_prop
     @property
     def parents(self) -> ParentNotes:
         """
@@ -573,13 +598,14 @@ class Note(BaseEntity[NoteModel]):
 
         :setter: Sets set of parent notes, replacing the existing set
         """
+        self._model.setup_check()
         return self._parents
 
     @parents.setter
-    def parents(self, val: set[Note]):
+    def parents(self, val: AbstractSet[Note]):
+        self._model.setup_check()
         self._parents._setattr(val)
 
-    @require_setup_prop
     @property
     def children(self) -> ChildNotes:
         """
@@ -587,22 +613,25 @@ class Note(BaseEntity[NoteModel]):
 
         :setter: Sets list of child notes, replacing the existing list
         """
+        self._model.setup_check()
         return self._children
 
     @children.setter
-    def children(self, val: list[Note]):
+    def children(self, val: Sequence[Note]):
+        self._model.setup_check()
         self._children._setattr(val)
 
-    @require_setup_prop
     @property
     def content(self) -> str | bytes:
         """
         Getter/setter for note content.
         """
+        self._model.setup_check()
         return self._content._get()
 
     @content.setter
     def content(self, val: str | bytes | IO):
+        self._model.setup_check()
         self._content._set(val)
 
     @property
@@ -860,35 +889,21 @@ class Note(BaseEntity[NoteModel]):
 
         self._session.flush(flush_set)
 
-    def _init(self):
-        """
-        Perform additional init prior to model setup.
-        """
-        # create extensions
-        self._attributes = Attributes(self)
-        self._branches = Branches(self)
-        self._parents = ParentNotes(self)
-        self._children = ChildNotes(self)
-        self._content = Content(self)
+    @classmethod
+    def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
+        return (note_id, None)
 
-        # create accessors
-        self._labels = Labels(self)
-        self._relations = Relations(self)
+    @classmethod
+    def _from_id(cls, entity_id: str, session: Session | None = None) -> Note:
+        return Note(note_id=entity_id, session=session)
 
-    def _init_hook(
-        self,
-        note_id: str | None,
-        note_id_seed_final: str | None,
-        force_leaf: bool | None,
-    ) -> InitContainer:
-        """
-        Override to perform additional init for subclasses.
-        """
-        return InitContainer()
+    @classmethod
+    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
+        return Note(note_id=model.note_id, session=session, _model_backing=model)
 
     @property
-    def _dependencies(self):
-        deps = set()
+    def _dependencies(self) -> set[BaseEntity]:
+        deps: set[BaseEntity] = set()
 
         if self.note_id != "root":
             # parent notes
@@ -897,7 +912,7 @@ class Note(BaseEntity[NoteModel]):
         return deps
 
     @property
-    def _associated_entities(self) -> list[BaseEntity]:
+    def _associated_entities(self) -> Sequence[BaseEntity]:
         return list(self.branches) + list(self.attributes.owned)
 
     @property
@@ -910,7 +925,7 @@ class Note(BaseEntity[NoteModel]):
         for path in self.paths:
             if len(path) > 1:
                 paths_ret.append(
-                    " > ".join([f"'{note._title_escape}'" for note in path[:-1]])
+                    " > ".join([f"'{note._escaped_title}'" for note in path[:-1]])
                 )
 
         return sorted(paths_ret)
@@ -930,36 +945,35 @@ class Note(BaseEntity[NoteModel]):
         return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
 
     @property
-    def _str_short(self):
+    def _str_short(self) -> str:
         note_id = f"'{self.note_id}'" if self.note_id else None
-        return f"Note('{self._title_escape}', note_id={note_id})"
+        return f"Note('{self._escaped_title}', note_id={note_id})"
 
     @property
     def _str_safe(self):
         return f"Note(note_id={self._entity_id}, id={id(self)})"
 
     @property
-    def _title_escape(self) -> str:
+    def _escaped_title(self) -> str:
         return self.title.replace("'", "\\'")
 
-    @classmethod
-    def _get_note_id(cls, note_id: str | None) -> tuple[str | None, str | None]:
-        return (note_id, None)
+    def _init(self):
+        """
+        Perform additional init prior to model setup.
+        """
+        # create extensions
+        self._attributes = Attributes(self)
+        self._branches = Branches(self)
+        self._parents = ParentNotes(self)
+        self._children = ChildNotes(self)
+        self._content = Content(self)
 
-    @classmethod
-    def _from_id(cls, note_id: str, session: Session | None = None) -> Note:
-        return Note(note_id=note_id, session=session)
+        # create accessors
+        self._labels = Labels(self)
+        self._relations = Relations(self)
 
-    @classmethod
-    def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
-        return Note(note_id=model.note_id, session=session, _model_backing=model)
-
-    def _delete(self):
-        super()._delete()
-
-        # also delete each parent branch so parents' child lists are updated
-        for branch in self.branches.parents:
-            branch.delete()
+    def _setup(self, model: EtapiNoteModel):
+        _ = model
 
     def _flush_check(self):
         if not self._is_delete:
@@ -979,6 +993,27 @@ class Note(BaseEntity[NoteModel]):
 
         for branch in self.branches.children:
             _assert_validate(branch.parent is self)
+
+    def _flush_prep(self):
+        pass
+
+    def _delete(self):
+        super()._delete()
+
+        # also delete each parent branch so parents' child lists are updated
+        for branch in self.branches.parents:
+            branch.delete()
+
+    def _init_hook(
+        self,
+        note_id: str | None,
+        note_id_seed_final: str | None,
+        force_leaf: bool | None,
+    ) -> InitContainer:
+        """
+        Override to perform additional init for subclasses.
+        """
+        return InitContainer()
 
     def _sync_subtree(self, src: Note, copy_context: CopyContext):
         """
@@ -1060,8 +1095,8 @@ class InitContainer:
     title: str | None = None
     note_type: str | None = None
     mime: str | None = None
-    attributes: list[BaseAttribute] | None = None
-    children: list[Note | Branch] | None = None
+    attributes: Sequence[BaseAttribute] | None = None
+    children: Sequence[Note | Branch] | None = None
     content: str | bytes | IO | None = None
 
 
@@ -1190,3 +1225,8 @@ def _normalize_template(
         target,
         session=session,
     )
+
+
+_ENTITY_VALIDATORS = (
+    TypeValidator(Note, tuple[Note, str | None], func=lambda x: (x, None)),
+)
