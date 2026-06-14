@@ -12,8 +12,8 @@ class Label(BaseAttribute):
     """
     Encapsulates a label.
 
-    Once instantiated, the label needs to be added to a {obj}`Note`; see {ref}`working-
-    with-attributes` for details.
+    Once instantiated, the label needs to be added to a {obj}`Note`; see \
+    {ref}`working-with-attributes` for details.
     """
 
     _attribute_type = "label"
