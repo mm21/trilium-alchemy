@@ -25,7 +25,7 @@ with open(Path(os.path.abspath(__file__)).parent.parent / "pyproject.toml", "rb"
 package = "trilium_alchemy"
 env = util.Env(package)
 
-PLANTUML_JAR = "plantuml-mit-1.2024.7.jar"
+PLANTUML_JAR = "plantuml-mit-1.2026.6.jar"
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -57,7 +57,7 @@ todo_include_todos = True
 todo_link_only = True
 
 autodoc2_packages = [
-    "../trilium_alchemy",
+    "../src/trilium_alchemy",
 ]
 autodoc2_index_template = None
 autodoc2_render_plugin = "renderer.MystRenderer"
@@ -90,7 +90,7 @@ intersphinx_mapping = {
 templates_path = ["_templates"]
 exclude_patterns = []
 
-plantuml_jar = shutil.which(PLANTUML_JAR)
+plantuml_jar = shutil.which(PLANTUML_JAR, os.F_OK | os.R_OK)
 graphvizdot = shutil.which("dot")
 assert plantuml_jar is not None
 assert graphvizdot is not None
