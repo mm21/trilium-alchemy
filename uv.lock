@@ -1574,7 +1574,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "trilium-client", specifier = ">=0.1.3,<0.2.0" },
     { name = "typecraft", specifier = ">=0.4.0" },
-    { name = "typer", specifier = ">=0.15.4" },
+    { name = "typer", specifier = ">=0.26.7" },
 ]
 
 [package.metadata.requires-dev]
