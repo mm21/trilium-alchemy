@@ -367,13 +367,9 @@ wheels = [
 [[package]]
 name = "docformatter"
 version = "1.7.8"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/mm21/docformatter.git#09bb72e730a3d55fb9058cfb9b59f706dba7dca6" }
 dependencies = [
     { name = "charset-normalizer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/e1/f6fb315205e0a8f62ddbd52029b3d39cb5bada768af317193460f0454f6b/docformatter-1.7.8.tar.gz", hash = "sha256:6589b62a8f38c62c4c8c84cb1afa296af007c88c959e4c9d25c74c1f933c4dbf", size = 37754, upload-time = "2026-04-28T20:34:49.39Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/9b/9d2f60e967243aa0d1c6366f4f5feb0740393b5da7dbc66802034afc6331/docformatter-1.7.8-py3-none-any.whl", hash = "sha256:8e518948bacb8d8df5d5f625060e214a200f0a908d8e6797c9ebbdd2cdd17467", size = 59445, upload-time = "2026-04-28T20:34:50.393Z" },
 ]
 
 [[package]]
@@ -1585,7 +1581,7 @@ requires-dist = [
 dev = [
     { name = "autoflake", specifier = ">=2.3.1,<3" },
     { name = "black", specifier = ">=25.1.0,<26" },
-    { name = "docformatter", specifier = ">=1.7.8,<2" },
+    { name = "docformatter", git = "https://github.com/mm21/docformatter.git" },
     { name = "doit", specifier = ">=0.36.0,<0.37.0" },
     { name = "furo", specifier = ">=2023.5.20,<2024" },
     { name = "genbadge", extras = ["all"], specifier = ">=1.1.0,<2" },
