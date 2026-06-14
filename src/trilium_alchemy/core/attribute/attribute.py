@@ -225,8 +225,10 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         """
         Getter for position of this attribute.
 
-        ```{note} This is maintained automatically based on the order of this attribute
-        in its note's {obj}`Note.attributes` list. ```
+        ```{note}
+        This is maintained automatically based on the order of this attribute
+        in its note's {obj}`Note.attributes` list.
+        ```
         """
         return self._position
 

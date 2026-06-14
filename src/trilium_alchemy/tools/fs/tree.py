@@ -29,8 +29,8 @@ NORM_NOTE_ID_SIZE = 32
 """
 Number of characters in normalized note id.
 
-Use 32 characters (128 bits of entropy) since Trilium note ids have
-log2(62**12) = 72 bits of entropy.
+Use 32 characters (128 bits of entropy) since Trilium note ids have log2(62**12) = 72
+bits of entropy.
 """
 
 TREE_DEPTH = 2

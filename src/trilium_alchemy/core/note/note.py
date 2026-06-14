@@ -734,8 +734,10 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         If `deep` is `False`{l=python}, child notes are cloned to the returned copy.
         Otherwise, child notes are recursively deep copied.
 
-        ```{note} The returned copy still needs to be placed in the tree hierarchy
-        (added as a child of another note) before `Session.flush()` is invoked. ```
+        ```{note}
+        The returned copy still needs to be placed in the tree hierarchy
+        (added as a child of another note) before `Session.flush()` is invoked.
+        ```
         """
         return CopyContext().copy(self, deep=deep)
 
@@ -778,7 +780,8 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         This is useful for converting a {obj}`Note` instance to a subclass thereof with
         custom convenience APIs.
 
-        ```{note} Has a side effect of committing any changes to this note to Trilium.
+        ```{note}
+        Has a side effect of committing any changes to this note to Trilium.
         ```
         """
         if self._is_dirty:

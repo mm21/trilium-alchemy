@@ -345,9 +345,8 @@ class BaseDeclarativeMixin(
 
 class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     """
-    Note to use as subclass for declarative notes, i.e. note classes which
-    automatically sync with the corresponding note if it already exists
-    in Trilium.
+    Note to use as subclass for declarative notes, i.e. note classes which automatically
+    sync with the corresponding note if it already exists in Trilium.
 
     ```{note}
     Subclassing this class means the note will replace any existing fields
@@ -393,8 +392,10 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
     Also adds `#originalFilename` label.
 
-    ```{note} Currently Trilium only shows `#originalFilename` if the note's type is
-    `file`. ```
+    ```{note}
+    Currently Trilium only shows `#originalFilename` if the note's type is
+    `file`.
+    ```
     """
 
     note_id_seed: str | None = None
@@ -417,10 +418,12 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     of `note_id` based on the fully qualified class name. This means the same class will
     always have the same `note_id` when instantiated.
 
-    ```{warning} If you move this class to a different module, it will result in a
+    ```{warning}
+    If you move this class to a different module, it will result in a
     different `note_id` which will break any non-declarative relations to it. To enable
     more portable behavior, set {obj}`BaseDeclarativeNote.idempotent` or assign
-    {obj}`BaseDeclarativeNote.note_id_seed` explicitly. ```
+    {obj}`BaseDeclarativeNote.note_id_seed` explicitly.
+    ```
     """
 
     idempotent: bool = False

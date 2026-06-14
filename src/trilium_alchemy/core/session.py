@@ -243,8 +243,8 @@ class Session:
         If `entities = None`{l=python}, flushes all dirty entities.
 
         ```{note}
-        You may equivalently invoke {obj}`Entity.flush` to flush an
-        {obj}`BaseEntity` along with its dependencies.
+        You may equivalently invoke {obj}`Entity.flush` to flush a {obj}`BaseEntity`
+        along with its dependencies.
         ```
 
         :param entities: Entities for which to commit changes, internally processed as a {obj}`set` and sorted according to dependencies
@@ -388,8 +388,10 @@ class Session:
         """
         Refresh ordering of provided note's children for any connected clients.
 
-        ```{note} This API is automatically invoked after any child branch positions are
-        adjusted. It should rarely be required, but is provided for completeness. ```
+        ```{note}
+        This API is automatically invoked after any child branch positions are
+        adjusted. It should rarely be required, but is provided for completeness.
+        ```
         """
         from .note.note import Note
 
@@ -402,9 +404,11 @@ class Session:
         """
         Login using a password and get an ETAPI token.
 
-        ```{note} You can implicitly login by passing `password` when creating a
+        ```{note}
+        You can implicitly login by passing `password` when creating a
         {obj}`Session`. This API should rarely be required, but is provided for
-        completeness. ```
+        completeness.
+        ```
 
         :param host: Hostname of Trilium server
         :param password: Trilium password
@@ -436,8 +440,10 @@ class Session:
         Deletes the currently active API token, if this `Session` was created with a
         `password` rather than `token`.
 
-        ```{warning} Subsequent attempts to invoke ETAPI methods using this `Session`,
-        such as those invoked by {meth}`flush <Session.flush>`, will fail. ```
+        ```{warning}
+        Subsequent attempts to invoke ETAPI methods using this `Session`,
+        such as those invoked by {meth}`flush <Session.flush>`, will fail.
+        ```
 
         If this {obj}`Session` was instead created with a token, a warning will be
         generated and no action will be taken. For token-based sessions there's no
@@ -505,15 +511,13 @@ class Session:
         set[BaseEntity],
     ]:
         """
-        Mapping of state to dirty {obj}`BaseEntity` objects
-        in that state.
+        Mapping of state to dirty {obj}`BaseEntity` objects in that state.
 
         Example usage:
         ```
-        create_set = my_session.dirty_map[State.CREATE]
+        create_entities = my_session.dirty_map[State.CREATE]
         ```
         """
-
         from .entity.types import State
 
         index: dict[State, set[BaseEntity]] = {

@@ -115,12 +115,13 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
     Implicitly created by operations documented in {obj}`Note` and {obj}`Branches`. Can
     also be explicitly created and added to a note using its `+=`{l=python} operator:
 
-    ```\n\
-    # add child note with prefix note += Branch(child=Note(title="Child note"),
-    prefix="Child branch prefix")
+    ```
+    # add child note with prefix
+    # note += Branch(child=Note(title="Child note"), prefix="Child branch prefix")
 
-    # add parent note (cloning the note) with prefix note += Branch(parent=session.root,
-    prefix="Parent branch prefix") ```
+    # add parent note (cloning the note) with prefix
+    note += Branch(parent=session.root, prefix="Parent branch prefix")
+    ```
     """
 
     _model_cls = BranchModel
@@ -255,8 +256,10 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         """
         Getter for position of this branch.
 
-        ```{note} This is maintained automatically based on the order of this branch in
-        its parent note's {obj}`Note.branches.children <Note.branches>` list. ```
+        ```{note}
+        This is maintained automatically based on the order of this branch in
+        its parent note's {obj}`Note.branches.children <Note.branches>` list.
+        ```
         """
         return self._position
 

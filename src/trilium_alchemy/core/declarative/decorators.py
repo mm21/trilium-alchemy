@@ -150,8 +150,8 @@ def label_def(
     accumulate: bool = False,
 ):
     """
-    Adds a {obj}`Label` definition (promoted label) to a
-    {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin` subclass.
+    Adds a {obj}`Label` definition (promoted label) to a {obj}`BaseDeclarativeNote` or
+    {obj}`BaseDeclarativeMixin` subclass.
 
     Example:
 
@@ -169,7 +169,6 @@ def label_def(
     :param inheritable: Whether label should be inherited to children
     :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
-
     name = f"label:{name}"
 
     params = []
@@ -217,7 +216,6 @@ def relation_def(
     :param inheritable: Whether relation should be inherited to children
     :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
     """
-
     name = f"relation:{name}"
 
     params = []
