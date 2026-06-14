@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
-from click import BadParameter, ClickException, MissingParameter
-from typer import Argument, Context, Option
+from typer import Argument, BadParameter, Context, Option
+from typer._click.exceptions import ClickException, MissingParameter
 
 from ._utils import (
     MainTyper,

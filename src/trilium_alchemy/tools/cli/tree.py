@@ -3,10 +3,10 @@ from __future__ import annotations
 import importlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
-from click import BadParameter, Choice, ClickException, MissingParameter
-from typer import Argument, Context, Option
+from typer import Argument, BadParameter, Context, Option
+from typer._click.exceptions import ClickException, MissingParameter
 
 from ...core import BaseDeclarativeNote, Note, Session
 from ..utils import commit_changes, recurse_notes
@@ -73,12 +73,10 @@ def export(
         help="Destination .zip file",
         dir_okay=False,
     ),
-    export_format: str = Option(
+    export_format: Literal["html", "markdown"] = Option(
         "html",
         "--format",
         help="Export format",
-        show_choices=True,
-        click_type=Choice(["html", "markdown"]),
     ),
     overwrite: bool = Option(
         False,
@@ -107,7 +105,7 @@ def export(
 
     tree_context.target_note.export_zip(
         dest,
-        export_format=cast(Literal["markdown", "html"], export_format),
+        export_format=export_format,
         overwrite=overwrite,
     )
 

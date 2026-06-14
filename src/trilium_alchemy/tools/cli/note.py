@@ -5,7 +5,7 @@ Operations on one or more notes, not necessarily within the same subtree.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typer import Context, Exit, Option
 
@@ -112,13 +112,16 @@ def sync_template(
     # select notes if provided
     assert ctx.parent
     if note_context.note_id or note_context.search:
+        # typer's Context inherits from click's Context whose `parent` field is of
+        # type click's Context, so cast required
+        parent_ctx = cast(Context, ctx.parent)
         notes = get_notes(
-            ctx.parent,
+            parent_ctx,
             note_context.session,
             note_id=note_context.note_id,
             search=note_context.search,
-            note_id_param=lookup_param(ctx.parent, "note_id"),
-            search_param=lookup_param(ctx.parent, "search"),
+            note_id_param=lookup_param(parent_ctx, "note_id"),
+            search_param=lookup_param(parent_ctx, "search"),
         )
         assert len(notes)
 

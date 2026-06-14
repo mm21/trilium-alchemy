@@ -19,10 +19,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from click.exceptions import BadParameter, MissingParameter
 from dotenv import find_dotenv, load_dotenv
 from pydantic import ValidationError
-from typer import Context, Exit, Option
+from typer import BadParameter, Context, Exit, Option
+
+# TODO: rework parameter handling to avoid importing from vendored click and align with
+# the updated typer API
+from typer._click.exceptions import MissingParameter
 
 from ...core import Session
 from ..config import Config, InstanceConfig

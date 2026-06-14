@@ -8,12 +8,10 @@ import datetime
 import logging
 from typing import TYPE_CHECKING
 
-from click import BadParameter
-from click import Context as ClickContext
-from click import Parameter
 from rich.console import Console
 from rich.logging import RichHandler
-from typer import Context, Typer
+from typer import BadParameter, Context, Typer
+from typer._click import Parameter
 
 from ...core import Note, Session
 
@@ -62,7 +60,7 @@ def get_root_context(ctx: Context) -> RootContext:
 
 
 def get_notes(
-    ctx: ClickContext,
+    ctx: Context,
     session: Session,
     *,
     note_id: str | None,
@@ -109,7 +107,7 @@ def get_notes(
     return notes
 
 
-def lookup_param(ctx: ClickContext, name: str) -> Parameter:
+def lookup_param(ctx: Context, name: str) -> Parameter:
     """
     Lookup param by name.
     """
