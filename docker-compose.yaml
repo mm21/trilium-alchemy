@@ -1,7 +1,7 @@
 # Simple Trilium instance to use for testing.
 services:
   trilium:
-    image: triliumnext/notes:v0.91.6
+    image: triliumnext/trilium:v0.103.0
     restart: always
     environment:
       - TRILIUM_DATA_DIR=/home/node/trilium-data

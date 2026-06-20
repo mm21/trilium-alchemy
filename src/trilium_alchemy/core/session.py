@@ -9,7 +9,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import TYPE_CHECKING, Callable, Iterable, Literal, cast
+from typing import TYPE_CHECKING, Iterable, Literal, cast
 
 import requests
 from trilium_client.api.default_api import DefaultApi
@@ -20,7 +20,6 @@ from trilium_client.models.app_info import AppInfo
 from trilium_client.models.login201_response import Login201Response
 from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
-from trilium_client.models.search_response import SearchResponse
 
 from .cache import Cache
 
@@ -281,29 +280,21 @@ class Session:
         """
         from .note.note import Note
 
-        ancestor_note_id: str | None = (
-            ancestor_note.note_id if ancestor_note is not None else None
-        )
-
-        # take bool in interface and convert to str
-        fast_search_arg: str = str(fast_search).lower()
-        include_archived_notes_arg: str = str(include_archived_notes).lower()
-        debug_arg = str(debug).lower()
+        ancestor_note_id = ancestor_note.note_id if ancestor_note is not None else None
 
         # take int in interface and convert to str
-        ancestor_depth_arg: str | None
-        ancestor_depth_arg = str(ancestor_depth) if ancestor_depth is not None else None
+        ancestor_depth_ = str(ancestor_depth) if ancestor_depth is not None else None
 
-        response: SearchResponse = self.api.search_notes(
+        response = self.api.search_notes(
             query,
             order_by=order_by,
             order_direction=order_direction,
             limit=limit,
-            fast_search=fast_search_arg,
-            include_archived_notes=include_archived_notes_arg,
+            fast_search=fast_search,
+            include_archived_notes=include_archived_notes,
             ancestor_note_id=ancestor_note_id,
-            ancestor_depth=ancestor_depth_arg,
-            debug=debug_arg,
+            ancestor_depth=ancestor_depth_,
+            debug=debug,
         )
 
         # print debug info, if any
@@ -333,36 +324,40 @@ class Session:
         Returns a day note for a given date.
 
         Gets created if doesn't exist.
+
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
-        return self._etapi_wrapper(self.api.get_day_note, date)
+        return self._get_note_from_model(self.api.get_day_note(date))
 
-    def get_week_note(self, date: datetime.date) -> Note:
+    def get_week_note(self, week: str) -> Note:
         """
         Returns a week note for a given date.
 
         Gets created if doesn't exist.
-        :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
+
+        :param date: Week as ISO 8601 week identifier `YYYY-Www`, e.g. `2023-W10`
         """
-        return self._etapi_wrapper(self.api.get_week_note, date)
+        return self._get_note_from_model(self.api.get_week_note(week))
 
     def get_month_note(self, month: str) -> Note:
         """
         Returns a month note for a given date.
 
         Gets created if doesn't exist.
+
         :param month: Month in the form `yyyy-mm`, e.g. `2023-07`
         """
-        return self._etapi_wrapper(self.api.get_month_note, month)
+        return self._get_note_from_model(self.api.get_month_note(month))
 
     def get_year_note(self, year: str) -> Note:
         """
         Returns a year note for a given date.
 
         Gets created if doesn't exist.
+
         :param year: Year as string
         """
-        return self._etapi_wrapper(self.api.get_year_note, year)
+        return self._get_note_from_model(self.api.get_year_note(year))
 
     def get_inbox_note(self, date: datetime.date) -> Note:
         """
@@ -373,7 +368,7 @@ class Session:
 
         :param date: Date object, e.g. `datetime.date(2023, 7, 5)`{l=python}
         """
-        return self._etapi_wrapper(self.api.get_inbox_note, date)
+        return self._get_note_from_model(self.api.get_inbox_note(date))
 
     def get_app_info(self) -> AppInfo:
         """
@@ -623,10 +618,9 @@ class Session:
         global default_session
         return default_session is self
 
-    def _etapi_wrapper(self, method: Callable, *args, **kwargs) -> Note:
+    def _get_note_from_model(self, model: EtapiNoteModel) -> Note:
         from .note.note import Note
 
-        model: EtapiNoteModel = method(*args, **kwargs)
         return Note._from_model(model, session=self)
 
 

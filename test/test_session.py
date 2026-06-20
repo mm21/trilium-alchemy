@@ -164,23 +164,29 @@ def test_dirty_set(session: Session, note: Note):
 def test_calendar(session: Session):
     date = datetime.date(2023, 6, 15)
 
-    session.get_today_note()
+    _ = session.get_today_note()
     day_note = session.get_day_note(date)
-    week_note = session.get_week_note(date)
     month_note = session.get_month_note("2023-06")
-    year_note = session.get_year_note("2023-06")
+    year_note = session.get_year_note("2023")
     inbox_note = session.get_inbox_note(date)
 
     # should have been automatically created
     calendar_root = session.search("#calendarRoot")[0]
 
+    # week note needs to be enabled
+    calendar_root["enableWeekNote"] = ""
+    session.flush()
+    week_note = session.get_week_note("2023-W24")
+
+    # week note got added to month note's children, month note needs to be refreshed
+    month_note.refresh()
+
     # inbox and day notes should be the same if there's no note with #inbox
     assert inbox_note is day_note
-
     assert day_note in month_note.children
-    assert week_note in month_note.children
     assert month_note in year_note.children
     assert year_note in calendar_root.children
+    assert week_note in month_note.children
 
     # just delete calendar root to cleanup
     calendar_root.delete()
