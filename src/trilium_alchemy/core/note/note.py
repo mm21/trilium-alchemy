@@ -225,11 +225,19 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     ):
         """
         :param title: Note title
-        :param note_type: Note type, default `text`; one of: `"text"`{l=python}, `"code"`{l=python}, `"relationMap"`{l=python}, `"search"`{l=python}, `"render"`{l=python}, `"book"`{l=python}, `"mermaid"`, `"canvas"`, `"file"`{l=python}, `"image"`{l=python}
-        :param mime: MIME type, default `text/html`; needs to be specified only for note types `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
-        :param parents: Parent note/branch, or iterable of notes/branches (internally modeled as a `set`{l=python})
-        :param children: Iterable of child notes/branches (internally modeled as a `list`{l=python})
-        :param attributes: Iterable of attributes (internally modeled as a `list`{l=python})
+        :param note_type: Note type, default `text`; one of: `"text"`{l=python},
+            `"code"`{l=python}, `"relationMap"`{l=python}, `"search"`{l=python},
+            `"render"`{l=python}, `"book"`{l=python}, `"mermaid"`{l=python},
+            `"canvas"`{l=python}, `"file"`{l=python}, `"image"`{l=python}
+        :param mime: MIME type, default `text/html`; needs to be specified only for
+            note types `"text"`{l=python}, `"code"`{l=python}, `"file"`{l=python},
+            `"image"`{l=python}
+        :param parents: Parent note/branch, or iterable of notes/branches (internally
+            modeled as a `set`{l=python})
+        :param children: Iterable of child notes/branches (internally modeled as a
+            `list`{l=python})
+        :param attributes: Iterable of attributes (internally modeled as a
+            `list`{l=python})
         :param content: Text/binary content or file handle
         :param note_id: `noteId` to use, will create if it doesn't exist
         :param template: Note to set as target of `~template` relation
