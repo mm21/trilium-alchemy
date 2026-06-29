@@ -5,6 +5,7 @@ Test basic CRUD capability of owned attributes.
 from pytest import mark
 
 from trilium_alchemy import *
+from trilium_alchemy.core.attribute import BaseAttribute
 
 from ..conftest import attribute_exists, check_read_only
 

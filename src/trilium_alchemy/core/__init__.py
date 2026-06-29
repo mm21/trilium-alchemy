@@ -4,60 +4,56 @@ This module implements ORM access to Trilium and fundamental note capabilities.
 See the {ref}`user-guide` for a detailed walkthrough with examples.
 """
 
-__submodules__ = [
-    "session",
-    "note",
-    "branch",
-    "attribute",
-    "declarative",
-    "exceptions",
-    "entity",
-]
+__submodules__ = {
+    "session": None,
+    "note": None,
+    "branch": None,
+    "attribute": ["Label", "Relation"],
+    "declarative": None,
+    "exceptions": None,
+    "entity": ["State"],
+}
+__canonical_children__ = [k for k in __submodules__.keys()]
 
-from .attribute import (
-    BaseAttribute,
-    Label,
-    Relation,
+# isort: off
+# <AUTOGEN_INIT>
+from .session import (
+    Session,
+)
+from .note import (
+    Note,
+    Attachment,
 )
 from .branch import (
     Branch,
 )
-from .declarative import (
-    BaseDeclarativeMixin,
-    BaseDeclarativeNote,
-    child,
-    children,
-    label,
-    label_def,
-    relation,
-    relation_def,
+from .attribute import (
+    Label,
+    Relation,
 )
-from .entity import (
-    BaseEntity,
-    State,
+from .declarative import (
+    BaseDeclarativeNote,
+    BaseDeclarativeMixin,
+    label,
+    relation,
+    label_def,
+    relation_def,
+    children,
+    child,
 )
 from .exceptions import (
     ReadOnlyError,
     ValidationError,
 )
-from .note import (
-    Attachment,
-    Attachments,
-    Note,
-)
-
-# <AUTOGEN_INIT>
-from .session import (
-    Session,
+from .entity import (
+    State,
 )
 
 __all__ = [
     "Session",
     "Note",
     "Attachment",
-    "Attachments",
     "Branch",
-    "BaseAttribute",
     "Label",
     "Relation",
     "BaseDeclarativeNote",
@@ -70,17 +66,6 @@ __all__ = [
     "child",
     "ReadOnlyError",
     "ValidationError",
-    "BaseEntity",
     "State",
 ]
 # </AUTOGEN_INIT>
-
-__canonical_children__ = [
-    "session",
-    "note",
-    "attribute",
-    "branch",
-    "declarative",
-    "entity",
-    "exceptions",
-]

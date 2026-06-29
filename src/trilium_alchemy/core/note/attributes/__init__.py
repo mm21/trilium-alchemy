@@ -1,31 +1,39 @@
+__submodules__ = [
+    "labels",
+    "relations",
+    "attributes",
+]
+__canonical_children__ = []
+
+# isort: off
 # <AUTOGEN_INIT>
-from .attributes import (
-    Attributes,
-    InheritedAttributes,
-    OwnedAttributes,
-)
 from .labels import (
-    InheritedLabels,
     Labels,
     OwnedLabels,
+    InheritedLabels,
 )
 from .relations import (
-    InheritedRelations,
-    OwnedRelations,
     Relations,
+    OwnedRelations,
+    InheritedRelations,
+)
+from .attributes import (
+    Attributes,
+    OwnedAttributes,
+    InheritedAttributes,
 )
 
 __all__ = [
-    "Attributes",
-    "OwnedAttributes",
-    "InheritedAttributes",
     "Labels",
     "OwnedLabels",
     "InheritedLabels",
     "Relations",
     "OwnedRelations",
     "InheritedRelations",
+    "Attributes",
+    "OwnedAttributes",
+    "InheritedAttributes",
 ]
 # </AUTOGEN_INIT>
 
-__canonical_syms__ = __all__  # type: ignore[name-defined]
+__canonical_syms__ = __all__

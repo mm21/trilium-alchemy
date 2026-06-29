@@ -13,22 +13,11 @@ from ..session import Session, SessionContainer, normalize_session
 from .model import (
     BaseEntityModel,
     ModelContainer,
-    WriteOnceDescriptor,
-    WriteThroughDescriptor,
 )
 from .types import State
 
 __all__ = [
     "BaseEntity",
-    "State",
-    "EntityIdDescriptor",
-    "WriteThroughDescriptor",
-    "WriteOnceDescriptor",
-]
-
-__rollup__ = [
-    "BaseEntity",
-    "State",
 ]
 
 

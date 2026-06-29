@@ -2,6 +2,10 @@ from enum import Enum, auto
 
 from rich.markup import escape
 
+__all__ = [
+    "State",
+]
+
 
 class State(Enum):
     """

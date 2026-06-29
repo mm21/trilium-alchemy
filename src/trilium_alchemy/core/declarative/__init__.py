@@ -1,15 +1,21 @@
+__submodules__ = [
+    "base",
+    "decorators",
+]
+
+# isort: off
 # <AUTOGEN_INIT>
 from .base import (
-    BaseDeclarativeMixin,
     BaseDeclarativeNote,
+    BaseDeclarativeMixin,
 )
 from .decorators import (
-    child,
-    children,
     label,
-    label_def,
     relation,
+    label_def,
     relation_def,
+    children,
+    child,
 )
 
 __all__ = [
@@ -24,7 +30,4 @@ __all__ = [
 ]
 # </AUTOGEN_INIT>
 
-__canonical_children__ = [
-    "base",
-    "decorators",
-]
+__canonical_syms__ = __all__

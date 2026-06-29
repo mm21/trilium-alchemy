@@ -1,6 +1,7 @@
 from typing import cast
 
 from trilium_alchemy import *
+from trilium_alchemy.core.attribute import BaseAttribute
 
 
 @label("labelm1", "value1")

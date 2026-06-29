@@ -18,7 +18,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from ..core import BaseAttribute, Branch, Note, label
+from ..core import Branch, Note, label
+from ..core.attribute import BaseAttribute
 from ..core.declarative.base import BaseDeclarativeNote, is_inherited
 from .extension_types import (
     BaseAppCssNote,

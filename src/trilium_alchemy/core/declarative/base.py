@@ -345,8 +345,8 @@ class BaseDeclarativeMixin(
 
 class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
     """
-    Note to use as subclass for declarative notes, i.e. note classes which automatically
-    sync with the corresponding note if it already exists in Trilium.
+    Note to use as subclass for declarative notes which deterministically create a note
+    hierarchy with fixed ids.
 
     ```{note}
     Subclassing this class means the note will replace any existing fields

@@ -1,3 +1,8 @@
+__submodules__ = [
+    "branch",
+]
+
+# isort: off
 # <AUTOGEN_INIT>
 from .branch import (
     Branch,
@@ -6,4 +11,4 @@ from .branch import (
 __all__ = ["Branch"]
 # </AUTOGEN_INIT>
 
-__canonical_syms__ = __all__  # type: ignore[name-defined]
+__canonical_syms__ = __all__

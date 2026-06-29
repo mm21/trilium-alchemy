@@ -16,13 +16,13 @@ from trilium_client.models.create_note_def import CreateNoteDef
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from trilium_alchemy import (
-    BaseAttribute,
-    BaseEntity,
     Branch,
     Note,
     ReadOnlyError,
     Session,
 )
+from trilium_alchemy.core.attribute import BaseAttribute
+from trilium_alchemy.core.entity import BaseEntity
 
 # enable import of modules in test folder
 sys.path.insert(0, os.getcwd())

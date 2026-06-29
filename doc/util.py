@@ -118,7 +118,9 @@ class Symbol:
         """
         assert (
             self.py_obj not in self.symbol_map.obj_map
-        ), f"Symbol already set as canonical: {self.py_obj}"
+        ), "Symbol already set as canonical: {} (have {}, setting {}){}, {})".format(
+            self.py_obj, self.symbol_map.obj_map[self.py_obj].virt_path, self.virt_path
+        )
 
         self.is_canonical = True
         self.aliases = []
@@ -129,7 +131,10 @@ class Symbol:
         Check if this symbol should be considered canonical.
         """
         if self.is_alias:
-            if self.virt_path == self.phys_path:
+            if (
+                self.virt_path == self.phys_path
+                and self.py_obj not in self.symbol_map.obj_map
+            ):
                 self.set_canonical()
 
     def check_alias(self):

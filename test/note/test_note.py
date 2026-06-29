@@ -12,6 +12,7 @@ from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from trilium_alchemy import *
+from trilium_alchemy import Note
 
 from ..conftest import check_read_only, create_label, note_exists
 

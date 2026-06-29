@@ -1,6 +1,7 @@
 from pytest import mark
 
 from trilium_alchemy import *
+from trilium_alchemy.core.attribute import BaseAttribute
 
 
 @mark.attribute("label1")

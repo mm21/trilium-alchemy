@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from .note.note import Note
 
 __all__ = ["Session"]
-__canonical_syms__ = __all__
 
 
 REQUEST_TIMEOUT = 10.0

@@ -18,6 +18,7 @@ __all__ = [
     "OwnedLabels",
     "InheritedLabels",
 ]
+__canonical_syms__ = []
 
 
 class BaseReadableLabelMixin(AttributeListMixin[Label]):

@@ -4,7 +4,8 @@ Defines more specific classes to assist in the development of extensions.
 
 from __future__ import annotations
 
-from ..core import BaseAttribute, Branch, Note, label
+from ..core import Branch, Note, label
+from ..core.attribute import BaseAttribute
 from ..core.declarative.base import BaseDeclarativeNote
 from .note_types import CssNote, JsBackendNote, JsFrontendNote
 

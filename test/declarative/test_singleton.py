@@ -3,6 +3,7 @@ from typing import Sequence, cast
 from pytest import fixture, mark, raises
 
 from trilium_alchemy import *
+from trilium_alchemy.core.attribute import BaseAttribute
 from trilium_alchemy.core.declarative import BaseDeclarativeNote
 from trilium_alchemy.core.entity.types import State
 from trilium_alchemy.core.note.note import id_hash

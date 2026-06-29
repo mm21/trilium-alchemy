@@ -3,18 +3,11 @@ Library which builds upon {obj}`BaseDeclarativeNote` to facilitate development o
 hierarchies and extensions encapsulated in a Python package.
 """
 
-__submodules__ = ["extension_types", "note_types", "system_types"]
+__submodules__ = ["note_types", "extension_types", "system_types"]
+__canonical_children__ = __submodules__
 
+# isort: off
 # <AUTOGEN_INIT>
-from .extension_types import (
-    BaseAppCssNote,
-    BaseBackendScriptNote,
-    BaseFrontendScriptNote,
-    BaseTemplateNote,
-    BaseThemeNote,
-    BaseWidgetNote,
-    BaseWorkspaceTemplateNote,
-)
 from .note_types import (
     CodeNote,
     CssNote,
@@ -23,14 +16,29 @@ from .note_types import (
     JsFrontendNote,
     TextNote,
 )
+from .extension_types import (
+    BaseTemplateNote,
+    BaseWorkspaceTemplateNote,
+    BaseAppCssNote,
+    BaseThemeNote,
+    BaseWidgetNote,
+    BaseFrontendScriptNote,
+    BaseBackendScriptNote,
+)
 from .system_types import (
-    BaseRootNote,
-    BaseRootSystemNote,
-    BaseSystemNote,
     BaseWorkspaceNote,
+    BaseSystemNote,
+    BaseRootSystemNote,
+    BaseRootNote,
 )
 
 __all__ = [
+    "CodeNote",
+    "CssNote",
+    "HtmlNote",
+    "JsBackendNote",
+    "JsFrontendNote",
+    "TextNote",
     "BaseTemplateNote",
     "BaseWorkspaceTemplateNote",
     "BaseAppCssNote",
@@ -38,21 +46,9 @@ __all__ = [
     "BaseWidgetNote",
     "BaseFrontendScriptNote",
     "BaseBackendScriptNote",
-    "CodeNote",
-    "CssNote",
-    "HtmlNote",
-    "JsBackendNote",
-    "JsFrontendNote",
-    "TextNote",
     "BaseWorkspaceNote",
     "BaseSystemNote",
     "BaseRootSystemNote",
     "BaseRootNote",
 ]
 # </AUTOGEN_INIT>
-
-__canonical_children__ = [
-    "note_types",
-    "extension_types",
-    "system_types",
-]
