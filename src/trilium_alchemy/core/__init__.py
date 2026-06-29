@@ -41,6 +41,8 @@ from .exceptions import (
     ValidationError,
 )
 from .note import (
+    Attachment,
+    Attachments,
     Note,
 )
 
@@ -52,6 +54,8 @@ from .session import (
 __all__ = [
     "Session",
     "Note",
+    "Attachment",
+    "Attachments",
     "Branch",
     "BaseAttribute",
     "Label",

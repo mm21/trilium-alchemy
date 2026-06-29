@@ -237,6 +237,7 @@ class Cache:
         from .branch import Branch
         from .entity.types import State
         from .note import Note
+        from .note.attachments import Attachment
 
         entities = dirty_set if dirty_set is not None else self.dirty_set
 
@@ -251,10 +252,11 @@ class Cache:
             Note: state_map(),
             BaseAttribute: state_map(),
             Branch: state_map(),
+            Attachment: state_map(),
         }
 
         def get_cls(entity: BaseEntity) -> type[BaseEntity] | None:
-            for cls in (Note, BaseAttribute, Branch):
+            for cls in (Note, BaseAttribute, Branch, Attachment):
                 if isinstance(entity, cls):
                     return cls
             return None
@@ -268,6 +270,7 @@ class Cache:
         notes = index[Note]
         attributes = index[BaseAttribute]
         branches = index[Branch]
+        attachments = index[Attachment]
 
         # return (create/update/delete) counts
         def states(index):
@@ -277,4 +280,7 @@ class Cache:
             return f"{creates}/{updates}/{deletes}"
 
         desc = "(create/update/delete) "
-        return f"{desc}{states(notes)} notes, {states(attributes)} attributes, {states(branches)} branches"
+        return (
+            f"{desc}{states(notes)} notes, {states(attributes)} attributes, "
+            f"{states(branches)} branches, {states(attachments)} attachments"
+        )

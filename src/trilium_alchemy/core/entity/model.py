@@ -6,6 +6,7 @@ from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Any, Generator, Literal, Self, overload
 
 from pydantic import BaseModel
+from trilium_client.models.attachment import Attachment as EtapiAttachmentModel
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 from trilium_client.models.branch import Branch as EtapiBranchModel
 from trilium_client.models.note import Note as EtapiNoteModel
@@ -292,7 +293,13 @@ class BaseEntityModel[EtapiModelT: BaseModel, DriverT: BaseDriver](ABC):
 
     def check_newer(self, model: EtapiModelT) -> bool:
         assert isinstance(
-            model, (EtapiNoteModel, EtapiAttributeModel, EtapiBranchModel)
+            model,
+            (
+                EtapiNoteModel,
+                EtapiAttributeModel,
+                EtapiBranchModel,
+                EtapiAttachmentModel,
+            ),
         )
         assert model.utc_date_modified
         return (

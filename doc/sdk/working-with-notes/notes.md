@@ -128,3 +128,52 @@ assert note.content_str == "<p>Hello, world!</p>"
 ```{note}
 Type-safe accessors will raise {obj}`ValueError` if the content is not of the expected type as determined by {obj}`Note.is_string`.
 ```
+
+## Attachments
+
+A note can have any number of attachments, accessed as a list via {obj}`Note.attachments`. Trilium only supports image attachments.
+
+Assign a list of attachments, replacing the existing list. Each item may be an {obj}`Attachment`, a {obj}`pathlib.Path`, or a binary file handle with a `.name`{l=python}:
+
+```python
+from pathlib import Path
+
+note.attachments = [
+    Attachment(title="image1.png", content=b"..."),
+    Path("image2.png"),
+    open("image3.png", "rb"),
+]
+
+assert len(note.attachments) == 3
+```
+
+When a {obj}`pathlib.Path` or file handle is provided, the title and MIME type are derived from the filename. Raw `bytes`{l=python} is not accepted in the list since a title can't be derived; construct an {obj}`Attachment` explicitly with a title instead:
+
+```python
+# raises ValueError: no title can be derived
+note.attachments = [b"..."]
+
+# ok: title supplied explicitly
+note.attachments = [Attachment(title="image.png", content=b"...")]
+```
+
+Attachments can also be passed when creating a note:
+
+```python
+note = Note(title="My note", attachments=[Path("image.png")])
+```
+
+Access an attachment's content as `bytes`{l=python}, along with its {obj}`role <Attachment.role>`, {obj}`mime <Attachment.mime>`, and {obj}`title <Attachment.title>`:
+
+```python
+attachment = note.attachments[0]
+
+assert attachment.content == Path("image.png").read_bytes()
+assert attachment.role == "image"
+```
+
+Save an attachment's content to a file using {obj}`Attachment.save`:
+
+```python
+note.attachments[0].save("image_copy.png")
+```

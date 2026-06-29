@@ -23,6 +23,7 @@ from ..entity.entity import BaseEntity, normalize_entities
 from ..exceptions import _assert_validate
 from ..session import Session
 from ..utils import base_n_hash
+from .attachments import Attachment, Attachments
 from .attributes.attributes import Attributes
 from .attributes.labels import Labels
 from .attributes.relations import Relations
@@ -192,6 +193,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     _parents: ParentNotes
     _children: ChildNotes
     _content: Content
+    _attachments: Attachments
 
     # stateless accessors
     _labels: Labels
@@ -218,6 +220,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         parents: Iterable[Note | Branch] | Note | Branch | None = None,
         children: Iterable[Note | Branch] | None = None,
         content: str | bytes | IO | None = None,
+        attachments: Iterable[Attachment | Path | IO[bytes]] | None = None,
         note_id: str | None = None,
         template: Note | type[Note] | None = None,
         session: Session | None = None,
@@ -239,6 +242,9 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         :param attributes: Iterable of attributes (internally modeled as a
             `list`{l=python})
         :param content: Text/binary content or file handle
+        :param attachments: Iterable of attachments (internally modeled as a
+            `list`{l=python}); items may be an {obj}`Attachment`, a
+            {obj}`pathlib.Path`, or a binary file handle with a `.name`{l=python}
         :param note_id: `noteId` to use, will create if it doesn't exist
         :param template: Note to set as target of `~template` relation
         :param session: Session, or `None`{l=python} to use default
@@ -276,6 +282,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
                 "children": children,
                 "attributes": attributes,
                 "content": content,
+                "attachments": attachments,
                 "template": template,
             }
             fields_err = [k for k, v in fields_check.items() if v is not None]
@@ -327,6 +334,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         new_note_type = note_type or init_container.note_type
         new_mime = normalize_mime(new_title, new_note_type, mime or init_container.mime)
         new_content = content or init_container.content
+        new_attachments = attachments
         new_attributes = combine_iterables(attributes, init_container.attributes)
         new_parents = None if parents is None else set(normalize_entities(parents))
         new_children = combine_iterables(children, init_container.children)
@@ -358,6 +366,9 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
         if new_attributes is not None:
             self.attributes.owned = new_attributes
+
+        if new_attachments is not None:
+            self.attachments = new_attachments
 
         if new_parents is not None:
             self.branches.parents = {
@@ -687,6 +698,23 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         return self._content.blob_id
 
     @property
+    def attachments(self) -> Attachments:
+        """
+        Getter/setter for attachments, modeled as a list.
+
+        :setter: Sets list of attachments, replacing the existing list. Items may     be
+        an {obj}`Attachment`, a {obj}`pathlib.Path`, or a binary file     handle with a
+        `.name`{l=python}.
+        """
+        self._model.setup_check()
+        return self._attachments
+
+    @attachments.setter
+    def attachments(self, val: Iterable[Attachment | Path | IO[bytes]]):
+        self._model.setup_check()
+        self._attachments._setattr(val)
+
+    @property
     def is_string(self) -> bool:
         """
         `True`{l=python} if note as it's currently configured has text content.
@@ -896,6 +924,11 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         # collect set of entities
         flush_set: set[BaseEntity] = {attr for attr in self.attributes.owned}
+
+        # include attachments (current and pending-delete) only if already
+        # materialized, to avoid fetching them from the server on every flush
+        flush_set |= self._attachments._collect_flush_entities()
+
         flush_set.add(self)
 
         self._session.flush(flush_set)
@@ -924,7 +957,10 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
     @property
     def _associated_entities(self) -> Sequence[BaseEntity]:
-        return list(self.branches) + list(self.attributes.owned)
+        attachments: list[BaseEntity] = list(
+            self._attachments._collect_flush_entities()
+        )
+        return list(self.branches) + list(self.attributes.owned) + attachments
 
     @property
     def _str_summary_extra_pre(self) -> list[str]:
@@ -978,6 +1014,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         self._parents = ParentNotes(self)
         self._children = ChildNotes(self)
         self._content = Content(self)
+        self._attachments = Attachments(self)
 
         # create accessors
         self._labels = Labels(self)

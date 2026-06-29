@@ -6,6 +6,8 @@ __submodules__ = ["core", "lib"]
 
 # <AUTOGEN_INIT>
 from .core import (
+    Attachment,
+    Attachments,
     BaseAttribute,
     BaseDeclarativeMixin,
     BaseDeclarativeNote,
@@ -48,6 +50,8 @@ from .lib import (
 __all__ = [
     "Session",
     "Note",
+    "Attachment",
+    "Attachments",
     "Branch",
     "BaseAttribute",
     "Label",
