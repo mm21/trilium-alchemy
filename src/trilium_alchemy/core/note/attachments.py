@@ -266,8 +266,7 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         role: str = "image",
         mime: str | None = None,
         session: Session | None = None,
-        _attachment_id: str | None = None,
-        _owning_note: Note | None = None,
+        **kwargs,
     ): ...
 
     @overload
@@ -279,9 +278,7 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         role: str = "image",
         mime: str | None = None,
         session: Session | None = None,
-        _attachment_id: str | None = None,
-        _owning_note: Note | None = None,
-        _backing_model: EtapiAttachmentModel | None = None,
+        **kwargs,
     ): ...
 
     def __init__(
@@ -292,17 +289,18 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         role: str = "image",
         mime: str | None = None,
         session: Session | None = None,
-        _attachment_id: str | None = None,
-        _owning_note: Note | None = None,
-        _backing_model: EtapiAttachmentModel | None = None,
+        **kwargs,
     ):
-        super().__init__(entity_id=_attachment_id, session=session)
+        attachment_id: str | None = kwargs.get("_attachment_id")
+        owning_note: Note | None = kwargs.get("_owning_note")
+        backing_model: EtapiAttachmentModel | None = kwargs.get("_backing_model")
+        super().__init__(entity_id=attachment_id, session=session)
 
         # set owning note if known already
-        if _owning_note is not None:
-            self._note = _owning_note
+        if owning_note is not None:
+            self._note = owning_note
 
-        if _backing_model is not None:
+        if backing_model is not None:
             # loading from server; metadata/content come from the model
             return
 
