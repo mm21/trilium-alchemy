@@ -1,9 +1,31 @@
-from pyrollup import rollup
+# <AUTOGEN_INIT>
+from .attributes import (
+    Attributes,
+    InheritedAttributes,
+    OwnedAttributes,
+)
+from .labels import (
+    InheritedLabels,
+    Labels,
+    OwnedLabels,
+)
+from .relations import (
+    InheritedRelations,
+    OwnedRelations,
+    Relations,
+)
 
-from . import attributes, labels, relations
-from .attributes import *  # noqa
-from .labels import *  # noqa
-from .relations import *  # noqa
+__all__ = [
+    "Attributes",
+    "OwnedAttributes",
+    "InheritedAttributes",
+    "Labels",
+    "OwnedLabels",
+    "InheritedLabels",
+    "Relations",
+    "OwnedRelations",
+    "InheritedRelations",
+]
+# </AUTOGEN_INIT>
 
-__all__ = rollup(attributes, labels, relations)  # type: ignore
-__canonical_syms__ = __all__
+__canonical_syms__ = __all__  # type: ignore[name-defined]

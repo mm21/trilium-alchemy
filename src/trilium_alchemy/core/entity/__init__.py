@@ -1,6 +1,12 @@
-from . import entity
-from .entity import *  # noqa
+__submodules__ = {"entity": ["BaseEntity", "State"]}
 
-__all__ = entity.__all__  # type: ignore
-__canonical_syms__ = __all__
-__rollup__ = entity.__rollup__
+# <AUTOGEN_INIT>
+from .entity import (
+    BaseEntity,
+    State,
+)
+
+__all__ = ["BaseEntity", "State"]
+# </AUTOGEN_INIT>
+
+__canonical_syms__ = __all__  # type: ignore[name-defined]

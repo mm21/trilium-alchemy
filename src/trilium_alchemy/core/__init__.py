@@ -4,26 +4,72 @@ This module implements ORM access to Trilium and fundamental note capabilities.
 See the {ref}`user-guide` for a detailed walkthrough with examples.
 """
 
-from pyrollup import rollup
+__submodules__ = [
+    "session",
+    "note",
+    "branch",
+    "attribute",
+    "declarative",
+    "exceptions",
+    "entity",
+]
 
-from . import attribute, branch, declarative, entity, exceptions, note, session
-from .attribute import *  # noqa
-from .branch import *  # noqa
-from .declarative import *  # noqa
-from .entity import *  # noqa
-from .exceptions import *  # noqa
-from .note import *  # noqa
-from .session import *  # noqa
+from .attribute import (
+    BaseAttribute,
+    Label,
+    Relation,
+)
+from .branch import (
+    Branch,
+)
+from .declarative import (
+    BaseDeclarativeMixin,
+    BaseDeclarativeNote,
+    child,
+    children,
+    label,
+    label_def,
+    relation,
+    relation_def,
+)
+from .entity import (
+    BaseEntity,
+    State,
+)
+from .exceptions import (
+    ReadOnlyError,
+    ValidationError,
+)
+from .note import (
+    Note,
+)
 
-__all__ = rollup(
-    session,
-    note,
-    attribute,
-    branch,
-    declarative,
-    entity,
-    exceptions,
-)  # type: ignore
+# <AUTOGEN_INIT>
+from .session import (
+    Session,
+)
+
+__all__ = [
+    "Session",
+    "Note",
+    "Branch",
+    "BaseAttribute",
+    "Label",
+    "Relation",
+    "BaseDeclarativeNote",
+    "BaseDeclarativeMixin",
+    "label",
+    "relation",
+    "label_def",
+    "relation_def",
+    "children",
+    "child",
+    "ReadOnlyError",
+    "ValidationError",
+    "BaseEntity",
+    "State",
+]
+# </AUTOGEN_INIT>
 
 __canonical_children__ = [
     "session",

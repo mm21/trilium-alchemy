@@ -58,6 +58,20 @@ def cleanup_dir(output_dir: Path):
         shutil.rmtree(output_dir)
 
 
+def task_init() -> Task:
+    """
+    Generate __init__.py files using mkinit.
+    """
+    return Task(
+        "init",
+        actions=[
+            f"mkinit src/{PACKAGE} --recursive --nomods --relative -i --source-order",
+        ],
+        targets=[],
+        file_dep=[],
+    )
+
+
 def task_test() -> Task:
     """
     Run pytest and generate coverage reports.

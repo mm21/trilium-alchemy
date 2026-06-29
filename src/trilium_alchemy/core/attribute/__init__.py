@@ -1,14 +1,15 @@
-from pyrollup import rollup
+# <AUTOGEN_INIT>
+from .attribute import (
+    BaseAttribute,
+)
+from .label import (
+    Label,
+)
+from .relation import (
+    Relation,
+)
 
-from . import attribute, label, relation
-from .attribute import *  # noqa
-from .label import *  # noqa
-from .relation import *  # noqa
+__all__ = ["BaseAttribute", "Label", "Relation"]
+# </AUTOGEN_INIT>
 
-__all__ = rollup(
-    attribute,
-    label,
-    relation,
-)  # type: ignore
-
-__canonical_syms__ = __all__
+__canonical_syms__ = __all__  # type: ignore[name-defined]

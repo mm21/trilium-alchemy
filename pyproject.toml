@@ -15,7 +15,6 @@ classifiers = [
 ]
 dependencies = [
   "pydantic>=2,<3",
-  "pyrollup>=0.1.0,<0.2.0",
   "python-dotenv>=1.0.1,<2",
   "pyyaml>=6.0.2,<7",
   "requests>=2.31.0,<3",
@@ -46,6 +45,7 @@ dev = [
   "furo>=2023.5.20,<2024",
   "genbadge[all]>=1.1.0,<2",
   "isort>=6.0.1,<7",
+  "mkinit",
   "mypy[reports]>=1.5.1,<2",
   "myst-parser>=2.0.0,<3",
   "nox>=2026.4.10",
@@ -122,3 +122,4 @@ sort_table_keys = true
 
 [tool.uv.sources]
 docformatter = {git = "https://github.com/mm21/docformatter.git"}
+mkinit = {git = "https://github.com/mm21/mkinit.git"}

@@ -1,5 +1,9 @@
-from . import branch
-from .branch import *  # noqa
+# <AUTOGEN_INIT>
+from .branch import (
+    Branch,
+)
 
-__all__ = branch.__all__  # type: ignore
-__canonical_syms__ = __all__
+__all__ = ["Branch"]
+# </AUTOGEN_INIT>
+
+__canonical_syms__ = __all__  # type: ignore[name-defined]

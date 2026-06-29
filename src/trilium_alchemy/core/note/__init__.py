@@ -1,10 +1,14 @@
-from pyrollup import rollup
+__submodules__ = ["note"]
 
-from . import note
-from .note import *  # noqa
+# <AUTOGEN_INIT>
+from .note import (
+    Note,
+)
 
-__all__ = rollup(note)  # type: ignore
-__canonical_syms__ = __all__
+__all__ = ["Note"]
+# </AUTOGEN_INIT>
+
+__canonical_syms__ = __all__  # type: ignore[name-defined]
 __canonical_children__ = [
     "attributes",
     "branches",
