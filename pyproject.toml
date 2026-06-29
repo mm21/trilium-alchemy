@@ -10,6 +10,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
   "Typing :: Typed"
 ]
@@ -76,7 +77,7 @@ remove-unused-variables = true
 
 [tool.black]
 quiet = true
-target-version = ["py312", "py313"]
+target-version = ["py312", "py313", "py314"]
 
 [tool.coverage.report]
 exclude_lines = [

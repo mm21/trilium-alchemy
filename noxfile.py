@@ -6,6 +6,7 @@ nox.options.envdir = "__cache__/nox"
 PYTHON_VERSIONS = [
     "3.12.13",
     "3.13.13",
+    "3.14.6",
 ]
 
 
