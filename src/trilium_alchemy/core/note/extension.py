@@ -10,7 +10,6 @@ from typing import (
     Iterable,
     Iterator,
     Sequence,
-    cast,
     overload,
 )
 
@@ -31,7 +30,7 @@ class NoteExtension(Extension):
 
     @property
     def _note(self) -> Note:
-        return cast(Note, self._entity)
+        return self._entity  # type: ignore
 
 
 class NoteStatefulExtension(StatefulExtension[EtapiNoteModel], NoteExtension):
