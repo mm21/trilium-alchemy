@@ -21,4 +21,4 @@ from .attachments import (
 __all__ = ["Note", "Attachment"]
 # </AUTOGEN_INIT>
 
-__canonical_syms__ = __all__
+__canonical_syms__ = ["Note"]
