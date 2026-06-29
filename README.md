@@ -229,7 +229,7 @@ Type-safe accessors will raise `ValueError` if the content is not of the expecte
 
 A note can have any number of attachments, accessed as a list via `Note.attachments`. Trilium only supports image attachments.
 
-Assign a list of attachments, replacing the existing list. Each item may be an `Attachment`, a `Path`, or a binary file handle with a `.name`:
+Assign a list of attachments, replacing the existing list, or modify individual items by index or slice. Each item may be an `Attachment`, a `Path`, or a binary file handle with a `.name`:
 
 ```python
 from pathlib import Path
