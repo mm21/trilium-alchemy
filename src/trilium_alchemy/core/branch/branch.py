@@ -124,8 +124,6 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
     ```
     """
 
-    _model_cls = BranchModel
-
     _parent = WriteOnceDescriptor["Note | None"]("_parent_obj", validator="_validate")
     _parent_obj: Note | None = None
 
@@ -270,6 +268,10 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
     @_position.setter
     def _position(self, val: int):
         self._model.set_field("note_position", val)
+
+    @property
+    def _model_cls(self) -> type[BranchModel]:
+        return BranchModel
 
     @property
     def _str_short(self):

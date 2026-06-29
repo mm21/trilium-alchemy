@@ -50,10 +50,6 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
     # current state
     _state: State
 
-    # type used to create _model
-    # MTODO: abstract property
-    _model_cls: type[ModelT]
-
     # MTODO: abstract property
     _force_position_cleanup: bool = False
 
@@ -64,7 +60,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         # session, or None to use default session
         session: Session | None = None,
         # backing model, if already loaded
-        backing_model: ModelT | None = None,
+        backing_model: EtapiModelT | None = None,
         # whether entity is being created (otherwise inferred from whether
         # entity_id provided)
         create: bool | None = None,
@@ -96,7 +92,7 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
         *,
         entity_id: str | None = None,
         session: Session | None = None,
-        backing_model: ModelT | None = None,
+        backing_model: EtapiModelT | None = None,
         create: bool | None = None,
     ):
         session = normalize_session(session)
@@ -389,6 +385,13 @@ class BaseEntity[ModelT: BaseEntityModel, EtapiModelT: BaseModel](
                     assert state is not State.CREATE
 
             self._state = state
+
+    @property
+    @abstractmethod
+    def _model_cls(self) -> type[ModelT]:
+        """
+        Type used to create _model.
+        """
 
     @property
     @abstractmethod

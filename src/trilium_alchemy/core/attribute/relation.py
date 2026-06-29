@@ -46,7 +46,7 @@ class Relation(BaseAttribute):
         :param session: Session, or `None`{l=python} to use default
         :param kwargs: Internal only
         """
-        backing_model = kwargs.get("_model_backing")
+        backing_model = kwargs.get("_backing_model")
 
         super().__init__(
             name,

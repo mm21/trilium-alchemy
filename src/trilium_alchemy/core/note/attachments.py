@@ -244,8 +244,6 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
     ```
     """
 
-    _model_cls = AttachmentModel
-
     # note which owns this attachment, ensuring only one note is assigned
     _note = WriteOnceDescriptor["Note | None"]("_note_obj")
     _note_obj: Note | None = None
@@ -257,7 +255,6 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
             cls,
             session=kwargs.get("session"),
             entity_id=kwargs.get("_attachment_id"),
-            backing_model=kwargs.get("_model_backing"),
         )
 
     @overload
@@ -271,7 +268,6 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         session: Session | None = None,
         _attachment_id: str | None = None,
         _owning_note: Note | None = None,
-        _model_backing: EtapiAttachmentModel | None = None,
     ): ...
 
     @overload
@@ -285,7 +281,7 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         session: Session | None = None,
         _attachment_id: str | None = None,
         _owning_note: Note | None = None,
-        _model_backing: EtapiAttachmentModel | None = None,
+        _backing_model: EtapiAttachmentModel | None = None,
     ): ...
 
     def __init__(
@@ -298,19 +294,15 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         session: Session | None = None,
         _attachment_id: str | None = None,
         _owning_note: Note | None = None,
-        _model_backing: EtapiAttachmentModel | None = None,
+        _backing_model: EtapiAttachmentModel | None = None,
     ):
-        super().__init__(
-            entity_id=_attachment_id,
-            session=session,
-            backing_model=_model_backing,
-        )
+        super().__init__(entity_id=_attachment_id, session=session)
 
         # set owning note if known already
         if _owning_note is not None:
             self._note = _owning_note
 
-        if _model_backing is not None:
+        if _backing_model is not None:
             # loading from server; metadata/content come from the model
             return
 
@@ -418,6 +410,13 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         return self._content_ext.blob_id
 
     @property
+    def utc_date_modified(self) -> str | None:
+        """
+        UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        """
+        return self._model.get_field("utc_date_modified", str, allow_none=True)
+
+    @property
     def position(self) -> int:
         """
         Getter for position of this attachment.
@@ -429,12 +428,11 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         """
         return self._position
 
-    @property
-    def utc_date_modified(self) -> str | None:
+    def save(self, path: str | Path):
         """
-        UTC modified datetime, e.g. `2021-12-31 19:18:11.939Z`.
+        Write attachment content to the provided path.
         """
-        return self._model.get_field("utc_date_modified", str, allow_none=True)
+        Path(path).write_bytes(self.content)
 
     @property
     def _position(self) -> int:
@@ -443,12 +441,6 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
     @_position.setter
     def _position(self, val: int):
         self._model.set_field("position", val)
-
-    def save(self, path: str | Path):
-        """
-        Write attachment content to the provided path.
-        """
-        Path(path).write_bytes(self.content)
 
     @classmethod
     def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
@@ -466,10 +458,24 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         attachment = cls(
             session=session,
             _attachment_id=model.attachment_id,
-            _model_backing=model,
+            _backing_model=model,
             _owning_note=owning_note,
         )
         return attachment
+
+    @property
+    def _model_cls(self) -> type[AttachmentModel]:
+        return AttachmentModel
+
+    @property
+    def _str_short(self) -> str:
+        attachment_id = f"'{self.attachment_id}'" if self.attachment_id else None
+        title = self._model.get_field("title", str) if self._model.setup_done else "?"
+        return f"Attachment(title='{title}', attachment_id={attachment_id})"
+
+    @property
+    def _str_safe(self) -> str:
+        return f"Attachment(attachment_id={self._entity_id}, id={id(self)})"
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
@@ -505,16 +511,6 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
         if self._note is not None:
             if self in self._note.attachments:
                 self._note.attachments.remove(self)
-
-    @property
-    def _str_short(self) -> str:
-        attachment_id = f"'{self.attachment_id}'" if self.attachment_id else None
-        title = self._model.get_field("title", str) if self._model.setup_done else "?"
-        return f"Attachment(title='{title}', attachment_id={attachment_id})"
-
-    @property
-    def _str_safe(self) -> str:
-        return f"Attachment(attachment_id={self._entity_id}, id={id(self)})"
 
 
 class Attachments(BaseEntityList[Attachment]):

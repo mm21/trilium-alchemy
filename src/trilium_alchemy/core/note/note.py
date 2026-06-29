@@ -185,8 +185,6 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     how to use this class, see     {ref}`Working with notes <working-with-notes-notes>`.
     """
 
-    _model_cls = NoteModel
-
     # model extensions
     _attributes: Attributes
     _branches: Branches
@@ -205,7 +203,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             cls,
             session=kwargs.get("session"),
             entity_id=note_id,
-            backing_model=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_backing_model"),
         )
 
     # TODO: add:
@@ -255,7 +253,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         note_id_seed_final = (
             kwargs.pop("_note_id_seed_final", None) or note_id_seed_final
         )
-        backing_model = kwargs.pop("_model_backing", None)
+        backing_model = kwargs.pop("_backing_model", None)
         force_leaf = kwargs.pop("_force_leaf", None)
 
         assert len(kwargs) == 0, f"Unexpected kwargs: {kwargs}"
@@ -943,7 +941,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
     @classmethod
     def _from_model(cls, model: EtapiNoteModel, session: Session | None = None) -> Note:
-        return Note(note_id=model.note_id, session=session, _model_backing=model)
+        return Note(note_id=model.note_id, session=session, _backing_model=model)
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
@@ -990,6 +988,10 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         blob_ids.append(f"'{self._content.blob_id}'")
 
         return [f"blob_id={'->'.join(blob_ids)}".join(["{", "}"])]
+
+    @property
+    def _model_cls(self) -> type[NoteModel]:
+        return NoteModel
 
     @property
     def _str_short(self) -> str:

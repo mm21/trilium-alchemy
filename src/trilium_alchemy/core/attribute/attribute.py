@@ -129,7 +129,6 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
     """
 
     _attribute_type: Literal["label", "relation"]
-    _model_cls = AttributeModel
 
     # name of attribute, ensuring only one name is assigned
     _name = WriteOnceDescriptor[str]("_name_obj")
@@ -145,7 +144,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
             cls,
             session=kwargs.get("session"),
             entity_id=kwargs.get("_attribute_id"),
-            backing_model=kwargs.get("_model_backing"),
+            backing_model=kwargs.get("_backing_model"),
         )
 
     @abstractmethod
@@ -156,12 +155,12 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         session: Session | None = None,
         _attribute_id: str | None = None,
         _owning_note: Note | None = None,
-        _model_backing: AttributeModel | None = None,
+        _backing_model: EtapiAttributeModel | None = None,
     ):
         super().__init__(
             entity_id=_attribute_id,
             session=session,
-            backing_model=_model_backing,
+            backing_model=_backing_model,
         )
 
         assert type(name) is str
@@ -173,7 +172,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
             self._note = _owning_note
 
         # set fields if not getting from database
-        if _model_backing is None:
+        if _backing_model is None:
             self.inheritable = inheritable
 
     @property
@@ -232,14 +231,6 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
         """
         return self._position
 
-    @property
-    def _position(self) -> int:
-        return self._model.get_field("position", int)
-
-    @_position.setter
-    def _position(self, val: int):
-        self._model.set_field("position", val)
-
     @classmethod
     def _from_id(cls, entity_id: str, session: Session | None = None) -> Self:
         """
@@ -274,7 +265,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
                 model.name,
                 session=session,
                 _attribute_id=model.attribute_id,
-                _model_backing=model,
+                _backing_model=model,
                 _owning_note=owning_note,
             )
 
@@ -284,7 +275,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
                 Note(note_id=model.value, session=session),
                 session=session,
                 _attribute_id=model.attribute_id,
-                _model_backing=model,
+                _backing_model=model,
                 _owning_note=owning_note,
             )
 
@@ -293,6 +284,18 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
 
         assert isinstance(attr, cls)
         return attr
+
+    @property
+    def _position(self) -> int:
+        return self._model.get_field("position", int)
+
+    @_position.setter
+    def _position(self, val: int):
+        self._model.set_field("position", val)
+
+    @property
+    def _model_cls(self) -> type[AttributeModel]:
+        return AttributeModel
 
     @property
     def _dependencies(self) -> set[BaseEntity]:
