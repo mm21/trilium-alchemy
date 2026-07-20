@@ -1,10 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.12, <4"
-resolution-markers = [
-    "python_full_version >= '3.15'",
-    "python_full_version < '3.15'",
-]
+requires-python = ">=3.12, <3.15"
 
 [[package]]
 name = "alabaster"
@@ -404,34 +400,6 @@ wheels = [
 ]
 
 [[package]]
-name = "flake8"
-version = "7.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mccabe" },
-    { name = "pycodestyle" },
-    { name = "pyflakes" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/af/fbfe3c4b5a657d79e5c47a2827a362f9e1b763336a52f926126aa6dc7123/flake8-7.3.0.tar.gz", hash = "sha256:fe044858146b9fc69b551a4b490d69cf960fcb78ad1edcb84e7fbb1b4a8e3872", size = 48326, upload-time = "2025-06-20T19:31:35.838Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/56/13ab06b4f93ca7cac71078fbe37fcea175d3216f31f85c3168a6bbd0bb9a/flake8-7.3.0-py2.py3-none-any.whl", hash = "sha256:b9696257b9ce8beb888cdbe31cf885c90d31928fe202be0889a7cdafad32f01e", size = 57922, upload-time = "2025-06-20T19:31:34.425Z" },
-]
-
-[[package]]
-name = "flake8-html"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "flake8" },
-    { name = "jinja2" },
-    { name = "pygments" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/44/faae17d4b4e00c8c041e9b90b0ea546f3aef8b799212e71a7bb835ff51e1/flake8-html-0.4.3.tar.gz", hash = "sha256:8b870299620cc4a06f73644a1b4d457799abeca1cc914c62ae71ec5bf65c79a5", size = 13670, upload-time = "2022-12-06T19:06:20.505Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/b0/bfd58118e2b9c1d0c5ac156c458c9a33cb599925b658df3ab038b55d30d7/flake8_html-0.4.3-py2.py3-none-any.whl", hash = "sha256:8f126748b1b0edd6cd39e87c6192df56e2f8655b0aa2bb00ffeac8cf27be4325", size = 13120, upload-time = "2022-12-06T19:06:18.917Z" },
-]
-
-[[package]]
 name = "furo"
 version = "2023.9.10"
 source = { registry = "https://pypi.org/simple" }
@@ -462,9 +430,11 @@ wheels = [
 ]
 
 [package.optional-dependencies]
-all = [
+coverage = [
     { name = "defusedxml" },
-    { name = "flake8-html" },
+]
+tests = [
+    { name = "defusedxml" },
 ]
 
 [[package]]
@@ -752,15 +722,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mccabe"
-version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e7/ff/0ffefdcac38932a54d2b5eed4e0ba8a408f215002cd178ad1df0f2806ff8/mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325", size = 9658, upload-time = "2022-01-24T01:14:51.113Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e", size = 7350, upload-time = "2022-01-24T01:14:49.62Z" },
-]
-
-[[package]]
 name = "mdit-py-plugins"
 version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1017,15 +978,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pycodestyle"
-version = "2.14.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/11/e0/abfd2a0d2efe47670df87f3e3a0e2edda42f055053c85361f19c0e2c1ca8/pycodestyle-2.14.0.tar.gz", hash = "sha256:c4b5b517d278089ff9d0abdec919cd97262a3367449ea1c8b49b91529167b783", size = 39472, upload-time = "2025-06-20T18:49:48.75Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/27/a58ddaf8c588a3ef080db9d0b7e0b97215cee3a45df74f3a94dbbf5c893a/pycodestyle-2.14.0-py2.py3-none-any.whl", hash = "sha256:dd6bf7cb4ee77f8e016f9c8e74a35ddd9f67e1d5fd4184d86c3b98e07099f42d", size = 31594, upload-time = "2025-06-20T18:49:47.491Z" },
-]
-
-[[package]]
 name = "pydantic"
 version = "2.13.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1134,6 +1086,36 @@ wheels = [
 ]
 
 [[package]]
+name = "pyprojkit"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "doit" },
+    { name = "nox" },
+    { name = "python-dotenv" },
+    { name = "toml-sort" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/a7/b5e8fd3ba54e2d980aaeb2a002b3d9ad2e6253c337e2ea0b69216f604291/pyprojkit-0.2.0.tar.gz", hash = "sha256:25775d4294268c846e0d66cc27ac9840f655c50a83abaa8461ede28a33a4eda6", size = 18243, upload-time = "2026-07-20T06:55:29.245Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/9c/333513b38b417d62d0be677c951ddcb92d3cb0928e0f49a442d83575d2bd/pyprojkit-0.2.0-py3-none-any.whl", hash = "sha256:70191f89d884eb08229c83da923c00e8089177d2f02d3d4ff858a7a24c428a8a", size = 24377, upload-time = "2026-07-20T06:55:28.069Z" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "autoflake" },
+    { name = "black" },
+    { name = "docformatter" },
+    { name = "genbadge", extra = ["coverage", "tests"] },
+    { name = "isort" },
+    { name = "mkinit" },
+    { name = "mypy", extra = ["reports"] },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[[package]]
 name = "pyright"
 version = "1.1.410"
 source = { registry = "https://pypi.org/simple" }
@@ -1148,40 +1130,43 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "7.4.4"
+version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
+    { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/1f/9d8e98e4133ffb16c90f3b405c43e38d3abb715bb5d7a63a5a684f7e46a3/pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280", size = 1357116, upload-time = "2023-12-31T12:00:18.035Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/ff/f6e8b8f39e08547faece4bd80f89d5a8de68a38b2d179cc1c4490ffa3286/pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8", size = 325287, upload-time = "2023-12-31T12:00:13.963Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
 ]
 
 [[package]]
 name = "pytest-cov"
-version = "4.1.0"
+version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coverage" },
+    { name = "pluggy" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/15/da3df99fd551507694a9b01f512a2f6cf1254f33601605843c3775f39460/pytest-cov-4.1.0.tar.gz", hash = "sha256:3904b13dfbfec47f003b8e77fd5b589cd11904a21ddf1ab38a64f204d6a10ef6", size = 63245, upload-time = "2023-05-24T18:44:56.845Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/51/a849f96e117386044471c8ec2bd6cfebacda285da9525c9106aeb28da671/pytest_cov-7.1.0.tar.gz", hash = "sha256:30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2", size = 55592, upload-time = "2026-03-21T20:11:16.284Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a7/4b/8b78d126e275efa2379b1c2e09dc52cf70df16fc3b90613ef82531499d73/pytest_cov-4.1.0-py3-none-any.whl", hash = "sha256:6ba70b9e97e69fcc3fb45bfeab2d0a138fb65c4d0d6a41ef33983ad114be8c3a", size = 21949, upload-time = "2023-05-24T18:44:54.079Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/7a/d968e294073affff457b041c2be9868a40c1c71f4a35fcc1e45e5493067b/pytest_cov-7.1.0-py3-none-any.whl", hash = "sha256:a0461110b7865f9a271aa1b51e516c9a95de9d696734a2f71e3e78f46e1d4678", size = 22876, upload-time = "2026-03-21T20:11:14.438Z" },
 ]
 
 [[package]]
 name = "pytest-dependency"
-version = "0.5.1"
+version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
+    { name = "setuptools" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/6d/cfd6d654877f75e0368e4040f1cf0350dd9f427b578bf7b685af629f8167/pytest-dependency-0.5.1.tar.gz", hash = "sha256:c2a892906192663f85030a6ab91304e508e546cddfe557d692d61ec57a1d946b", size = 27764, upload-time = "2020-02-14T21:07:09.217Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/ea/84509533e0f6477960b8a9179d240d93c909c6543e4dd8209932026d7815/pytest_dependency-0.6.1.tar.gz", hash = "sha256:246c24d2a5fc743a942cec4408853640e56a05ba58d46e5b213a1d4b738a2464", size = 20837, upload-time = "2026-02-15T18:08:43.927Z" }
 
 [[package]]
 name = "python-dateutil"
@@ -1503,28 +1488,28 @@ wheels = [
 
 [[package]]
 name = "toml-sort"
-version = "0.23.1"
+version = "0.24.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/87/73d4464480f5191a21ff7e142131fedbf65ad90bc84a9be04db8e0554a15/toml_sort-0.23.1.tar.gz", hash = "sha256:833728c48b0f8d509aecd9ae8347768ca3a9332977b32c9fd2002932f0eb9c90", size = 18624, upload-time = "2023-05-08T04:14:59Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c5/d6f650fdcf8e1f83096815fa67fb13a9a345b99da6015c60c4b7e4a8ea2b/toml_sort-0.24.4.tar.gz", hash = "sha256:429b69f5b98b7047a11380c80ecf0838556bdea1a8902d0be564961c48841423", size = 17793, upload-time = "2026-03-24T14:05:53.637Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/7c/f5f7141fa13737341f06b28f242669b45abe279a3c3f40b1688e5dd74707/toml_sort-0.23.1-py3-none-any.whl", hash = "sha256:69ae60de9c4d67478533697eb4119092e2b30ddffe5ca09bbad3912905c935a0", size = 20678, upload-time = "2023-05-08T04:14:56.49Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/5a/1f0e54df4eacf0f4d8f94ba50cf72be33d2a3f04babdfb1931bead48a0ab/toml_sort-0.24.4-py3-none-any.whl", hash = "sha256:125aa5fb94f33c542c6901040456145dd38f79bbb310b56b436a93057d30a739", size = 16577, upload-time = "2026-03-24T14:05:54.757Z" },
 ]
 
 [[package]]
 name = "tomlkit"
-version = "0.15.0"
+version = "0.13.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/51/db/03eaf4331631ef6b27d6e3c9b68c54dc6f0d63d87201fed600cc409307fd/tomlkit-0.15.0.tar.gz", hash = "sha256:7d1a9ecba3086638211b13814ea79c90dd54dd11993564376f3aa92271f5c7a3", size = 161875, upload-time = "2026-05-10T07:38:22.245Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/18/0bbf3884e9eaa38819ebe46a7bd25dcd56b67434402b66a58c4b8e552575/tomlkit-0.13.3.tar.gz", hash = "sha256:430cf247ee57df2b94ee3fbe588e71d362a941ebb545dec29b53961d61add2a1", size = 185207, upload-time = "2025-06-05T07:13:44.947Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/43/8bd850ee71a191bf072e31302c73a66be413fecdd98fdcd111ecbcce13ca/tomlkit-0.15.0-py3-none-any.whl", hash = "sha256:4dbc8f0fc024412b57ced8757ac7461305126a648ff8c2c807fcb8e133a78738", size = 41328, upload-time = "2026-05-10T07:38:23.517Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/75/8539d011f6be8e29f339c42e633aae3cb73bffa95dd0f9adec09b9c58e85/tomlkit-0.13.3-py3-none-any.whl", hash = "sha256:c89c649d79ee40629a9fda55f8ace8c6a1b42deb912b2a8fd8d942ddadb606b0", size = 38901, upload-time = "2025-06-05T07:13:43.546Z" },
 ]
 
 [[package]]
 name = "trilium-alchemy"
-version = "0.8.0"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
@@ -1538,29 +1523,18 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "autoflake" },
-    { name = "black" },
     { name = "docformatter" },
-    { name = "doit" },
     { name = "furo" },
-    { name = "genbadge", extra = ["all"] },
-    { name = "isort" },
     { name = "mkinit" },
-    { name = "mypy", extra = ["reports"] },
     { name = "myst-parser" },
-    { name = "nox" },
     { name = "pexpect" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pyprojkit", extra = ["all"] },
     { name = "pytest-dependency" },
-    { name = "python-dotenv" },
     { name = "sphinx" },
     { name = "sphinx-autodoc2" },
     { name = "sphinx-copybutton" },
     { name = "sphinxcontrib-plantuml" },
     { name = "sphinxcontrib-typer" },
-    { name = "toml-sort" },
     { name = "types-requests" },
 ]
 
@@ -1577,29 +1551,18 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "autoflake", specifier = ">=2.3.1,<3" },
-    { name = "black", specifier = ">=25.1.0,<26" },
     { name = "docformatter", git = "https://github.com/mm21/docformatter.git" },
-    { name = "doit", specifier = ">=0.36.0,<0.37.0" },
     { name = "furo", specifier = ">=2023.5.20,<2024" },
-    { name = "genbadge", extras = ["all"], specifier = ">=1.1.0,<2" },
-    { name = "isort", specifier = ">=6.0.1,<7" },
     { name = "mkinit", git = "https://github.com/mm21/mkinit.git" },
-    { name = "mypy", extras = ["reports"], specifier = ">=1.5.1,<2" },
     { name = "myst-parser", specifier = ">=2.0.0,<3" },
-    { name = "nox", specifier = ">=2026.4.10" },
     { name = "pexpect", specifier = ">=4.9.0,<5" },
-    { name = "pyright", specifier = ">=1.1.329,<2" },
-    { name = "pytest", specifier = ">=7.3.1,<8" },
-    { name = "pytest-cov", specifier = ">=4.1.0,<5" },
-    { name = "pytest-dependency", specifier = ">=0.5.1,<0.6.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0,<2" },
+    { name = "pyprojkit", extras = ["all"], specifier = ">=0.2.0,<0.3.0" },
+    { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
     { name = "sphinx", specifier = ">=7.0.1,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2,<0.6.0" },
     { name = "sphinxcontrib-plantuml", specifier = ">=0.25,<0.26" },
     { name = "sphinxcontrib-typer", specifier = ">=0.9.0,<0.10.0" },
-    { name = "toml-sort", specifier = ">=0.23.1,<0.24.0" },
     { name = "types-requests", specifier = ">=2.31.0.8,<3" },
 ]
 

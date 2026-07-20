@@ -7,10 +7,10 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Natural Language :: English",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3",  # managed by pyprojkit
+  "Programming Language :: Python :: 3.12",  # managed by pyprojkit
+  "Programming Language :: Python :: 3.13",  # managed by pyprojkit
+  "Programming Language :: Python :: 3.14",  # managed by pyprojkit
   "Programming Language :: Python :: Implementation :: CPython",
   "Typing :: Typed"
 ]
@@ -27,7 +27,7 @@ description = "Python SDK and CLI toolkit for Trilium Notes"
 license = "AGPL-3.0-only"
 name = "trilium-alchemy"
 readme = "README.pypi.md"
-requires-python = ">=3.12,<4"
+requires-python = ">=3.12,<3.15"  # managed by pyprojkit
 version = "0.9.0"
 
 [project.scripts]
@@ -39,29 +39,18 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 
 [dependency-groups]
 dev = [
-  "autoflake>=2.3.1,<3",
-  "black>=25.1.0,<26",
   "docformatter",
-  "doit>=0.36.0,<0.37.0",
   "furo>=2023.5.20,<2024",
-  "genbadge[all]>=1.1.0,<2",
-  "isort>=6.0.1,<7",
   "mkinit",
-  "mypy[reports]>=1.5.1,<2",
   "myst-parser>=2.0.0,<3",
-  "nox>=2026.4.10",
   "pexpect>=4.9.0,<5",
-  "pyright>=1.1.329,<2",
-  "pytest>=7.3.1,<8",
-  "pytest-cov>=4.1.0,<5",
-  "pytest-dependency>=0.5.1,<0.6.0",
-  "python-dotenv>=1.0.0,<2",
+  "pyprojkit[all]>=0.2.0,<0.3.0",
+  "pytest-dependency>=0.6.1,<0.7.0",
   "sphinx>=7.0.1,<8",
   "sphinx-autodoc2 @ git+https://github.com/mm21/sphinx-autodoc2.git",
   "sphinx-copybutton>=0.5.2,<0.6.0",
   "sphinxcontrib-plantuml>=0.25,<0.26",
   "sphinxcontrib-typer>=0.9.0,<0.10.0",
-  "toml-sort>=0.23.1,<0.24.0",
   "types-requests>=2.31.0.8,<3"
 ]
 
@@ -69,26 +58,30 @@ dev = [
 build-backend = "uv_build"
 requires = ["uv_build>=0.11.6,<0.12.0"]
 
-[tool.autoflake]
+[tool.autoflake]  # managed by pyprojkit
 in_place = true
 recursive = true
 remove-all-unused-imports = true
 remove-unused-variables = true
 
-[tool.black]
+[tool.black]  # managed by pyprojkit
 quiet = true
-target-version = ["py312", "py313", "py314"]
+target-version = [
+  "py312",
+  "py313",
+  "py314"
+]
 
-[tool.coverage.report]
+[tool.coverage.report]  # managed by pyprojkit
 exclude_lines = [
   "if TYPE_CHECKING:",
   "\\.\\.\\.$"
 ]
 
-[tool.coverage.run]
+[tool.coverage.run]  # managed by pyprojkit
 data_file = "__cache__/.coverage"
 
-[tool.docformatter]
+[tool.docformatter]  # managed by pyprojkit
 black = true
 in-place = true
 make-summary-multi-line = true
@@ -96,30 +89,50 @@ non-strict = true
 pre-summary-newline = true
 recursive = true
 
-[tool.doit]
+[tool.doit]  # managed by pyprojkit
 dep_file = "__cache__/.doit.db"
 verbosity = 2
 
-[tool.isort]
+[tool.isort]  # managed by pyprojkit
 profile = "black"
 quiet = true
 
-[tool.mypy]
+[tool.mypy]  # managed by pyprojkit
 ignore_missing_imports = true
 python_version = "3.12"
 
-[tool.nox]
+[tool.nox]  # managed by pyprojkit
 default_venv_backend = "uv"
 envdir = "__cache__/nox"
 
-[tool.pytest.ini_options]
+[tool.pyprojkit]  # managed by pyprojkit
+managed = [
+  "tool.autoflake",
+  "tool.black",
+  "tool.coverage.report",
+  "tool.coverage.run",
+  "tool.docformatter",
+  "tool.doit",
+  "tool.isort",
+  "tool.mypy",
+  "tool.nox",
+  "tool.pytest.ini_options",
+  "tool.tomlsort"
+]
+
+[tool.pytest.ini_options]  # managed by pyprojkit
 addopts = "--import-mode=importlib -s -v -rA"
 cache_dir = "__cache__/pytest"
 testpaths = "test"
 
-[tool.tomlsort]
-sort_first = ["project", "dependency-groups", "build-system"]
+[tool.tomlsort]  # managed by pyprojkit
+sort_first = [
+  "project",
+  "dependency-groups",
+  "build-system"
+]
 sort_table_keys = true
+spaces_before_inline_comment = 2
 
 [tool.uv.sources]
 docformatter = {git = "https://github.com/mm21/docformatter.git"}
