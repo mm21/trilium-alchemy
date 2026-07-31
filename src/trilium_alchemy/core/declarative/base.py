@@ -93,9 +93,8 @@ class BaseDeclarativeMixin(
 
     def init(self, attributes: list[BaseAttribute], children: list[Branch], /):
         """
-        Can be overridden to add attributes and/or children during
-        instantiation. Use the following to create attribute/child with
-        deterministic id:
+        Can be overridden to add attributes and/or children during instantiation. Use
+        the following to create attribute/child with deterministic id:
 
         - {obj}`BaseDeclarativeMixin.create_declarative_label`
         - {obj}`BaseDeclarativeMixin.create_declarative_relation`

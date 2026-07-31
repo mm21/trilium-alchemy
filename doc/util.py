@@ -597,9 +597,8 @@ class Env:
         """
         Try to get item given its name, which may not include a modpath.
 
-        If there's a corresponding Symbol, it's returned as well. The
-        Symbol may be the containing class - members of classes don't
-        have an entry in the SymbolMap.
+        If there's a corresponding Symbol, it's returned as well. The Symbol may be the
+        containing class - members of classes don't have an entry in the SymbolMap.
         """
         # try to resolve as symbol
         symbol = self.symbol_map.lookup(name)

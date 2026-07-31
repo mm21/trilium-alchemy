@@ -32,8 +32,7 @@ class Content(NoteStatefulExtension):
     """
     Interface to note's content.
 
-    Access as {obj}`Note.content`, a descriptor mapping to
-    an instance of this class.
+    Access as {obj}`Note.content`, a descriptor mapping to an instance of this class.
 
     The expected type depends on {obj}`Note.is_string`:
     - `True`{l=python}: get/set `str`{l=python}

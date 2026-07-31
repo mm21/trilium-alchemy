@@ -200,9 +200,11 @@ def note(request: FixtureRequest, session: Session) -> Generator[Note, None, Non
 
     Supports attribute creation using decorator like:
 
+    ```
     @mark.attribute('test_label', 'test_value')
     @mark.attribute('test_label', inheritable=True)
     @mark.attribute('test_relation', 'target_note_id', type='relation')
+    ```
 
     Use @mark.attribute to preserve order of attributes.
 

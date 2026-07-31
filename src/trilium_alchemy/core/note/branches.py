@@ -73,8 +73,7 @@ class ParentBranches(BaseEntitySet[Branch], BranchLookupMixin):
 
     def __contains__(self, obj: object) -> bool:
         """
-        Implement helper:
-        note1 in note2.branches.parents
+        Implement helper: note1 in note2.branches.parents
         """
         assert self._entity_set is not None
         return obj in self._entity_set

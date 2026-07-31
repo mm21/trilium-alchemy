@@ -114,11 +114,11 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
     """
     Encapsulates an attribute, a key-value record attached to a note.
 
-    Can't be instantiated directly; use {obj}`Label` or {obj}`Relation`
-    concrete classes.
+    Can't be instantiated directly; use {obj}`Label` or {obj}`Relation` concrete
+    classes.
 
-    Once instantiated, the attribute needs to be added to a {obj}`Note`.
-    See the documentation of {obj}`Note` for details.
+    Once instantiated, the attribute needs to be added to a {obj}`Note`. See the
+    documentation of {obj}`Note` for details.
 
     ```{note}
     Value is accessed differently depending on the concrete class:

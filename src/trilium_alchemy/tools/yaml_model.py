@@ -15,8 +15,8 @@ __all__ = [
 
 class BaseYamlModel(BaseModel):
     """
-    Base pydantic model with additional functionality to load to and dump from
-    .yaml file.
+    Base pydantic model with additional functionality to load to and dump from .yaml
+    file.
     """
 
     @classmethod

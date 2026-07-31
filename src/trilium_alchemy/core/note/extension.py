@@ -306,8 +306,8 @@ class BaseEntitySet[EntityT: BaseEntity](
     """
     Maintain set of entities bound to a note.
 
-    Used for ParentBranches.     Since sets aren't ordered, it emphasizes the fact that
-    there are no     position values to maintain.
+    Used for ParentBranches. Since sets aren't ordered, it emphasizes the fact that
+    there are no position values to maintain.
     """
 
     _entity_set: set[EntityT] | None = None

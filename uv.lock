@@ -361,11 +361,12 @@ wheels = [
 ]
 
 [[package]]
-name = "docformatter"
-version = "1.7.8"
-source = { git = "https://github.com/mm21/docformatter.git#09bb72e730a3d55fb9058cfb9b59f706dba7dca6" }
-dependencies = [
-    { name = "charset-normalizer" },
+name = "docfmt"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/ef/d717f937eda3a7c66b83d7981bc2f40523007d62785357792fb2a8b715c9/docfmt-0.2.0.tar.gz", hash = "sha256:471be7cb7263e0e31e8c0816136404b220b7b473df1ca347618595e21bc13a7a", size = 16663, upload-time = "2026-07-26T06:02:32.102Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/92/fd996fedc177a74a5e9f865c7a340d9d455c1631cd850b3746035b8e6b57/docfmt-0.2.0-py3-none-any.whl", hash = "sha256:d6f0ecb524cbefdf273baef086f2a5f7f928116ed1f8373cd40d8e46c320e9f2", size = 21210, upload-time = "2026-07-26T06:02:30.91Z" },
 ]
 
 [[package]]
@@ -745,7 +746,7 @@ wheels = [
 [[package]]
 name = "mkinit"
 version = "1.3.0"
-source = { git = "https://github.com/mm21/mkinit.git#2e7cae2e5d35c00ccf9a843e990509ced4fb955a" }
+source = { git = "https://github.com/mm21/mkinit.git#671f45b68591b9327534ce44a7cdc8a0a1417d07" }
 dependencies = [
     { name = "ubelt" },
 ]
@@ -1087,7 +1088,7 @@ wheels = [
 
 [[package]]
 name = "pyprojkit"
-version = "0.2.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "doit" },
@@ -1096,16 +1097,16 @@ dependencies = [
     { name = "toml-sort" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/a7/b5e8fd3ba54e2d980aaeb2a002b3d9ad2e6253c337e2ea0b69216f604291/pyprojkit-0.2.0.tar.gz", hash = "sha256:25775d4294268c846e0d66cc27ac9840f655c50a83abaa8461ede28a33a4eda6", size = 18243, upload-time = "2026-07-20T06:55:29.245Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/1b/971dcd37d726fd590e3cf60884246a2813bc81f40191a32b09b3fb930ad3/pyprojkit-0.3.1.tar.gz", hash = "sha256:a97f4ed3e7288a167bf00890673cbfb6b8a18579864d8e875fdcc2d9b6377954", size = 18872, upload-time = "2026-07-31T06:02:51.769Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/9c/333513b38b417d62d0be677c951ddcb92d3cb0928e0f49a442d83575d2bd/pyprojkit-0.2.0-py3-none-any.whl", hash = "sha256:70191f89d884eb08229c83da923c00e8089177d2f02d3d4ff858a7a24c428a8a", size = 24377, upload-time = "2026-07-20T06:55:28.069Z" },
+    { url = "https://files.pythonhosted.org/packages/79/9d/ddd158d868ed5e9ca4fa640e987e2c9238ece794368c96a45fad39ffc4ee/pyprojkit-0.3.1-py3-none-any.whl", hash = "sha256:5784b7152af7cb3aad796333be166ddc0f38ed99a3b8a700e32f88680bb77358", size = 24972, upload-time = "2026-07-31T06:02:50.635Z" },
 ]
 
 [package.optional-dependencies]
 all = [
     { name = "autoflake" },
     { name = "black" },
-    { name = "docformatter" },
+    { name = "docfmt" },
     { name = "genbadge", extra = ["coverage", "tests"] },
     { name = "isort" },
     { name = "mkinit" },
@@ -1523,7 +1524,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "docformatter" },
     { name = "furo" },
     { name = "mkinit" },
     { name = "myst-parser" },
@@ -1551,12 +1551,11 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "docformatter", git = "https://github.com/mm21/docformatter.git" },
     { name = "furo", specifier = ">=2023.5.20,<2024" },
     { name = "mkinit", git = "https://github.com/mm21/mkinit.git" },
     { name = "myst-parser", specifier = ">=2.0.0,<3" },
     { name = "pexpect", specifier = ">=4.9.0,<5" },
-    { name = "pyprojkit", extras = ["all"], specifier = ">=0.2.0,<0.3.0" },
+    { name = "pyprojkit", extras = ["all"], specifier = ">=0.3.1,<0.4.0" },
     { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
     { name = "sphinx", specifier = ">=7.0.1,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },

@@ -231,9 +231,9 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
 
     Trilium only supports image attachments.
 
-    Add to a note using its {obj}`Note.attachments` list. An attachment can be
-    created from raw `bytes`{l=python} (requires a `title`{l=python}), a
-    {obj}`pathlib.Path`, or a binary file handle:
+    Add to a note using its {obj}`Note.attachments` list. An attachment can be created
+    from raw `bytes`{l=python} (requires a `title`{l=python}), a {obj}`pathlib.Path`, or
+    a binary file handle:
 
     ```
     note.attachments = [

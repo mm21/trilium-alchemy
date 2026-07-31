@@ -39,12 +39,11 @@ homepage = "https://github.com/mm21/trilium-alchemy"
 
 [dependency-groups]
 dev = [
-  "docformatter",
   "furo>=2023.5.20,<2024",
   "mkinit",
   "myst-parser>=2.0.0,<3",
   "pexpect>=4.9.0,<5",
-  "pyprojkit[all]>=0.2.0,<0.3.0",
+  "pyprojkit[all]>=0.3.1,<0.4.0",
   "pytest-dependency>=0.6.1,<0.7.0",
   "sphinx>=7.0.1,<8",
   "sphinx-autodoc2 @ git+https://github.com/mm21/sphinx-autodoc2.git",
@@ -81,13 +80,11 @@ exclude_lines = [
 [tool.coverage.run]  # managed by pyprojkit
 data_file = "__cache__/.coverage"
 
-[tool.docformatter]  # managed by pyprojkit
-black = true
+[tool.docfmt]  # managed by pyprojkit
+force-reflow = true
 in-place = true
-make-summary-multi-line = true
-non-strict = true
-pre-summary-newline = true
 recursive = true
+summary-on-own-line = true
 
 [tool.doit]  # managed by pyprojkit
 dep_file = "__cache__/.doit.db"
@@ -111,7 +108,7 @@ managed = [
   "tool.black",
   "tool.coverage.report",
   "tool.coverage.run",
-  "tool.docformatter",
+  "tool.docfmt",
   "tool.doit",
   "tool.isort",
   "tool.mypy",
@@ -135,5 +132,4 @@ sort_table_keys = true
 spaces_before_inline_comment = 2
 
 [tool.uv.sources]
-docformatter = {git = "https://github.com/mm21/docformatter.git"}
 mkinit = {git = "https://github.com/mm21/mkinit.git"}

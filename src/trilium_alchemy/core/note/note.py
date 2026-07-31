@@ -112,9 +112,9 @@ def is_string(note_type: str, mime: str) -> bool:
     Encapsulates logic for checking if a note is considered string type according to
     Trilium.
 
-    This should be generally kept in sync with
-    `src/services/utils.js:isStringNote()`, although checking if not a binary
-    type so as to be more future-proof for when other string types are added.
+    This should be generally kept in sync with `src/services/utils.js:isStringNote()`,
+    although checking if not a binary type so as to be more future-proof for when other
+    string types are added.
     """
     return (
         note_type not in BIN_NOTE_TYPES
@@ -140,19 +140,19 @@ def id_hash_legacy(seed: str) -> str:
     """
     Legacy implementation of `id_hash()`.
 
-    Possibly useful for migrating to the new hash mechanism. To be removed before version 1.0.
+    Possibly useful for migrating to the new hash mechanism. To be removed before
+    version 1.0.
 
-    Return id given seed. Needed to ensure IDs have a consistent amount of
-    entropy by all being of the same length and character distribution.
+    Return id given seed. Needed to ensure IDs have a consistent amount of entropy by
+    all being of the same length and character distribution.
 
-    Note: there is a small loss in entropy due to mapping the characters '+'
-    and '/' to 'a' and 'b' respectively. This is required since these are not
-    allowable characters in Trilium and will result in a slight bias,
-    compromising cryptographic properties, but it's inconsequential
-    for this application.
+    Note: there is a small loss in entropy due to mapping the characters '+' and '/' to
+    'a' and 'b' respectively. This is required since these are not allowable characters
+    in Trilium and will result in a slight bias, compromising cryptographic properties,
+    but it's inconsequential for this application.
 
-    They could be replaced with e.g. 'aa', 'ab' to restore cryptographic
-    entropy, but at the cost of making IDs inconsistent lengths.
+    They could be replaced with e.g. 'aa', 'ab' to restore cryptographic entropy, but at
+    the cost of making IDs inconsistent lengths.
     """
     hex_string = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
     byte_string = bytes.fromhex(hex_string)
@@ -181,8 +181,8 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     """
     Encapsulates a note.
 
-    Can be subclassed for custom attribute accessors.     For a detailed walkthrough of
-    how to use this class, see     {ref}`Working with notes <working-with-notes-notes>`.
+    Can be subclassed for custom attribute accessors. For a detailed walkthrough of how
+    to use this class, see {ref}`Working with notes <working-with-notes-notes>`.
     """
 
     # model extensions
@@ -437,9 +437,8 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
         """
         Implement clone operator:
 
-        child ^= parent_note
-        child ^= (parent_note, "prefix")
-        child ^= [parent1, parent2]
+        child ^= parent_note child ^= (parent_note, "prefix") child ^= [parent1,
+        parent2]
         """
         parent_or_parents_ = (
             [parent_or_parents]

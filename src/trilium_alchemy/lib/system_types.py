@@ -10,8 +10,8 @@ notes ({obj}`BaseDeclarativeNote.leaf` is `False`{l=python}).
 If a note hierarchy is defined under a {obj}`BaseRootNote` subclass, a
 {obj}`BaseRootSystemNote` is automatically added.
 
-For a complete example of a note hierarchy using these classes, see `trilium-
-alchemy/examples/event-tracker` and its documentation at {ref}`event-tracker`.
+For a complete example of a note hierarchy using these classes, see
+`trilium- alchemy/examples/event-tracker` and its documentation at {ref}`event-tracker`.
 """
 
 from __future__ import annotations

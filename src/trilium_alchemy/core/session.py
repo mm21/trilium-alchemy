@@ -235,8 +235,8 @@ class Session:
         """
         Commits pending changes to Trilium via ETAPI.
 
-        If `entities`{l=python} passed, only flushes those entities
-        and their dependencies.
+        If `entities`{l=python} passed, only flushes those entities and their
+        dependencies.
 
         If `entities = None`{l=python}, flushes all dirty entities.
 
@@ -373,7 +373,8 @@ class Session:
         """
         Returns app info.
 
-        See <https://github.com/mm21/trilium-client/blob/main/docs/AppInfo.md> for its definition.
+        See <https://github.com/mm21/trilium-client/blob/main/docs/AppInfo.md> for its
+        definition.
         """
         app_info: AppInfo = self.api.get_app_info()
         return app_info
@@ -539,12 +540,16 @@ class Session:
         note_states: dict[int, NoteState] = {}
 
         def add_note(note: Note):
-            "Add a note to the notes dict."
+            """
+            Add a note to the notes dict.
+            """
             if not id(note) in note_states:
                 note_states[id(note)] = NoteState(note)
 
         def get_note_state(note: Note) -> NoteState:
-            "Get the note state for this note, creating it if needed."
+            """
+            Get the note state for this note, creating it if needed.
+            """
             add_note(note)
             note_state = note_states.get(id(note))
             assert note_state
@@ -596,8 +601,7 @@ class Session:
         ETAPI client object.
 
         Used internally and exposed for manual low-level operations. For its
-        documentation, see:
-        <https://github.com/mm21/trilium-client>
+        documentation, see: <https://github.com/mm21/trilium-client>
         """
         assert self._api is not None
         return self._api
@@ -607,8 +611,7 @@ class Session:
         """
         Return API base path from config.
 
-        This is the host appended with
-        `/etapi`.
+        This is the host appended with `/etapi`.
         """
         return f"{self.host}/etapi"
 

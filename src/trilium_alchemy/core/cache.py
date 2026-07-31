@@ -25,7 +25,9 @@ class Cache:
     """
 
     entity_map: dict[str, BaseEntity]
-    """Mapping of entity id to entity object"""
+    """
+    Mapping of entity id to entity object.
+    """
 
     dirty_set: set[BaseEntity]
     """

@@ -38,8 +38,11 @@ TREE_DEPTH = 2
 Depth of prefix tree.
 
 For example:
+
+```
 /dump_root/a1/b2/c3d4...
 /dump_root/a1/b3/c4d5...
+```
 """
 
 PREFIX_SIZE = 2
