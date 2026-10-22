@@ -1,3 +1,5 @@
+# managed (in part) by pyprojkit: https://github.com/mm21/pyprojkit
+
 [project]
 authors = [
   {name = "mm21", email = "mm21.dev@gmail.com"}
@@ -7,10 +9,10 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Natural Language :: English",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",  # managed by pyprojkit
-  "Programming Language :: Python :: 3.12",  # managed by pyprojkit
-  "Programming Language :: Python :: 3.13",  # managed by pyprojkit
-  "Programming Language :: Python :: 3.14",  # managed by pyprojkit
+  "Programming Language :: Python :: 3",  # pyprojkit-managed
+  "Programming Language :: Python :: 3.12",  # pyprojkit-managed
+  "Programming Language :: Python :: 3.13",  # pyprojkit-managed
+  "Programming Language :: Python :: 3.14",  # pyprojkit-managed
   "Programming Language :: Python :: Implementation :: CPython",
   "Typing :: Typed"
 ]
@@ -27,7 +29,7 @@ description = "Python SDK and CLI toolkit for Trilium Notes"
 license = "AGPL-3.0-only"
 name = "trilium-alchemy"
 readme = "README.pypi.md"
-requires-python = ">=3.12,<3.15"  # managed by pyprojkit
+requires-python = ">=3.12,<4.0"  # pyprojkit-managed
 version = "0.9.0"
 
 [project.scripts]
@@ -43,7 +45,7 @@ dev = [
   "mkinit",
   "myst-parser>=2.0.0,<3",
   "pexpect>=4.9.0,<5",
-  "pyprojkit[all]>=0.3.1,<0.4.0",
+  "pyprojkit[all]>=0.4.3,<0.5.0",
   "pytest-dependency>=0.6.1,<0.7.0",
   "sphinx>=7.0.1,<8",
   "sphinx-autodoc2 @ git+https://github.com/mm21/sphinx-autodoc2.git",
@@ -57,79 +59,64 @@ dev = [
 build-backend = "uv_build"
 requires = ["uv_build>=0.11.6,<0.12.0"]
 
-[tool.autoflake]  # managed by pyprojkit
-in_place = true
-recursive = true
-remove-all-unused-imports = true
-remove-unused-variables = true
+[tool.autoflake]
+in_place = true  # pyprojkit-managed
+recursive = true  # pyprojkit-managed
+remove-all-unused-imports = true  # pyprojkit-managed
+remove-unused-variables = true  # pyprojkit-managed
 
-[tool.black]  # managed by pyprojkit
-quiet = true
+[tool.black]
+quiet = true  # pyprojkit-managed
 target-version = [
   "py312",
   "py313",
   "py314"
-]
+]  # pyprojkit-managed
 
-[tool.coverage.report]  # managed by pyprojkit
+[tool.coverage.report]
 exclude_lines = [
   "if TYPE_CHECKING:",
   "\\.\\.\\.$"
-]
+]  # pyprojkit-managed
 
-[tool.coverage.run]  # managed by pyprojkit
-data_file = "__cache__/.coverage"
+[tool.coverage.run]
+data_file = "__cache__/.coverage"  # pyprojkit-managed
 
-[tool.docfmt]  # managed by pyprojkit
-force-reflow = true
-in-place = true
-recursive = true
-summary-on-own-line = true
+[tool.docfmt]
+force-reflow = true  # pyprojkit-managed
+in-place = true  # pyprojkit-managed
+recursive = true  # pyprojkit-managed
+summary-on-own-line = true  # pyprojkit-managed
 
-[tool.doit]  # managed by pyprojkit
-dep_file = "__cache__/.doit.db"
-verbosity = 2
+[tool.doit]
+dep_file = "__cache__/.doit.db"  # pyprojkit-managed
+verbosity = 2  # pyprojkit-managed
 
-[tool.isort]  # managed by pyprojkit
-profile = "black"
-quiet = true
+[tool.isort]
+profile = "black"  # pyprojkit-managed
+quiet = true  # pyprojkit-managed
 
-[tool.mypy]  # managed by pyprojkit
-ignore_missing_imports = true
-python_version = "3.12"
+[tool.mypy]
+ignore_missing_imports = true  # pyprojkit-managed
+python_version = "3.12"  # pyprojkit-managed
 
-[tool.nox]  # managed by pyprojkit
-default_venv_backend = "uv"
-envdir = "__cache__/nox"
+[tool.nox]
+default_venv_backend = "uv"  # pyprojkit-managed
+envdir = "__cache__/nox"  # pyprojkit-managed
 
-[tool.pyprojkit]  # managed by pyprojkit
-managed = [
-  "tool.autoflake",
-  "tool.black",
-  "tool.coverage.report",
-  "tool.coverage.run",
-  "tool.docfmt",
-  "tool.doit",
-  "tool.isort",
-  "tool.mypy",
-  "tool.nox",
-  "tool.pytest.ini_options",
-  "tool.tomlsort"
-]
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -s -v -rA"  # pyprojkit-managed
+cache_dir = "__cache__/pytest"  # pyprojkit-managed
+testpaths = "test"  # pyprojkit-managed
 
-[tool.pytest.ini_options]  # managed by pyprojkit
-addopts = "--import-mode=importlib -s -v -rA"
-cache_dir = "__cache__/pytest"
-testpaths = "test"
-
-[tool.tomlsort]  # managed by pyprojkit
+[tool.tomlsort]
 sort_first = [
   "project",
   "dependency-groups",
   "build-system"
-]
-sort_table_keys = true
-spaces_before_inline_comment = 2
+]  # pyprojkit-managed
+sort_table_keys = true  # pyprojkit-managed
+spaces_before_inline_comment = 2  # pyprojkit-managed
 
 [tool.uv.sources]
 mkinit = {git = "https://github.com/mm21/mkinit.git"}

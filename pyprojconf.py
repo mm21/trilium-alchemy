@@ -1,21 +1,20 @@
 from dataclasses import replace
 
 from pyprojkit import (
-    AnalysisConfig,
     DocConfig,
     ProjectConfig,
     PythonVersions,
+    RequiresPython,
     SphinxConfig,
-    ToolsConfig,
+    create_kitchen_sink_tools,
 )
 
 config = ProjectConfig(
     package="trilium_alchemy",
-    python=PythonVersions(3, (12, 14)),
-    packages_dir="src",
+    requires_python=RequiresPython((3, 12)),
+    pinned_python=PythonVersions(3, (12, 14)),
     tools=replace(
-        ToolsConfig.default(),
+        create_kitchen_sink_tools(),
         doc=DocConfig(sphinx=SphinxConfig(copy_env_var="TRILIUM_ALCHEMY_DOCS_DIR")),
-        analysis=AnalysisConfig(),
     ),
 )

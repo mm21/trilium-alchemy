@@ -1,6 +1,10 @@
 version = 1
 revision = 3
-requires-python = ">=3.12, <3.15"
+requires-python = ">=3.12, <4.0"
+resolution-markers = [
+    "python_full_version >= '3.15'",
+    "python_full_version < '3.15'",
+]
 
 [[package]]
 name = "alabaster"
@@ -362,11 +366,11 @@ wheels = [
 
 [[package]]
 name = "docfmt"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/17/ef/d717f937eda3a7c66b83d7981bc2f40523007d62785357792fb2a8b715c9/docfmt-0.2.0.tar.gz", hash = "sha256:471be7cb7263e0e31e8c0816136404b220b7b473df1ca347618595e21bc13a7a", size = 16663, upload-time = "2026-07-26T06:02:32.102Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/50/6c4a492d207d6197dcdc8fe6c0e163db1d692431f148fae6b38ff7056694/docfmt-0.3.0.tar.gz", hash = "sha256:47319bbff54dd4fcbf5a365eadecdc50053c8f1c90c32e4bd0d2f65a5c145cc6", size = 16604, upload-time = "2026-10-16T19:32:03.181Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/92/fd996fedc177a74a5e9f865c7a340d9d455c1631cd850b3746035b8e6b57/docfmt-0.2.0-py3-none-any.whl", hash = "sha256:d6f0ecb524cbefdf273baef086f2a5f7f928116ed1f8373cd40d8e46c320e9f2", size = 21210, upload-time = "2026-07-26T06:02:30.91Z" },
+    { url = "https://files.pythonhosted.org/packages/74/0c/6e6a514bafbf2ddff54d02b4b9534f3ea2e700926b7495a977d55eb6aae3/docfmt-0.3.0-py3-none-any.whl", hash = "sha256:873306120d5869d9f1cd85c2e426b8ff9cd9c3987e00a4698391744dd928c44a", size = 21208, upload-time = "2026-10-16T19:32:02.202Z" },
 ]
 
 [[package]]
@@ -1088,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "pyprojkit"
-version = "0.3.1"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "doit" },
@@ -1097,9 +1101,9 @@ dependencies = [
     { name = "toml-sort" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/1b/971dcd37d726fd590e3cf60884246a2813bc81f40191a32b09b3fb930ad3/pyprojkit-0.3.1.tar.gz", hash = "sha256:a97f4ed3e7288a167bf00890673cbfb6b8a18579864d8e875fdcc2d9b6377954", size = 18872, upload-time = "2026-07-31T06:02:51.769Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/82/0e149f84ac213a1dcb55c9271f9cf08418d15a232af9e7cbc08edf07446c/pyprojkit-0.4.3.tar.gz", hash = "sha256:b84938cebf6f237b27733ce2912275ddfbf39c576a0052b6d6fccb9cf247cbbe", size = 28490, upload-time = "2026-10-21T23:42:37.291Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/9d/ddd158d868ed5e9ca4fa640e987e2c9238ece794368c96a45fad39ffc4ee/pyprojkit-0.3.1-py3-none-any.whl", hash = "sha256:5784b7152af7cb3aad796333be166ddc0f38ed99a3b8a700e32f88680bb77358", size = 24972, upload-time = "2026-07-31T06:02:50.635Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/06/8a228e2c97a95aadb01dd68aa2cb0b578397909a8a3a909e09e489a9449d/pyprojkit-0.4.3-py3-none-any.whl", hash = "sha256:fc2e94d43a25a0c5c6f78158022ea3705ced6fdcdce170cc8c615db0664461b5", size = 35359, upload-time = "2026-10-21T23:42:36.138Z" },
 ]
 
 [package.optional-dependencies]
@@ -1555,7 +1559,7 @@ dev = [
     { name = "mkinit", git = "https://github.com/mm21/mkinit.git" },
     { name = "myst-parser", specifier = ">=2.0.0,<3" },
     { name = "pexpect", specifier = ">=4.9.0,<5" },
-    { name = "pyprojkit", extras = ["all"], specifier = ">=0.3.1,<0.4.0" },
+    { name = "pyprojkit", extras = ["all"], specifier = ">=0.4.3,<0.5.0" },
     { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
     { name = "sphinx", specifier = ">=7.0.1,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },
