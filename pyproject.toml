@@ -45,7 +45,7 @@ dev = [
   "mkinit",
   "myst-parser>=2.0.0,<3",
   "pexpect>=4.9.0,<5",
-  "pyprojkit[all]>=0.4.3,<0.5.0",
+  "pyprojkit[all]>=0.6.0,<0.7.0",
   "pytest-dependency>=0.6.1,<0.7.0",
   "sphinx>=7.0.1,<8",
   "sphinx-autodoc2 @ git+https://github.com/mm21/sphinx-autodoc2.git",
@@ -99,13 +99,16 @@ profile = "black"  # pyprojkit-managed
 quiet = true  # pyprojkit-managed
 
 [tool.mypy]
-check_untyped_defs = true
+check_untyped_defs = true  # pyprojkit-managed
 ignore_missing_imports = true  # pyprojkit-managed
 python_version = "3.12"  # pyprojkit-managed
 
 [tool.nox]
 default_venv_backend = "uv"  # pyprojkit-managed
 envdir = "__cache__/nox"  # pyprojkit-managed
+
+[tool.pyright]
+pythonVersion = "3.12"  # pyprojkit-managed
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -s -v -rA"  # pyprojkit-managed
