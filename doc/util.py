@@ -118,7 +118,7 @@ class Symbol:
         """
         assert (
             self.py_obj not in self.symbol_map.obj_map
-        ), "Symbol already set as canonical: {} (have {}, setting {}){}, {})".format(
+        ), "Symbol already set as canonical: {} (have {}, setting {})".format(
             self.py_obj, self.symbol_map.obj_map[self.py_obj].virt_path, self.virt_path
         )
 
@@ -920,7 +920,8 @@ class Env:
             # insert xref in param default
             # TODO: helper to traverse for inline with classes="default_value"
             if len(parameter.children) > 7:
-                default: docutils.nodes.inline = parameter.children[7]
+                default = parameter.children[7]
+                assert isinstance(default, docutils.nodes.inline)
                 self._insert_xref(default)
 
         # traverse returns
@@ -944,6 +945,7 @@ class Env:
             obj_type = desc["objtype"]
 
             signature = desc.children[0]
+            assert isinstance(signature, docutils.nodes.Element)
 
             full_name = signature["ids"][0]
 

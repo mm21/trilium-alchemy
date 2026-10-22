@@ -3,7 +3,7 @@ __submodules__ = [
     "relations",
     "attributes",
 ]
-__canonical_children__ = []
+__canonical_children__: list[str] = []
 
 # isort: off
 # <AUTOGEN_INIT>

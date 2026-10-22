@@ -123,7 +123,8 @@ class Content(NoteStatefulExtension):
         """
         Reset all state.
         """
-        [state.reset() for state in [self._backing, self._working]]
+        for state in [self._backing, self._working]:
+            state.reset()
 
     def _get(self) -> str | bytes:
         """
@@ -132,6 +133,8 @@ class Content(NoteStatefulExtension):
         The type is `str` or `bytes`, depending on whether Trilium stores the content as
         string or binary.
         """
+        blob: str | bytes | None
+
         if self._working.blob is not None:
             # get from content set by user
             blob = self._working.blob

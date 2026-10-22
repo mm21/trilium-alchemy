@@ -88,7 +88,7 @@ intersphinx_mapping = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns: list[str] = []
 
 plantuml_jar = shutil.which(PLANTUML_JAR, os.F_OK | os.R_OK)
 graphvizdot = shutil.which("dot")

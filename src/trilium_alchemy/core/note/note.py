@@ -198,7 +198,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     _relations: Relations
 
     def __new__(cls, *_, **kwargs) -> Self:
-        note_id, _ = cls._get_note_id(kwargs.get("note_id"))
+        note_id = cls._get_note_id(kwargs.get("note_id"))[0]
         return super().__new__(
             cls,
             session=kwargs.get("session"),
@@ -308,6 +308,8 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             """
             Return correct mime given note_type, validating if it was passed by user.
             """
+            mime_: str | None
+
             if note_type is None:
                 return None
             elif note_type in NOTE_TYPES_MIME_NA:
@@ -387,7 +389,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
             | BaseAttribute
             | Iterable[Note | tuple[Note, str | None] | Branch | BaseAttribute]
         ),
-    ) -> Note:
+    ) -> Self:
         """
         Implement entity bind operator:
 
@@ -433,7 +435,7 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
     def __ixor__(
         self,
         parent_or_parents: Note | tuple[Note, str] | Iterable[Note | tuple[Note, str]],
-    ) -> Note:
+    ) -> Self:
         """
         Implement clone operator:
 

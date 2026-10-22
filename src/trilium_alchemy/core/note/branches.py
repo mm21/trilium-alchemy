@@ -34,7 +34,8 @@ class BranchLookupMixin:
     Enables looking up a branch given a related Note, either parent or child.
     """
 
-    def __iter__(self) -> Iterator[Branch]: ...
+    def __iter__(self) -> Iterator[Branch]:
+        raise NotImplementedError
 
     def lookup_branch(self, note: Note) -> Branch | None:
         """
@@ -51,7 +52,8 @@ class NoteLookupMixin:
     Enables looking up a note given a title, either parent or child.
     """
 
-    def __iter__(self) -> Iterator[Note]: ...
+    def __iter__(self) -> Iterator[Note]:
+        raise NotImplementedError
 
     def lookup_note(self, title: str) -> Note | None:
         """
@@ -290,6 +292,17 @@ class ParentNotes(NoteExtension, MutableSet, NoteLookupMixin):
         self._note.branches.parents |= {self._normalize_branch(n) for n in parents}
         return self
 
+    def __add__(self, parent: Note | Iterable[Note]) -> set[Note]:
+        """
+        Return a new set of this note's parents combined with the given parent(s),
+        without modifying the note.
+
+        Also lets mypy check `note.parents += parent_note`; with asymmetric property
+        types, mypy resolves augmented assignment against the setter type, which has no
+        `__iadd__`, and so falls back to `__add__`.
+        """
+        return set(self) | set(normalize_entities(parent))
+
     def __contains__(self, obj: object) -> bool:
         """
         Implement helper:
@@ -359,6 +372,16 @@ class ChildNotes(NoteExtension, MutableSequence, NoteLookupMixin):
         child_branches = [self._note.branches.children._normalize(c) for c in children]
         self._note.branches.children += child_branches
         return self
+
+    def __add__(self, child: Note | Iterable[Note]) -> list[Note]:
+        """
+        Return a new list of this note's children followed by the given child(ren),
+        without modifying the note.
+
+        Also lets mypy check `note.children += child_note`; see
+        {obj}`ParentNotes.__add__`.
+        """
+        return list(self) + normalize_entities(child)
 
     def __iter__(self) -> Iterator[Note]:
         return iter([b._child for b in self._note.branches.children if b._child])

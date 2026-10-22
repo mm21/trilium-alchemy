@@ -30,7 +30,10 @@ class NoteExtension(Extension):
 
     @property
     def _note(self) -> Note:
-        return self._entity  # type: ignore
+        from .note import Note
+
+        assert isinstance(self._entity, Note)
+        return self._entity
 
 
 class NoteStatefulExtension(StatefulExtension[EtapiNoteModel], NoteExtension):
@@ -156,6 +159,16 @@ class BaseEntityList[EntityT: OrderedEntity](
     def __len__(self) -> int:
         return len(self._norm_entity_list)
 
+    def __add__(self, entities: Iterable[EntityT]) -> list[EntityT]:
+        """
+        Return a new list of these entities followed by the given entities, without
+        modifying the note.
+
+        Also lets mypy check e.g. `note.attributes.owned += [...]`; see
+        {obj}`ParentNotes.__add__`.
+        """
+        return list(self) + list(entities)
+
     @overload
     def __getitem__(self, i: int) -> EntityT: ...
 
@@ -203,7 +216,8 @@ class BaseEntityList[EntityT: OrderedEntity](
         del_entities = self._norm_entity_list[s]
         del self._norm_entity_list[s]
 
-        [self._unbind_entity(entity) for entity in del_entities]
+        for entity in del_entities:
+            self._unbind_entity(entity)
         self._set_positions()
         self._validate()
 

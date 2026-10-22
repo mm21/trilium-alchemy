@@ -194,7 +194,13 @@ class BaseOwnedFilteredAttributes[AttributeT: BaseAttribute](
     def __setitem__(
         self, index: int | slice, value: AttributeT | Iterable[AttributeT]
     ) -> None:
-        self._note_getter.attributes.owned[index] = value  # type: ignore[index]
+        owned = self._note_getter.attributes.owned
+        if isinstance(index, slice):
+            assert not isinstance(value, BaseAttribute)
+            owned[index] = value
+        else:
+            assert isinstance(value, BaseAttribute)
+            owned[index] = value
 
     @overload
     def __delitem__(self, index: int) -> None: ...

@@ -420,7 +420,7 @@ def create_note_fixture(request: FixtureRequest, session: Session, fixture_name:
     # mapping of attribute name to number of attributes
     # (just in case there are multiple attributes with same name,
     # each will get a unique id)
-    name_dict = dict()
+    name_dict: dict[str, int] = dict()
     position = 10
 
     # create attributes

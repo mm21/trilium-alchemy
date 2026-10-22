@@ -321,7 +321,7 @@ def child(
 
 
 def _patch_init_decl(
-    init: Callable[[BaseDeclarativeNote, list[BaseAttribute], list[Branch]]],
+    init: Callable[[BaseDeclarativeNote, list[BaseAttribute], list[Branch]], None],
     doc: str | None = None,
 ):
     """
@@ -346,7 +346,10 @@ def _patch_init_decl(
                 # invoke old init
                 init_decl_old(self, cls_decl, attributes, children)
 
-        cls._init_decl = _init_decl
+        # replace this class's _init_decl with the wrapper above, so each decorator
+        # adds one step to the chain; mypy treats methods as read-only and
+        # rejects this intentional patch
+        cls._init_decl = _init_decl  # type: ignore[method-assign]
 
         if doc:
             # append to docstring

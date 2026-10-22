@@ -80,7 +80,7 @@ def main(
             raise MissingParameter(
                 message="either --host/--instance must be passed, or set TRILIUM_HOST/TRILIUM_INSTANCE environment variable",
                 ctx=ctx,
-                param_hint=["host", "instance"],  # type: ignore
+                param_hint=["host", "instance"],
                 param_type="option",
             )
 
@@ -88,7 +88,7 @@ def main(
             raise MissingParameter(
                 message="either --token/--password must be passed, or set TRILIUM_TOKEN/TRILIUM_PASSWORD environment variable",
                 ctx=ctx,
-                param_hint=["token", "password"],  # type: ignore
+                param_hint=["token", "password"],
                 param_type="option",
             )
 

@@ -83,7 +83,7 @@ class Cache:
         )
 
         # create topological sorter
-        sorter = graphlib.TopologicalSorter()
+        sorter: graphlib.TopologicalSorter[BaseEntity] = graphlib.TopologicalSorter()
 
         # populate and prepare sorter
         for entity in dirty_set:

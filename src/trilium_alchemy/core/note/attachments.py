@@ -159,9 +159,12 @@ class AttachmentContent(StatefulExtension[EtapiAttachmentModel]):
             self._backing.digest = model.blob_id
 
     def _teardown(self):
-        [state.reset() for state in [self._backing, self._working]]
+        for state in [self._backing, self._working]:
+            state.reset()
 
     def _get(self) -> bytes:
+        blob: str | bytes | None
+
         if self._working.blob is not None:
             blob = self._working.blob
         else:

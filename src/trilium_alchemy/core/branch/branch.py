@@ -347,7 +347,8 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
     # TODO: only use case for this right now is test code, so not
     # not high priority
     @classmethod
-    def _from_model(cls, model: EtapiBranchModel) -> Branch: ...
+    def _from_model(cls, model: EtapiBranchModel) -> Branch:
+        raise NotImplementedError
 
     def _init(self):
         pass

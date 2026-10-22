@@ -55,7 +55,7 @@ class MystRenderer(RendererBase):
 
         type_ = item["type"]
 
-        type_map = {
+        type_map: dict[str, t.Callable[..., t.Iterable[str]]] = {
             "package": self.render_package,
             "module": self.render_module,
             "function": self.render_function,

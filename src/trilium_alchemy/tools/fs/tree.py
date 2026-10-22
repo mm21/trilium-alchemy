@@ -162,12 +162,12 @@ def load_tree(
     root_notes = _find_root_notes(notes)
 
     # if parent given, find relative root notes and add as children
+    errors: list[str] = []
     if parent_note:
         children: set[Note] = set(parent_note.children)
 
         # validate relative root notes
         invalid_root_notes = {parent_note, session.root}
-        errors: list[str] = []
 
         for note in root_notes:
             if note in invalid_root_notes:
@@ -183,8 +183,6 @@ def load_tree(
             if note not in children:
                 parent_note += note
     else:
-        errors: list[str] = []
-
         for note in root_notes:
             if not len(note.parents):
                 errors.append(
