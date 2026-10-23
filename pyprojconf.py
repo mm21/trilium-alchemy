@@ -11,7 +11,7 @@ from pyprojkit import (
 )
 
 config = ProjectConfig(
-    package="trilium_alchemy",
+    packages="trilium_alchemy",
     requires_python=RequiresPython((3, 12)),
     pinned_python=PythonVersions(3, (12, 14)),
     tools=replace(
@@ -21,4 +21,5 @@ config = ProjectConfig(
             sphinx=SphinxConfig(copy_env_var="TRILIUM_ALCHEMY_DOCS_DIR"),
         ),
     ),
+    typed=True,
 )

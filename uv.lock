@@ -1092,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "pyprojkit"
-version = "0.6.0"
+version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "doit" },
@@ -1101,9 +1101,9 @@ dependencies = [
     { name = "toml-sort" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/76/1c/0fc40797cc04c713a38e800fd97370a44b14494b6d4ab89f20e8c1a9bf33/pyprojkit-0.6.0.tar.gz", hash = "sha256:f6bf327ee225b41ffc07dba83ff1791d0d208f99d1a306e0f2c9e9062e9d0360", size = 29308, upload-time = "2026-10-22T08:21:50.385Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/58/d62e0ee1b0bad1fcc4a6535ed9cc24998a03192c909d0d831af01dc77823/pyprojkit-0.8.1.tar.gz", hash = "sha256:70eb9e2289c86eaf0ae34519fe1922249676c861dd595ac9f2b7f86df36f7039", size = 31488, upload-time = "2026-10-23T07:10:27.113Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/d3/43ff3199e22ec4bdda321569d1ff7e535851c52737dd5ef4021217ad7056/pyprojkit-0.6.0-py3-none-any.whl", hash = "sha256:c18ef556f332d41081692e2dae5215dce46e8a8db3d431bec9359756b42a747e", size = 36199, upload-time = "2026-10-22T08:21:49.273Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/21/864ad7670f3586854348cabf945bb5cd59cd334e47418f853b72c96ca29a/pyprojkit-0.8.1-py3-none-any.whl", hash = "sha256:6570244019023c72a2f42c99c16084637c3c900e45d64d82b97c1a79ae6211f4", size = 38510, upload-time = "2026-10-23T07:10:26.016Z" },
 ]
 
 [package.optional-dependencies]
@@ -1540,6 +1540,7 @@ dev = [
     { name = "sphinxcontrib-plantuml" },
     { name = "sphinxcontrib-typer" },
     { name = "types-docutils" },
+    { name = "types-pexpect" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
 ]
@@ -1551,7 +1552,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2,<7" },
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "trilium-client", specifier = ">=0.2.0,<0.3.0" },
-    { name = "typecraft", specifier = ">=0.4.0" },
+    { name = "typecraft", specifier = ">=0.4.2" },
     { name = "typer", specifier = ">=0.26.7" },
 ]
 
@@ -1561,7 +1562,7 @@ dev = [
     { name = "mkinit", git = "https://github.com/mm21/mkinit.git" },
     { name = "myst-parser", specifier = ">=2.0.0,<3" },
     { name = "pexpect", specifier = ">=4.9.0,<5" },
-    { name = "pyprojkit", extras = ["all"], specifier = ">=0.6.0,<0.7.0" },
+    { name = "pyprojkit", extras = ["all"], specifier = ">=0.8.1,<0.9.0" },
     { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
     { name = "sphinx", specifier = ">=7.0.1,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },
@@ -1569,6 +1570,7 @@ dev = [
     { name = "sphinxcontrib-plantuml", specifier = ">=0.25,<0.26" },
     { name = "sphinxcontrib-typer", specifier = ">=0.9.0,<0.10.0" },
     { name = "types-docutils", specifier = ">=0.23.0.20260923" },
+    { name = "types-pexpect", specifier = ">=4.9.0.20260518" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906" },
     { name = "types-requests", specifier = ">=2.31.0.8,<3" },
 ]
@@ -1590,11 +1592,11 @@ wheels = [
 
 [[package]]
 name = "typecraft"
-version = "0.4.0"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/db/81ca6ab6a358ecc1e23757e3dc79390c25d24a8d421b72941a30ecc58446/typecraft-0.4.0.tar.gz", hash = "sha256:9277449fcf3c874748e7a5c825b75bd57a2e8790731d6c4d7289256e217ec8a7", size = 50306, upload-time = "2026-06-13T05:30:27.667Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/7e/e8917781169f4b78699166bbeb7f9006c5a9dc4c50955dbab01836b46572/typecraft-0.4.2.tar.gz", hash = "sha256:c4f6c2fc4da6ecff09b329f56377d9521982dad74f989a95c18f684c2aca4be2", size = 51538, upload-time = "2026-10-23T07:15:35.245Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/a9/85691dbb86e0174bddb82485320ae9ee95b56534aab1d6c4dc4c233e6960/typecraft-0.4.0-py3-none-any.whl", hash = "sha256:359c6583bbd6eaa2156fbc612ba58579b1a209f860b86c85ee75e917b32ff18f", size = 65004, upload-time = "2026-06-13T05:30:30.118Z" },
+    { url = "https://files.pythonhosted.org/packages/59/1e/04970b57fb44902af82a9c804d338834accb5bb4073f950966e5bef5df02/typecraft-0.4.2-py3-none-any.whl", hash = "sha256:c1cb5639b9add23530eae07ac337fcc3ddf39fade5a1ece83ba949e922253cf6", size = 67289, upload-time = "2026-10-23T07:15:33.899Z" },
 ]
 
 [[package]]
@@ -1619,6 +1621,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/00/ff/e5c4e5383a226703fc81e3e53bb2072526ec4b7e834eeb7146ea674192ed/types_docutils-0.23.0.20260923.tar.gz", hash = "sha256:486d9054ea84410cc201a30c15759077a5f32234247cfc08aa7290ff2509f770", size = 58327, upload-time = "2026-09-23T06:51:56.366Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/43/b39c0af29de3b02bcf6194a3d6675685d2d7b8b336a31af4525bc0022c4b/types_docutils-0.23.0.20260923-py3-none-any.whl", hash = "sha256:62851b429db623e36853a4a189ce15a846e0636fe090c135d6dc5dd4f9108ef5", size = 92174, upload-time = "2026-09-23T06:51:54.908Z" },
+]
+
+[[package]]
+name = "types-pexpect"
+version = "4.9.0.20260518"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/84/c52c4841aeaf1d56551f14335ca99a40e7e04b4f8358b402115910828e8e/types_pexpect-4.9.0.20260518.tar.gz", hash = "sha256:38c373798209428dd90988b6fd4b8839c68c7e3ed79215f1ab11fa42d7ff9427", size = 13568, upload-time = "2026-05-18T06:03:35.378Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/11/17b1da645d5f2a12e4db83ae38dbb732fbac96fb3bd7416635c844f7d24e/types_pexpect-4.9.0.20260518-py3-none-any.whl", hash = "sha256:bf2422e825e4efe29cc4a1b7bdc3c375ae97d9c3046ce6b2018c100fb049c262", size = 17087, upload-time = "2026-05-18T06:03:34.14Z" },
 ]
 
 [[package]]
