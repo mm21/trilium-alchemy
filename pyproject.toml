@@ -30,7 +30,7 @@ license = "AGPL-3.0-only"
 name = "trilium-alchemy"
 readme = "README.pypi.md"
 requires-python = ">=3.12,<4.0"  # pyprojkit-managed
-version = "0.9.0"
+version = "0.9.1"
 
 [project.scripts]
 trilium-alchemy = "trilium_alchemy.tools.cli.main:run"
