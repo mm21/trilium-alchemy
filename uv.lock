@@ -1093,7 +1093,7 @@ wheels = [
 
 [[package]]
 name = "pyprojkit"
-version = "0.8.1"
+version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "doit" },
@@ -1102,9 +1102,9 @@ dependencies = [
     { name = "toml-sort" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/58/d62e0ee1b0bad1fcc4a6535ed9cc24998a03192c909d0d831af01dc77823/pyprojkit-0.8.1.tar.gz", hash = "sha256:70eb9e2289c86eaf0ae34519fe1922249676c861dd595ac9f2b7f86df36f7039", size = 31488, upload-time = "2026-10-23T07:10:27.113Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/98/743c90748014920cac28f1bc667e2d08374d450ea688247bdf21fd1ddf51/pyprojkit-0.9.0.tar.gz", hash = "sha256:3db81b9ae3f98bb8b1cb12ef67e7f9b52fafaa0304e0a59ae0c70c69fa636f53", size = 35085, upload-time = "2026-10-24T06:25:57.273Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/21/864ad7670f3586854348cabf945bb5cd59cd334e47418f853b72c96ca29a/pyprojkit-0.8.1-py3-none-any.whl", hash = "sha256:6570244019023c72a2f42c99c16084637c3c900e45d64d82b97c1a79ae6211f4", size = 38510, upload-time = "2026-10-23T07:10:26.016Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/96/a2ffc022286a6aeb9ba294beeaf93aade815ba3a62ea4bb4fce2146ebaa1/pyprojkit-0.9.0-py3-none-any.whl", hash = "sha256:6ebc710706bf3fb90ae22e8b5d6c1a72a0751136ca4e47044fc0ff7dc28f6d0c", size = 40740, upload-time = "2026-10-24T06:25:55.83Z" },
 ]
 
 [package.optional-dependencies]
@@ -1576,7 +1576,7 @@ dev = [
     { name = "mkinit", git = "https://github.com/mm21/mkinit.git" },
     { name = "myst-parser", specifier = ">=2.0.0,<3" },
     { name = "pexpect", specifier = ">=4.9.0,<5" },
-    { name = "pyprojkit", extras = ["all"], specifier = ">=0.8.1,<0.9.0" },
+    { name = "pyprojkit", extras = ["all"], specifier = ">=0.9.0,<0.10.0" },
     { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
     { name = "sphinx", specifier = ">=7.4,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },

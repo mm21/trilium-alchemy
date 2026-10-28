@@ -13,6 +13,7 @@ description: Workflow and conventions for Python development in this project. Us
 - Code must support Python 3.12+ (`requires-python = ">=3.12,<4.0"`): use modern syntax and standard library features available in Python 3.12, and don't add compatibility shims for older versions.
 - Tested Python versions: 3.12, 3.13, 3.14.
 - Tool configuration is declared in `pyprojconf.py` and synced into `pyproject.toml` by pyprojkit. Fields marked `# pyprojkit-managed` are overwritten on sync: to change them, edit `pyprojconf.py` and run `uv run doit sync` instead.
+- Fields marked `# pyprojkit-tracked` may be edited by hand, but are updated on sync when they fall behind, e.g. the `uv_build` requirement when a newer uv is installed.
 
 ## Conventions
 

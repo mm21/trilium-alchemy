@@ -22,4 +22,6 @@ config = ProjectConfig(
         ),
     ),
     typed=True,
+    python_version_file=True,
+    uv_build_backend=True,
 )
