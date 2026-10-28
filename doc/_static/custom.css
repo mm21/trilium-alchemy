@@ -1,6 +1,4 @@
-/*
-TODO: try using multi_line_parameter_list = True
-*/
+/* put each arg on a separate line */
 em.sig-param::before {
   content: "\A";
   white-space: pre;
@@ -18,24 +16,6 @@ to be consistent with "Parameters:" */
 div.main p.rubric {
     font-size: var(--font-size--small);
     font-weight: 500;
-}
-
-/* param names */
-dl.field-list strong {
-    font-weight: 700;
-    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-}
-
-/* arguments */
-dl.field-list em {
-    font-weight: 700;
-    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-}
-
-/* return values */
-dl.field-list a {
-    font-weight: 700;
-    font-family: "SFMono-Regular", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
 }
 
 /* jump straight to anchors instead of furo's smooth scroll */

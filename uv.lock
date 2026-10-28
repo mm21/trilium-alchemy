@@ -1,9 +1,10 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <4.0"
 resolution-markers = [
     "python_full_version >= '3.15'",
-    "python_full_version < '3.15'",
+    "python_full_version >= '3.13' and python_full_version < '3.15'",
+    "python_full_version < '3.13'",
 ]
 
 [[package]]
@@ -1404,6 +1405,18 @@ wheels = [
 ]
 
 [[package]]
+name = "sphinx-better-fieldlist"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/48/e6/80e55994caed2a0fa1fe9783a931092af25e23fcee6cdee621b4c7ec13a8/sphinx_better_fieldlist-0.2.0.tar.gz", hash = "sha256:b99c0e688dec010d813b65ae3c3f02d79caedbc6499b8618a0b5ca9962f1509d", size = 7884, upload-time = "2026-10-27T23:05:00.401Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/7d/f0f77da74f1766dc4edf8d669b980f59f58784412911fe65b41e7967b3db/sphinx_better_fieldlist-0.2.0-py3-none-any.whl", hash = "sha256:76e18480d31e5c754ee412a5f74c2780ec929a26dff30e9fcfa8cc95dc26e8e5", size = 9780, upload-time = "2026-10-27T23:04:59.212Z" },
+]
+
+[[package]]
 name = "sphinx-copybutton"
 version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1536,6 +1549,7 @@ dev = [
     { name = "pytest-dependency" },
     { name = "sphinx" },
     { name = "sphinx-autodoc2" },
+    { name = "sphinx-better-fieldlist", marker = "python_full_version >= '3.13'" },
     { name = "sphinx-copybutton" },
     { name = "sphinxcontrib-plantuml" },
     { name = "sphinxcontrib-typer" },
@@ -1564,8 +1578,9 @@ dev = [
     { name = "pexpect", specifier = ">=4.9.0,<5" },
     { name = "pyprojkit", extras = ["all"], specifier = ">=0.8.1,<0.9.0" },
     { name = "pytest-dependency", specifier = ">=0.6.1,<0.7.0" },
-    { name = "sphinx", specifier = ">=7.0.1,<8" },
+    { name = "sphinx", specifier = ">=7.4,<8" },
     { name = "sphinx-autodoc2", git = "https://github.com/mm21/sphinx-autodoc2.git" },
+    { name = "sphinx-better-fieldlist", marker = "python_full_version >= '3.13'", specifier = ">=0.2.0,<0.3.0" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2,<0.6.0" },
     { name = "sphinxcontrib-plantuml", specifier = ">=0.25,<0.26" },
     { name = "sphinxcontrib-typer", specifier = ">=0.9.0,<0.10.0" },

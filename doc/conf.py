@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
+    "sphinx_better_fieldlist",
     "sphinx_copybutton",
     "sphinxcontrib.plantuml",
     "sphinxcontrib.typer",
