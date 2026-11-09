@@ -189,7 +189,7 @@ trilium-alchemy db backup --name my-backup
 # create backup and copy to specific location (requires TRILIUM_ALCHEMY_DATA_DIR or --data-dir)
 trilium-alchemy db backup --dest /path/to/backup-now.db
 
-# verify backup timestamp after creation (requires TRILIUM_ALCHEMY_DATA_DIR or --data-dir)
+# verify backup timestamp after creation, implied by --dest (requires TRILIUM_ALCHEMY_DATA_DIR or --data-dir)
 trilium-alchemy db backup --verify
 
 # restore from backup (requires TRILIUM_ALCHEMY_DATA_DIR or --data-dir)

@@ -84,11 +84,11 @@ def backup(
     verify: bool = Option(
         False,
         "--verify",
-        help=f"Whether to verify by ensuring backup's mtime is < {MAX_BACKUP_TIME_DELTA} seconds ago (requires db --data-dir)",
+        help=f"Whether to verify by ensuring backup's mtime is < {MAX_BACKUP_TIME_DELTA} seconds ago, implied by --dest (requires db --data-dir)",
     ),
     dest: Path | None = Option(
         None,
-        help="Optional destination database file or folder to copy backup; if folder, filename will use current datetime (requires db --data-dir)",
+        help="Optional destination database file or folder to copy backup, implies --verify; if folder, filename will use current datetime (requires db --data-dir)",
     ),
     overwrite: bool = Option(
         False,
@@ -125,13 +125,13 @@ def backup(
     else:
         dest_file = None
 
-    # determine whether data dir is required
-    require_data_dir = bool(dest or verify)
+    # destination implies verification since the backup is about to be copied
+    verify = verify or dest_file is not None
 
     db_context = _get_db_context(ctx)
     data_dir = db_context.data_dir
 
-    if require_data_dir and not data_dir:
+    if verify and not data_dir:
         raise BadParameter(
             "required when --dest or --verify is passed",
             ctx=ctx,

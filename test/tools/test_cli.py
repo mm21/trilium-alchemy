@@ -232,6 +232,9 @@ def test_db(
     # backup to folder w/file having unique name
     _run(request, ["db", "backup", "--dest", tmp_path])
 
+    # destination implies verification
+    assert any("seconds ago" in log for log in log_handler.test_logs[-2:])
+
     # backup to specific file
     backup_path = tmp_path / "test.db"
     _run(request, ["db", "backup", "--dest", backup_path])
