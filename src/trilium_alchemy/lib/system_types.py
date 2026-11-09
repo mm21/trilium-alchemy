@@ -135,32 +135,20 @@ class BaseSystemNote(BaseDeclarativeNote):
     """
 
     def init(self, _: list[BaseAttribute], children: list[Branch]):
-        children.append(
-            self.create_declarative_child(
-                Templates, children=self._collect_notes("templates")
-            )
-        )
-        children.append(
-            self.create_declarative_child(
-                WorkspaceTemplates,
-                children=self._collect_notes("workspace_templates"),
-            )
-        )
-        children.append(
-            self.create_declarative_child(
-                Stylesheets, children=self._collect_notes("stylesheets")
-            )
-        )
-        children.append(
-            self.create_declarative_child(
-                Widgets, children=self._collect_notes("widgets")
-            )
-        )
-        children.append(
-            self.create_declarative_child(
-                Scripts, children=self._collect_notes("scripts")
-            )
-        )
+        self._add_category(children, Templates, "templates")
+        self._add_category(children, WorkspaceTemplates, "workspace_templates")
+        self._add_category(children, Stylesheets, "stylesheets")
+        self._add_category(children, Widgets, "widgets")
+        self._add_category(children, Scripts, "scripts")
+
+    def _add_category(
+        self, children: list[Branch], category: type[BaseDeclarativeNote], attr: str
+    ):
+        """
+        Add category note holding notes from the given attribute, if any are set.
+        """
+        if notes := self._collect_notes(attr):
+            children.append(self.create_declarative_child(category, children=notes))
 
     def _collect_notes(self, attr: str) -> list[Note]:
         """
@@ -189,8 +177,6 @@ class BaseSystemNote(BaseDeclarativeNote):
                         ), f"Got unexpected class in note attribute '{attr}': {note_cls} {type(note_cls)}"
 
                         notes.append(note_cls(session=self.session))
-
-                    # notes += attr_list
 
         return notes
 
@@ -229,11 +215,7 @@ class BaseRootSystemNote(BaseSystemNote):
         children.append(self.create_declarative_child(TriliumAlchemySystemNote))
 
         # add themes
-        children.append(
-            self.create_declarative_child(
-                Themes, children=self._collect_notes("themes")
-            )
-        )
+        self._add_category(children, Themes, "themes")
 
 
 class BaseRootNote(BaseDeclarativeNote):

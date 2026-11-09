@@ -21,8 +21,10 @@ def test_system(session: Session, note: Note):
     system = note.transmute(BaseRootSystemNote)
     session.flush()
 
-    assert len(system.children) == 7
+    # only built-in system note since no category attributes are set
+    assert len(system.children) == 1
     assert system.children[0].title == "TriliumAlchemySystemNote"
+    assert [c.title for c in system.children[0].children] == ["Stylesheets"]
 
 
 def test_system_append(session: Session, note: Note):
@@ -32,7 +34,8 @@ def test_system_append(session: Session, note: Note):
     system = note.transmute(System2)
     session.flush()
 
-    assert len(system.children) == 5
+    # empty categories are skipped
+    assert len(system.children) == 1
     templates = system.children[0]
 
     assert templates.title == "Templates"
