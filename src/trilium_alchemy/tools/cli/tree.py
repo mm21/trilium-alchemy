@@ -6,17 +6,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from typer import Argument, BadParameter, Context, Option
-from typer._click.exceptions import ClickException, MissingParameter
 
 from ...core import BaseDeclarativeNote, Note, Session
 from ..utils import commit_changes, recurse_notes
 from ._utils import (
+    CliError,
     MainTyper,
     console,
     get_notes,
     get_root_context,
     logger,
-    lookup_param,
+    lookup_param_hint,
 )
 
 if TYPE_CHECKING:
@@ -50,8 +50,8 @@ def main(
         session,
         note_id=note_id,
         search=search,
-        note_id_param=lookup_param(ctx, "note_id"),
-        search_param=lookup_param(ctx, "search"),
+        note_id_hint=lookup_param_hint(ctx, "note_id"),
+        search_hint=lookup_param_hint(ctx, "search"),
         exactly_one=True,
     )
 
@@ -91,14 +91,14 @@ def export(
         raise BadParameter(
             f"Parent folder of '{dest}' does not exist",
             ctx=ctx,
-            param=lookup_param(ctx, "path"),
+            param_hint=lookup_param_hint(ctx, "dest"),
         )
 
     if dest.exists() and not overwrite:
-        raise MissingParameter(
+        raise BadParameter(
             f"Destination '{dest}' exists and --overwrite was not passed",
             ctx=ctx,
-            param=lookup_param(ctx, "overwrite"),
+            param_hint=lookup_param_hint(ctx, "overwrite"),
         )
 
     tree_context = _get_tree_context(ctx)
@@ -159,20 +159,19 @@ def push(
     fqcn = note_fqcn or root_note_fqcn
 
     if not fqcn:
-        raise MissingParameter(
-            "must be passed when root_note_fqcn not set in config file",
+        raise BadParameter(
+            "note class name must be passed, or root_note_fqcn set in config file",
             ctx=ctx,
-            param=lookup_param(ctx, "note_fqcn"),
         )
 
     if not note_fqcn and root_note_fqcn:
         if not tree_context.target_note.note_id == "root":
-            raise ClickException(
+            raise CliError(
                 "cannot specify a target note other than root when using root_note_fqcn from config file"
             )
 
     if not "." in fqcn:
-        raise ClickException(
+        raise CliError(
             f"fully-qualified class name '{fqcn}' must contain at least one '.'"
         )
 
@@ -182,10 +181,10 @@ def push(
         module = importlib.import_module(module_path)
         note_cls = getattr(module, obj_name)
     except (ImportError, AttributeError) as e:
-        raise ClickException(f"failed to import '{fqcn}': {e}")
+        raise CliError(f"failed to import '{fqcn}': {e}")
 
     if not issubclass(note_cls, BaseDeclarativeNote):
-        raise ClickException(
+        raise CliError(
             f"fully-qualified class name '{fqcn}' is not a BaseDeclarativeRoot subclass: {note_cls}"
         )
 

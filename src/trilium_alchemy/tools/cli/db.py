@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING
 
 import typer
 from typer import Argument, BadParameter, Context, Option
-from typer._click.exceptions import ClickException, MissingParameter
 
 from ._utils import (
+    CliError,
     MainTyper,
     format_datetime,
     format_file_datetime,
     format_seconds,
     get_root_context,
     logger,
-    lookup_param,
+    lookup_param_hint,
 )
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ def main(
         raise BadParameter(
             message="cannot be passed with config file",
             ctx=ctx,
-            param=lookup_param(ctx, "data_dir"),
+            param_hint=lookup_param_hint(ctx, "data_dir"),
         )
 
     # instance-configured data dir takes precedence over parameter
@@ -112,7 +112,7 @@ def backup(
             raise BadParameter(
                 f"destination '{dest}' parent folder does not exist",
                 ctx=ctx,
-                param=lookup_param(ctx, "dest"),
+                param_hint=lookup_param_hint(ctx, "dest"),
             )
 
         # ensure destination path is allowed to be overwritten if it exists
@@ -120,7 +120,7 @@ def backup(
             raise BadParameter(
                 f"destination '{dest_file}' exists and --overwrite was not passed",
                 ctx=ctx,
-                param=lookup_param(ctx, "dest"),
+                param_hint=lookup_param_hint(ctx, "dest"),
             )
     else:
         dest_file = None
@@ -132,11 +132,10 @@ def backup(
     data_dir = db_context.data_dir
 
     if require_data_dir and not data_dir:
-        raise MissingParameter(
-            message="required when --dest or --verify is passed",
+        raise BadParameter(
+            "required when --dest or --verify is passed",
             ctx=ctx,
             param_hint="db --data-dir",
-            param_type="option",
         )
 
     # create session
@@ -146,7 +145,7 @@ def backup(
     try:
         session.backup(backup_name)
     except Exception as e:
-        raise ClickException(f"Trilium failed to create backup: {e}")
+        raise CliError(f"Trilium failed to create backup: {e}")
 
     backup_filename = f"backup-{backup_name}.db"
     backup_path = data_dir / "backup" / backup_filename if data_dir else None
@@ -156,7 +155,7 @@ def backup(
 
         # validate that trilium created the backup
         if not backup_path.is_file():
-            raise ClickException(
+            raise CliError(
                 f"Trilium failed to create backup: file '{backup_path}' does not exist"
             )
 
@@ -166,7 +165,7 @@ def backup(
         delta = datetime.datetime.now() - mod_datetime
 
         if delta.seconds > MAX_BACKUP_TIME_DELTA:
-            raise ClickException(
+            raise CliError(
                 f"Backup '{backup_path}' was written {delta.seconds} seconds ago, which is more than the expected maximum of {MAX_BACKUP_TIME_DELTA}"
             )
 
@@ -211,10 +210,8 @@ def restore(
     data_dir = db_context.data_dir
 
     if not data_dir:
-        raise MissingParameter(
-            message="required for this command",
-            ctx=ctx,
-            param=lookup_param(ctx, "data_dir"),
+        raise BadParameter(
+            "required for this command", ctx=ctx, param_hint="db --data-dir"
         )
 
     assert src.is_file()

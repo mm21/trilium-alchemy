@@ -17,7 +17,7 @@ from ._utils import (
     get_notes,
     get_root_context,
     logger,
-    lookup_param,
+    lookup_param_hint,
 )
 
 if TYPE_CHECKING:
@@ -94,8 +94,8 @@ def sync_template(
             note_context.session,
             note_id=template_note_id,
             search=template_search,
-            note_id_param=lookup_param(ctx, "template_note_id"),
-            search_param=lookup_param(ctx, "template_search"),
+            note_id_hint=lookup_param_hint(ctx, "template_note_id"),
+            search_hint=lookup_param_hint(ctx, "template_search"),
             exactly_one=True,
         )
         assert len(templates) == 1
@@ -120,8 +120,8 @@ def sync_template(
             note_context.session,
             note_id=note_context.note_id,
             search=note_context.search,
-            note_id_param=lookup_param(parent_ctx, "note_id"),
-            search_param=lookup_param(parent_ctx, "search"),
+            note_id_hint=lookup_param_hint(parent_ctx, "note_id"),
+            search_hint=lookup_param_hint(parent_ctx, "search"),
         )
         assert len(notes)
 

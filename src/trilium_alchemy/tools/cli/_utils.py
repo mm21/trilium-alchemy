@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 from rich.logging import RichHandler
 from typer import BadParameter, Context, Typer
-from typer._click import Parameter
 
 from ...core import Note, Session
 
@@ -51,6 +50,19 @@ class MainTyper(Typer):
         )
 
 
+class CliError(BadParameter):
+    """
+    Failure of an operation rather than of its parameters: exits with status 1 and shows
+    only the message. Derives from `BadParameter` as typer doesn't publicly export a
+    more general exception which gets rendered as an error panel.
+    """
+
+    exit_code = 1
+
+    def format_message(self) -> str:
+        return self.message
+
+
 def get_root_context(ctx: Context) -> RootContext:
     from .main import RootContext
 
@@ -65,8 +77,8 @@ def get_notes(
     *,
     note_id: str | None,
     search: str | None,
-    note_id_param: Parameter,
-    search_param: Parameter,
+    note_id_hint: str,
+    search_hint: str,
     exactly_one: bool = False,
 ) -> list[Note]:
     """
@@ -83,13 +95,13 @@ def get_notes(
             raise BadParameter(
                 f"search '{search}' does not uniquely identify a note: got {len(notes)} results",
                 ctx=ctx,
-                param=search_param,
+                param_hint=search_hint,
             )
         elif not len(notes):
             raise BadParameter(
                 f"search '{search}' did not return any results",
                 ctx=ctx,
-                param=search_param,
+                param_hint=search_hint,
             )
 
     else:
@@ -99,7 +111,7 @@ def get_notes(
             raise BadParameter(
                 f"note with note_id '{note_id}' does not exist",
                 ctx=ctx,
-                param=note_id_param,
+                param_hint=note_id_hint,
             )
 
         notes = [Note(note_id=note_id, session=session)]
@@ -107,13 +119,13 @@ def get_notes(
     return notes
 
 
-def lookup_param(ctx: Context, name: str) -> Parameter:
+def lookup_param_hint(ctx: Context, name: str) -> str:
     """
-    Lookup param by name.
+    Lookup param by name and get its hint for use in error messages.
     """
     param = next((p for p in ctx.command.params if p.name == name), None)
     assert param, f"Could not find param with name: {name}"
-    return param
+    return param.get_error_hint(ctx)
 
 
 def format_datetime(dt: datetime.datetime) -> str:

@@ -23,14 +23,15 @@ from dotenv import find_dotenv, load_dotenv
 from pydantic import ValidationError
 from typer import BadParameter, Context, Exit, Option
 
-# TODO: rework parameter handling to avoid importing from vendored click and align with
-# the updated typer API
-from typer._click.exceptions import MissingParameter
-
 from ...core import Session
 from ..config import Config, InstanceConfig
 from . import db, fs, note, tree
-from ._utils import MainTyper, get_root_context, logger, lookup_param
+from ._utils import (
+    MainTyper,
+    get_root_context,
+    logger,
+    lookup_param_hint,
+)
 
 load_dotenv(find_dotenv(usecwd=True))
 
@@ -77,19 +78,17 @@ def main(
         )
     else:
         if not host:
-            raise MissingParameter(
-                message="either --host/--instance must be passed, or set TRILIUM_ALCHEMY_HOST/TRILIUM_ALCHEMY_INSTANCE environment variable",
+            raise BadParameter(
+                "either --host/--instance must be passed, or set TRILIUM_ALCHEMY_HOST/TRILIUM_ALCHEMY_INSTANCE environment variable",
                 ctx=ctx,
-                param_hint=["host", "instance"],
-                param_type="option",
+                param_hint=["--host", "--instance"],
             )
 
         if not (token or password):
-            raise MissingParameter(
-                message="either --token/--password must be passed, or set TRILIUM_ALCHEMY_TOKEN/TRILIUM_ALCHEMY_PASSWORD environment variable",
+            raise BadParameter(
+                "either --token/--password must be passed, or set TRILIUM_ALCHEMY_TOKEN/TRILIUM_ALCHEMY_PASSWORD environment variable",
                 ctx=ctx,
-                param_hint=["token", "password"],
-                param_type="option",
+                param_hint=["--token", "--password"],
             )
 
         instance = InstanceConfig(host=host, token=token, password=password)
@@ -144,7 +143,7 @@ class RootContext:
             raise BadParameter(
                 message=f"file does not exist: {config_file}",
                 ctx=ctx,
-                param=lookup_param(ctx, "config_file"),
+                param_hint=lookup_param_hint(ctx, "config_file"),
             )
 
         # get config from file
@@ -154,7 +153,7 @@ class RootContext:
             raise BadParameter(
                 f"failed to load config file '{config_file}': {e}",
                 ctx=ctx,
-                param=lookup_param(ctx, "config_file"),
+                param_hint=lookup_param_hint(ctx, "config_file"),
             )
 
         # get instance from config
@@ -163,7 +162,7 @@ class RootContext:
             raise BadParameter(
                 f"instance '{instance_name}' not found in '{config_file}'",
                 ctx=ctx,
-                param=lookup_param(ctx, "instance_name"),
+                param_hint=lookup_param_hint(ctx, "instance_name"),
             )
 
         return RootContext(ctx=ctx, instance=instance, from_file=True)

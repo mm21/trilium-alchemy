@@ -23,7 +23,7 @@ from ._utils import (
     get_notes,
     get_root_context,
     logger,
-    lookup_param,
+    lookup_param_hint,
 )
 
 if TYPE_CHECKING:
@@ -85,8 +85,8 @@ def dump(
         session,
         note_id=note_id,
         search=search,
-        note_id_param=lookup_param(ctx, "note_id"),
-        search_param=lookup_param(ctx, "search"),
+        note_id_hint=lookup_param_hint(ctx, "note_id"),
+        search_hint=lookup_param_hint(ctx, "search"),
     )
 
     # dump to destination
@@ -148,8 +148,8 @@ def load(
             session,
             note_id=parent_note_id,
             search=parent_search,
-            note_id_param=lookup_param(ctx, "parent_note_id"),
-            search_param=lookup_param(ctx, "parent_search"),
+            note_id_hint=lookup_param_hint(ctx, "parent_note_id"),
+            search_hint=lookup_param_hint(ctx, "parent_search"),
             exactly_one=True,
         )
         assert len(parent_note_results) == 1
