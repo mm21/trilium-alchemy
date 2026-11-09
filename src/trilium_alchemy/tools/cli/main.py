@@ -45,24 +45,24 @@ def main(
     ctx: Context,
     host: str = Option(
         None,
-        help="Trilium host, e.g. http://localhost:8080. Can also be set via TRILIUM_HOST environment variable.",
-        envvar="TRILIUM_HOST",
+        help="Trilium host, e.g. http://localhost:8080. Can also be set via TRILIUM_ALCHEMY_HOST environment variable.",
+        envvar="TRILIUM_ALCHEMY_HOST",
     ),
     token: str | None = Option(
         None,
         help="ETAPI token",
-        envvar="TRILIUM_TOKEN",
+        envvar="TRILIUM_ALCHEMY_TOKEN",
     ),
     password: str | None = Option(
         None,
         help="Trilium password",
-        envvar="TRILIUM_PASSWORD",
+        envvar="TRILIUM_ALCHEMY_PASSWORD",
     ),
     instance_name: str | None = Option(
         None,
         "--instance",
         help="Instance name as configured in .yaml",
-        envvar="TRILIUM_INSTANCE",
+        envvar="TRILIUM_ALCHEMY_INSTANCE",
     ),
     config_file: Path = Option(
         "trilium-alchemy.yaml",
@@ -78,7 +78,7 @@ def main(
     else:
         if not host:
             raise MissingParameter(
-                message="either --host/--instance must be passed, or set TRILIUM_HOST/TRILIUM_INSTANCE environment variable",
+                message="either --host/--instance must be passed, or set TRILIUM_ALCHEMY_HOST/TRILIUM_ALCHEMY_INSTANCE environment variable",
                 ctx=ctx,
                 param_hint=["host", "instance"],
                 param_type="option",
@@ -86,7 +86,7 @@ def main(
 
         if not (token or password):
             raise MissingParameter(
-                message="either --token/--password must be passed, or set TRILIUM_TOKEN/TRILIUM_PASSWORD environment variable",
+                message="either --token/--password must be passed, or set TRILIUM_ALCHEMY_TOKEN/TRILIUM_ALCHEMY_PASSWORD environment variable",
                 ctx=ctx,
                 param_hint=["token", "password"],
                 param_type="option",

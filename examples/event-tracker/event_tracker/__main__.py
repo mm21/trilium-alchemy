@@ -35,19 +35,24 @@ logging.basicConfig(
 )
 
 # ensure we have expected environment variables
-if not "TRILIUM_HOST" in os.environ:
-    sys.exit("TRILIUM_HOST not defined, use .env or set environment variable manually")
-
-if not "TRILIUM_TOKEN" in os.environ and not "TRILIUM_PASSWORD" in os.environ:
+if not "TRILIUM_ALCHEMY_HOST" in os.environ:
     sys.exit(
-        "Neither TRILIUM_TOKEN nor TRILIUM_PASSWORD defined, use .env or set environment variable manually for one of these"
+        "TRILIUM_ALCHEMY_HOST not defined, use .env or set environment variable manually"
     )
 
-host = os.environ.get("TRILIUM_HOST")
+if (
+    not "TRILIUM_ALCHEMY_TOKEN" in os.environ
+    and not "TRILIUM_ALCHEMY_PASSWORD" in os.environ
+):
+    sys.exit(
+        "Neither TRILIUM_ALCHEMY_TOKEN nor TRILIUM_ALCHEMY_PASSWORD defined, use .env or set environment variable manually for one of these"
+    )
+
+host = os.environ.get("TRILIUM_ALCHEMY_HOST")
 assert host
 
-token = os.environ.get("TRILIUM_TOKEN", None)
-password = os.environ.get("TRILIUM_PASSWORD", None)
+token = os.environ.get("TRILIUM_ALCHEMY_TOKEN", None)
+password = os.environ.get("TRILIUM_ALCHEMY_PASSWORD", None)
 
 session = Session(host, token=token, password=password)
 

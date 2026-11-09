@@ -43,7 +43,7 @@ or prefix commands with `uv run` (e.g. `uv run pytest`, `uv run doit`) to run th
 
 ### Environment
 
-From the root folder, copy `.env.example` to `.env` and fill in the variables. Not all tests require all of them, e.g. `TRILIUM_DATA_DIR` is only used to verify that backups were created. However it's encouraged to provide all of them so you can run all the tests.
+From the root folder, copy `.env.example` to `.env` and fill in the variables. Not all tests require all of them, e.g. `TRILIUM_ALCHEMY_DATA_DIR` is only used to verify that backups were created. However it's encouraged to provide all of them so you can run all the tests.
 
 ## Command-line targets
 

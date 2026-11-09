@@ -41,14 +41,18 @@ def main(
     data_dir: Path | None = Option(
         None,
         help="Directory containing Trilium database, if not specified in config file",
-        envvar="TRILIUM_DATA_DIR",
+        envvar="TRILIUM_ALCHEMY_DATA_DIR",
         exists=True,
         file_okay=False,
     ),
 ):
     root_context = get_root_context(ctx)
 
-    if data_dir and "TRILIUM_DATA_DIR" not in os.environ and root_context.from_file:
+    if (
+        data_dir
+        and "TRILIUM_ALCHEMY_DATA_DIR" not in os.environ
+        and root_context.from_file
+    ):
         raise BadParameter(
             message="cannot be passed with config file",
             ctx=ctx,

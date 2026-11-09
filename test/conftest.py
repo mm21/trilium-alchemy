@@ -32,16 +32,16 @@ logging.basicConfig(level=logging.WARNING)
 dotenv.load_dotenv()
 
 # need all of these to run all tests
-assert "TRILIUM_HOST" in os.environ
-assert "TRILIUM_TOKEN" in os.environ
-assert "TRILIUM_PASSWORD" in os.environ
-assert "TRILIUM_DATA_DIR" in os.environ  # to confirm backup was created
+assert "TRILIUM_ALCHEMY_HOST" in os.environ
+assert "TRILIUM_ALCHEMY_TOKEN" in os.environ
+assert "TRILIUM_ALCHEMY_PASSWORD" in os.environ
+assert "TRILIUM_ALCHEMY_DATA_DIR" in os.environ  # to confirm backup was created
 
-HOST = os.environ["TRILIUM_HOST"]
-TOKEN = os.environ["TRILIUM_TOKEN"]
-PASSWORD = os.environ["TRILIUM_PASSWORD"]
+HOST = os.environ["TRILIUM_ALCHEMY_HOST"]
+TOKEN = os.environ["TRILIUM_ALCHEMY_TOKEN"]
+PASSWORD = os.environ["TRILIUM_ALCHEMY_PASSWORD"]
 
-DATA_DIR = Path(os.environ["TRILIUM_DATA_DIR"])
+DATA_DIR = Path(os.environ["TRILIUM_ALCHEMY_DATA_DIR"])
 DB_PATH = DATA_DIR / "document.db"
 BACKUP_PATH = DATA_DIR / "backup"
 
