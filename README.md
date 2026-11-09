@@ -386,6 +386,8 @@ class Person(BaseWorkspaceTemplateNote):
 
 ![Screenshot](doc/sdk/declarative-notes/images/template-screenshot.png)
 
+Use `alias` to show a friendlier name in the UI, e.g. `@label_def("altName", alias="Alternative name")`.
+
 ### Adding children
 
 Use `children` or `child` to add children:

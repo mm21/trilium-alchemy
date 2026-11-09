@@ -148,6 +148,7 @@ def label_def(
     ] = "text",
     inheritable: bool = False,
     accumulate: bool = False,
+    alias: str | None = None,
 ):
     """
     Adds a {obj}`Label` definition (promoted label) to a {obj}`BaseDeclarativeNote` or
@@ -168,6 +169,7 @@ def label_def(
     :param value_type: Type of label value
     :param inheritable: Whether label should be inherited to children
     :param accumulate: Whether label should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
+    :param alias: Display name to show in UI instead of label name; may contain spaces and punctuation
     """
     name = f"label:{name}"
 
@@ -175,6 +177,9 @@ def label_def(
 
     if promoted:
         params.append("promoted")
+
+    if alias:
+        params.append(f"alias={_encode_alias(alias)}")
 
     if multi:
         params.append("multi")
@@ -194,6 +199,7 @@ def relation_def(
     inverse: str | None = None,
     inheritable: bool = False,
     accumulate: bool = False,
+    alias: str | None = None,
 ):
     """
     Adds a {obj}`Relation` definition (promoted relation) to a
@@ -215,6 +221,7 @@ def relation_def(
     :param inverse: Inverse relation, e.g. if `name = "isParentOf"`{l=python} this could be `"isChildOf"`{l=python}
     :param inheritable: Whether relation should be inherited to children
     :param accumulate: Whether relation should be added if an attribute with this name already exists from a subclassed {obj}`BaseDeclarativeNote` or {obj}`BaseDeclarativeMixin`
+    :param alias: Display name to show in UI instead of relation name; may contain spaces and punctuation
     """
     name = f"relation:{name}"
 
@@ -222,6 +229,9 @@ def relation_def(
 
     if promoted:
         params.append("promoted")
+
+    if alias:
+        params.append(f"alias={_encode_alias(alias)}")
 
     if multi:
         params.append("multi")
@@ -318,6 +328,14 @@ def child(
         )
 
     return _patch_init_decl(init)
+
+
+def _encode_alias(alias: str) -> str:
+    """
+    Escape an alias for storage in a comma-separated attribute definition, matching
+    Trilium's own encoding. The `%` must be replaced first to avoid re-escaping.
+    """
+    return alias.replace("%", "%25").replace(",", "%2C")
 
 
 def _patch_init_decl(

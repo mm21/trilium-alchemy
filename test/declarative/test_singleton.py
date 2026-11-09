@@ -116,8 +116,8 @@ def check_child2(branch: Branch, state: State):
     assert len(note.branches.parents) == 2
 
 
-@label_def("label1")
-@relation_def("relation1", multi=True, inverse="relation1inverse")
+@label_def("label1", alias="Label 1, 100%")
+@relation_def("relation1", multi=True, inverse="relation1inverse", alias="Relation 1")
 @children(TemplateChild1, (TemplateChild2, "Prefix2"))
 class TemplateTest(BaseTemplateNote):
     pass
@@ -132,10 +132,13 @@ def check_template_attributes(attributes: Sequence[BaseAttribute]):
     assert isinstance(template, Label)
 
     assert label1.name == "label:label1"
-    assert label1.value == "promoted,single,text"
+    assert label1.value == "promoted,alias=Label 1%2C 100%25,single,text"
 
     assert promoted_relation1.name == "relation:relation1"
-    assert promoted_relation1.value == "promoted,multi,inverse=relation1inverse"
+    assert (
+        promoted_relation1.value
+        == "promoted,alias=Relation 1,multi,inverse=relation1inverse"
+    )
 
     assert template.name == "template"
     assert template.value == ""
