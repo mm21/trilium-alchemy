@@ -1,4 +1,9 @@
-/* Hide "create child note" button for notes managed by a Note subclass */
+/* Hide "create child note" button for non-leaf declarative notes */
 span.triliumAlchemyDeclarative span.add-note-button {
+    visibility: hidden;
+}
+
+/* Hide "create child note" button for leaf notes */
+span.triliumAlchemyHideNewNote span.add-note-button {
     visibility: hidden;
 }

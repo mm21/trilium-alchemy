@@ -543,16 +543,19 @@ class BaseDeclarativeNote(Note, BaseDeclarativeMixin):
 
         container.title = container.title or self.title_ or type(self).__name__
 
-        # add #cssClass for internal (non-leaf) singleton declarative
-        # notes which aren't templates. this enables hiding
-        # "create child" button (templates should always be modifiable
-        # since the cssClass would be inherited to instances created
-        # by user)
+        # add #cssClass for internal non-leaf singleton declarative
+        # notes which aren't templates, or those explicitly marked to do so
         if note_id is not None:
-            if self.hide_new_note or not any((self.leaf, self._force_leaf)):
+            if not (self.leaf or self._force_leaf):
                 attributes.append(
                     self.create_declarative_label(
                         "cssClass", value="triliumAlchemyDeclarative"
+                    )
+                )
+            if self.hide_new_note:
+                attributes.append(
+                    self.create_declarative_label(
+                        "cssClass", value="triliumAlchemyHideNewNote"
                     )
                 )
 
