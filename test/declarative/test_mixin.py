@@ -22,7 +22,8 @@ class Mixin2(Mixin3):
 
 @label("label1")
 class MixinTestNote(BaseDeclarativeNote, Mixin1, Mixin2):
-    def init(self, attributes: list[BaseAttribute], _: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = children
         attributes.append(self.create_declarative_label("label2"))
 
 

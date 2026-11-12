@@ -51,7 +51,8 @@ class BaseWorkspaceNote(BaseDeclarativeNote):
     singleton = True
     system: type[BaseSystemNote] | None = None
 
-    def init(self, _: list[BaseAttribute], children: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = attributes
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))
 
@@ -134,7 +135,8 @@ class BaseSystemNote(BaseDeclarativeNote):
     List of {obj}`FrontendScript` or {obj}`BackendScript` subclasses.
     """
 
-    def init(self, _: list[BaseAttribute], children: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = attributes
         self._add_category(children, Templates, "templates")
         self._add_category(children, WorkspaceTemplates, "workspace_templates")
         self._add_category(children, Stylesheets, "stylesheets")
@@ -210,7 +212,9 @@ class BaseRootSystemNote(BaseSystemNote):
     List of {obj}`Theme` subclasses.
     """
 
-    def init(self, _: list[BaseAttribute], children: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = attributes
+
         # add built-in system note
         children.append(self.create_declarative_child(TriliumAlchemySystemNote))
 
@@ -226,6 +230,7 @@ class BaseRootNote(BaseDeclarativeNote):
     title_ = "root"
     system: type[BaseRootSystemNote] | None = BaseRootSystemNote
 
-    def init(self, _: list[BaseAttribute], children: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = attributes
         if self.system is not None:
             children.append(self.create_declarative_child(self.system))

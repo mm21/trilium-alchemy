@@ -75,7 +75,8 @@ class BaseThemeNote(CssNote):
     Name of theme, or `None`{l=python} to use class name.
     """
 
-    def init(self, attributes: list[BaseAttribute], _: list[Branch]):
+    def init(self, attributes: list[BaseAttribute], children: list[Branch]):
+        _ = children
         # default to class name if name not provided
         attributes.append(
             self.create_declarative_label(

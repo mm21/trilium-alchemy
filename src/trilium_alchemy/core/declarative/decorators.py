@@ -70,8 +70,9 @@ def label(
     def init(
         self: BaseDeclarativeNote,
         attributes: list[BaseAttribute],
-        _: list[Branch],
+        children: list[Branch],
     ):
+        _ = children
         attributes.append(
             self.create_declarative_label(name, value=value, inheritable=inheritable)
         )
@@ -122,8 +123,9 @@ def relation(
     def init(
         self: BaseDeclarativeMixin,
         attributes: list[BaseAttribute],
-        _: list[Branch],
+        children: list[Branch],
     ):
+        _ = children
         assert (
             target_cls._is_singleton()
         ), f"Relation target {target_cls} must have a deterministic id by setting a note_id, note_id_seed, or singleton = True"
@@ -275,9 +277,10 @@ def children(
 
     def init(
         self: BaseDeclarativeNote,
-        _: list[BaseAttribute],
+        attributes: list[BaseAttribute],
         children_: list[Branch],
     ):
+        _ = attributes
         for child in children:
             child_cls: type[BaseDeclarativeNote]
             prefix: str
@@ -320,9 +323,10 @@ def child(
 
     def init(
         self: BaseDeclarativeNote,
-        _: list[BaseAttribute],
+        attributes: list[BaseAttribute],
         children: list[Branch],
     ):
+        _ = attributes
         children.append(
             self.create_declarative_child(child, prefix=prefix, expanded=expanded)
         )
