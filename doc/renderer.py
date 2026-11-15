@@ -202,8 +202,12 @@ class MystRenderer(RendererBase):
                             )
                             yield ""
 
+        # skip symbols re-exported from external packages (e.g. alchemizer),
+        # which autodoc2 has no item for
         canonical_symbols = [
-            symbol.virt_path for symbol in module.symbols if symbol.is_canonical
+            symbol.virt_path
+            for symbol in module.symbols
+            if symbol.is_canonical and self.get_item(symbol.virt_path) is not None
         ]
 
         if len(canonical_symbols):
