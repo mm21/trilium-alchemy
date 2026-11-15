@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from alchemizer import WriteThroughDescriptor, assert_valid
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 from ..entity.entity import BaseEntity
-from ..entity.model import WriteThroughDescriptor
-from ..exceptions import _assert_validate
 from ..session import Session
 from .attribute import BaseAttribute
 
@@ -103,10 +102,10 @@ class Relation(BaseAttribute):
 
         super()._flush_check()
 
-        _assert_validate(
+        assert_valid(
             self._target_obj is not None, f"Relation {self} has no target note"
         )
-        _assert_validate(isinstance(self._target_obj, Note))
+        assert_valid(isinstance(self._target_obj, Note))
 
     def _flush_prep(self):
         """

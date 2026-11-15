@@ -8,19 +8,14 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, Iterable, Self, Sequence, overload
 
 import requests
+from alchemizer import StatefulExtension, WriteOnceDescriptor, assert_valid
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attachment import Attachment as EtapiAttachmentModel
 from trilium_client.models.create_attachment import CreateAttachment
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..entity.entity import BaseEntity, OrderedEntity
-from ..entity.model import (
-    BaseDriver,
-    BaseEntityModel,
-    StatefulExtension,
-    WriteOnceDescriptor,
-)
-from ..exceptions import _assert_validate
+from ..entity.model import BaseDriver, BaseEntityModel
 from ..session import Session, normalize_session
 from .content import BlobState, get_digest
 from .extension import BaseEntityList
@@ -501,7 +496,7 @@ class Attachment(OrderedEntity[AttachmentModel, EtapiAttachmentModel]):
             assert self._note_obj.note_id == model.owner_id
 
     def _flush_check(self):
-        _assert_validate(self._note is not None, "Attachment not assigned to note")
+        assert_valid(self._note is not None, "Attachment not assigned to note")
 
     def _flush_prep(self):
         pass

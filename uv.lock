@@ -17,6 +17,16 @@ wheels = [
 ]
 
 [[package]]
+name = "alchemizer"
+version = "0.2.1"
+source = { editable = "../alchemizer" }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyprojkit", extras = ["all"], specifier = ">=0.9.0,<0.10.0" }]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1530,6 +1540,7 @@ name = "trilium-alchemy"
 version = "0.10.2"
 source = { editable = "." }
 dependencies = [
+    { name = "alchemizer" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -1561,6 +1572,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alchemizer", editable = "../alchemizer" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2" },
     { name = "pyyaml", specifier = ">=6.0.2,<7" },

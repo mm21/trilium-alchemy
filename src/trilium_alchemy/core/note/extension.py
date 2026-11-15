@@ -13,11 +13,11 @@ from typing import (
     overload,
 )
 
+from alchemizer import Extension, StatefulExtension
 from trilium_client.models.note import Note as EtapiNoteModel
 from typecraft import validate
 
 from ..entity.entity import BaseEntity, OrderedEntity
-from ..entity.model import Extension, StatefulExtension
 
 if TYPE_CHECKING:
     from .note import Note
@@ -310,7 +310,7 @@ class BaseEntityList[EntityT: OrderedEntity](
                 prev_position is not None and current_position <= prev_position
             ) or (next_position is not None and current_position >= next_position)
 
-            if needs_update or cleanup or self._entity._force_position_cleanup:
+            if needs_update or cleanup or self._note._force_position_cleanup:
                 entity_list[i]._position = self._get_position(i)
 
 

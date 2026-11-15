@@ -36,7 +36,7 @@ def commit_changes(
         return
 
     dirty_summary = session.get_dirty_summary()
-    overall_summary = session._cache._get_summary()
+    overall_summary = session._get_summary()
 
     session._logger.info("Pending changes:")
     console.print(

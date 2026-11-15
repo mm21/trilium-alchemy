@@ -249,3 +249,33 @@ def test_refresh_note_ordering(session: Session, note: Note):
 
     session.flush()
     session.refresh_note_ordering(note)
+
+
+@mark.attribute("label1")
+def test_repr(session: Session, note: Note):
+    def get_repr(counts: str) -> str:
+        return f"Session(host='{HOST}', {counts}, default=False)"
+
+    # only notes are cached until note is loaded
+    assert repr(session) == get_repr(
+        "notes=2 (0 dirty), attributes=0 (0 dirty), branches=0 (0 dirty), "
+        "attachments=0 (0 dirty)"
+    )
+
+    # loading note caches its label and parent branch
+    assert note.title
+    assert repr(session) == get_repr(
+        "notes=2 (0 dirty), attributes=1 (0 dirty), branches=1 (0 dirty), "
+        "attachments=0 (0 dirty)"
+    )
+
+    note.title = "New title"
+    note += Label("label2", session=session)
+    note.labels.owned[0].delete()
+
+    # entities being created aren't cached until flushed
+    assert "notes=2 (1 dirty), attributes=1 (2 dirty)" in repr(session)
+
+    session.flush()
+
+    assert "notes=2 (0 dirty), attributes=1 (0 dirty)" in str(session)

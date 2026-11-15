@@ -4,16 +4,12 @@ from abc import ABC, abstractmethod
 from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Literal, Self, Sequence
 
+from alchemizer import WriteOnceDescriptor, assert_valid
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.attribute import Attribute as EtapiAttributeModel
 
 from ..entity.entity import BaseEntity, OrderedEntity, State
-from ..entity.model import (
-    BaseDriver,
-    BaseEntityModel,
-    WriteOnceDescriptor,
-)
-from ..exceptions import _assert_validate
+from ..entity.model import BaseDriver, BaseEntityModel
 from ..session import Session, normalize_session
 
 if TYPE_CHECKING:
@@ -343,7 +339,7 @@ class BaseAttribute(OrderedEntity[AttributeModel, EtapiAttributeModel], ABC):
             assert self._note_obj.note_id == model.note_id
 
     def _flush_check(self):
-        _assert_validate(self._note is not None, "Attribute not assigned to note")
+        assert_valid(self._note is not None, "Attribute not assigned to note")
 
     def _flush_prep(self):
         pass

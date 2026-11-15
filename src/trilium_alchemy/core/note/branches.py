@@ -4,10 +4,10 @@ import itertools
 from collections.abc import MutableSequence, MutableSet, Sequence
 from typing import TYPE_CHECKING, AbstractSet, Any, Iterable, Iterator, overload
 
+from alchemizer import normalize_entities
 from trilium_client.models.note import Note as EtapiNoteModel
 
 from ..branch import Branch
-from ..entity.entity import normalize_entities
 from .extension import BaseEntityList, BaseEntitySet, NoteExtension
 
 if TYPE_CHECKING:

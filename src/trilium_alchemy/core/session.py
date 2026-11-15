@@ -7,27 +7,31 @@ from __future__ import annotations
 import datetime
 import json
 import logging
+from contextlib import contextmanager
 from dataclasses import dataclass, field
+from graphlib import TopologicalSorter
 from logging import Logger
-from typing import TYPE_CHECKING, Iterable, Literal, cast
+from typing import TYPE_CHECKING, Generator, Iterable, Literal, cast
 
 import requests
+from alchemizer import BaseSession
+from alchemizer import SessionContainer as _SessionContainer
+from alchemizer import State
 from trilium_client.api.default_api import DefaultApi
 from trilium_client.api_client import ApiClient
 from trilium_client.configuration import Configuration
-from trilium_client.exceptions import ApiException
+from trilium_client.exceptions import ApiException, NotFoundException
 from trilium_client.models.app_info import AppInfo
 from trilium_client.models.login201_response import Login201Response
 from trilium_client.models.login_request import LoginRequest
 from trilium_client.models.note import Note as EtapiNoteModel
 
-from .cache import Cache
+from . import flush
 
 if TYPE_CHECKING:
     from .attribute.attribute import BaseAttribute
     from .branch.branch import Branch
     from .entity.entity import BaseEntity
-    from .entity.types import State
     from .note.note import Note
 
 __all__ = ["Session"]
@@ -39,10 +43,7 @@ Timeout for initial request to get app info.
 """
 
 
-default_session: Session | None = None
-
-
-class Session:
+class Session(BaseSession["BaseEntity"]):
     """
     Interface to Trilium and context in which to store changes to entities.
 
@@ -51,6 +52,8 @@ class Session:
 
     For details and example usage, see {ref}`sessions` in the user guide.
     """
+
+    _tolerated_flush_errors = (NotFoundException, ApiException)
 
     _host: str
     """
@@ -78,11 +81,6 @@ class Session:
     Trilium version tuple.
     """
 
-    _cache: Cache
-    """
-    Cache object.
-    """
-
     _etapi_headers: dict[str, str]
     """
     Common ETAPI HTTP headers for manual requests.
@@ -99,11 +97,6 @@ class Session:
     _root: Note
     """
     Root note.
-    """
-
-    _logger: Logger
-    """
-    Logger to use.
     """
 
     def __init__(
@@ -128,15 +121,10 @@ class Session:
         """
         from .note.note import Note
 
-        self._logger = logger or logging.getLogger()
+        # set early since used in repr
+        self._host = host
 
-        # ensure no existing default session, if requested to use as default
-        if default:
-            global default_session
-            assert (
-                default_session is None
-            ), f"Attempt to create default Session {self} when default {default_session} already registered"
-            default_session = self
+        super().__init__(default=default, logger=logger or logging.getLogger())
 
         if token is None:
             # get token from password
@@ -150,7 +138,6 @@ class Session:
             # set flag to enable logging out later
             self._logout_pending = True
 
-        self._host = host
         self._token = token
         self._etapi_headers = {"Authorization": self._token}
 
@@ -159,9 +146,6 @@ class Session:
 
         # create api
         self._api = DefaultApi(ApiClient(config))
-
-        # create cache
-        self._cache = Cache(self)
 
         # test connection to trilium server
         # TODO: hangs if DNS resolution fails; implement timeout manually
@@ -200,26 +184,19 @@ class Session:
         # set root note
         self._root = Note(note_id="root", session=self)
 
-    def __enter__(self):
-        self._logger.debug(f"Entering context: {self}")
-        return self
-
-    def __exit__(self, exc_type, exc_val, traceback):
-        if exc_type:
-            self._logger.error(f"Exiting context with error: {self}")
-            return
-
-        self._logger.debug(f"Exiting context: {self}")
-
-        # flush pending changes
-        self.flush()
-
-        # if default, deregister it
-        self.deregister_default()
-
-        # logout if the user provided a password
-        if self._logout_pending:
-            self.logout()
+    def __repr__(self) -> str:
+        entity_counts = flush.count_entities(
+            cast("Iterable[BaseEntity]", self._cache.entity_map.values())
+        )
+        dirty_counts = flush.count_entities(self.dirty_set)
+        counts = ", ".join(
+            f"{name}={count} ({dirty_counts[name]} dirty)"
+            for name, count in entity_counts.items()
+        )
+        return (
+            f"{type(self).__name__}(host={self._host!r}, {counts}, "
+            f"default={self._is_default})"
+        )
 
     @property
     def trilium_version(self) -> str:
@@ -247,7 +224,7 @@ class Session:
 
         :param entities: Entities for which to commit changes, internally processed as a {obj}`set` and sorted according to dependencies
         """
-        self._cache.flush(entities)
+        super().flush(entities)
 
     def search(
         self,
@@ -464,9 +441,7 @@ class Session:
 
         No-op otherwise.
         """
-        if self._is_default:
-            global default_session
-            default_session = None
+        super().deregister_default()
 
     @property
     def root(self) -> Note:
@@ -489,14 +464,14 @@ class Session:
         """
         Number of dirty {obj}`BaseEntity` objects.
         """
-        return len(self.dirty_set)
+        return super().dirty_count
 
     @property
     def dirty_set(self) -> set[BaseEntity]:
         """
         Copy of all dirty {obj}`BaseEntity` objects.
         """
-        return {e for e in self._cache.dirty_set}
+        return super().dirty_set
 
     @property
     def dirty_map(
@@ -513,18 +488,7 @@ class Session:
         create_entities = my_session.dirty_map[State.CREATE]
         ```
         """
-        from .entity.types import State
-
-        index: dict[State, set[BaseEntity]] = {
-            State.CREATE: set(),
-            State.UPDATE: set(),
-            State.DELETE: set(),
-        }
-
-        for entity in self._cache.dirty_set:
-            index[entity._state].add(entity)
-
-        return index
+        return super().dirty_map
 
     def get_dirty_summary(self) -> str:
         """
@@ -615,10 +579,40 @@ class Session:
         """
         return f"{self.host}/etapi"
 
-    @property
-    def _is_default(self) -> bool:
-        global default_session
-        return default_session is self
+    def _close(self):
+        # logout if the user provided a password
+        if self._logout_pending:
+            self.logout()
+
+    @contextmanager
+    def _flush_scope(
+        self,
+        entities: set[BaseEntity],
+        sorter: TopologicalSorter[BaseEntity],
+    ) -> Generator[None, None, None]:
+        flush.add_branch_dependencies(entities, sorter)
+
+        # get notes with changed child branch positions
+        refresh_ordering_notes = flush.check_refresh_ordering(entities)
+
+        # get notes with changed templates/parent branches
+        refresh_notes = flush.check_refresh_notes(entities)
+
+        # flush entities
+        yield
+
+        # refresh ordering for changed branch positions
+        for note in refresh_ordering_notes:
+            if note._model.exists:
+                self.refresh_note_ordering(note)
+
+        # refresh notes
+        for note in refresh_notes:
+            if note._model.exists:
+                note.refresh()
+
+    def _get_summary(self, entities: Iterable[BaseEntity] | None = None) -> str:
+        return flush.get_summary(entities if entities is not None else self.dirty_set)
 
     def _get_note_from_model(self, model: EtapiNoteModel) -> Note:
         from .note.note import Note
@@ -626,15 +620,10 @@ class Session:
         return Note._from_model(model, session=self)
 
 
-class SessionContainer:
+class SessionContainer(_SessionContainer[Session]):
     """
     Indicates that an object is associated with a Session.
     """
-
-    _session: Session
-
-    def __init__(self, session: Session):
-        self._session = session
 
 
 @dataclass
@@ -667,15 +656,7 @@ def normalize_session(session: Session | None) -> Session:
     """
     Interface to get default Session if none provided.
     """
-    if session is not None:
-        return session
-
-    # get default
-    global default_session
-
-    assert default_session is not None, "No session provided and no default set"
-
-    return default_session
+    return Session._normalize(session)
 
 
 def _indent_str(value: str, indent: str) -> str:

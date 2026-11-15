@@ -17,6 +17,7 @@ classifiers = [
   "Typing :: Typed"  # pyprojkit-managed
 ]
 dependencies = [
+  "alchemizer>=0.2.1,<0.3.0",
   "pydantic>=2,<3",
   "python-dotenv>=1.0.1,<2",
   "pyyaml>=6.0.2,<7",
@@ -126,4 +127,5 @@ sort_table_keys = true  # pyprojkit-managed
 spaces_before_inline_comment = 2  # pyprojkit-managed
 
 [tool.uv.sources]
+alchemizer = {path = "../alchemizer", editable = true}
 mkinit = {git = "https://github.com/mm21/mkinit.git"}

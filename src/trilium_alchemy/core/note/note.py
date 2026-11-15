@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import IO, AbstractSet, Generator, Literal, Self, Sequence, cast
 
 import requests
+from alchemizer import assert_valid, normalize_entities
 from trilium_client.exceptions import NotFoundException
 from trilium_client.models.note import Note as EtapiNoteModel
 from trilium_client.models.note_with_branch import NoteWithBranch
@@ -19,8 +20,7 @@ from typecraft.validating import TypeValidator, normalize_to_list
 
 from ..attribute import BaseAttribute, Label, Relation
 from ..branch import Branch
-from ..entity.entity import BaseEntity, normalize_entities
-from ..exceptions import _assert_validate
+from ..entity.entity import BaseEntity
 from ..session import Session
 from ..utils import base_n_hash
 from .attachments import Attachment, Attachments
@@ -1028,22 +1028,22 @@ class Note(BaseEntity[NoteModel, EtapiNoteModel]):
 
     def _flush_check(self):
         if not self._is_delete:
-            _assert_validate(len(self.branches.parents) > 0, "Note has no parents")
+            assert_valid(len(self.branches.parents) > 0, "Note has no parents")
 
         for branch in self.branches.parents:
-            _assert_validate(
+            assert_valid(
                 branch.child is self,
                 f"Child not set for parent branch {branch}",
             )
 
             if self.note_id is not None and self.note_id != "root":
-                _assert_validate(
+                assert_valid(
                     branch.parent is not None,
                     f"Parent not set for branch: {branch}",
                 )
 
         for branch in self.branches.children:
-            _assert_validate(branch.parent is self)
+            assert_valid(branch.parent is self)
 
     def _flush_prep(self):
         pass

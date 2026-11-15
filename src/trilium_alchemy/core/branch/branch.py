@@ -3,17 +3,13 @@ from __future__ import annotations
 from graphlib import TopologicalSorter
 from typing import TYPE_CHECKING, Any, Self, Sequence
 
+from alchemizer import WriteOnceDescriptor, assert_valid
 from trilium_client.exceptions import NotFoundException, ServiceException
 from trilium_client.models.branch import Branch as EtapiBranchModel
 
 from ..entity.entity import BaseEntity, OrderedEntity
-from ..entity.model import (
-    BaseDriver,
-    BaseEntityModel,
-    WriteOnceDescriptor,
-)
+from ..entity.model import BaseDriver, BaseEntityModel
 from ..entity.types import State
-from ..exceptions import _assert_validate
 from ..session import Session
 
 if TYPE_CHECKING:
@@ -367,21 +363,21 @@ class Branch(OrderedEntity[BranchModel, EtapiBranchModel]):
         self.child = Note(note_id=model.note_id, session=self._session)
 
     def _flush_check(self):
-        _assert_validate(self._child is not None, "No child set")
+        assert_valid(self._child is not None, "No child set")
 
         if self.child.note_id != "root":
-            _assert_validate(self._parent is not None, "No parent set")
+            assert_valid(self._parent is not None, "No parent set")
 
         if self.state is not State.DELETE:
             # make sure this branch was added to parents of child
-            _assert_validate(
+            assert_valid(
                 self in self.child.branches.parents,
                 f"Not added to parents of child {self.child}",
             )
 
             # make sure this branch was added to children of parents
             if self.child.note_id != "root":
-                _assert_validate(
+                assert_valid(
                     self in self.parent.branches.children,
                     f"Not added to children of parent {self.parent}",
                 )
